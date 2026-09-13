@@ -17,6 +17,8 @@ for(const stock of snapshot.stocks){
 }
 const candidates=snapshot.stocks.filter(s=>s.candidateReason).map(s=>({code:s.code,officialReason:s.candidateReason,reconstructed:countGate(s,snapshot.calendar,snapshot.asOf)}));
 const report={asOf:snapshot.asOf,kind:'Historical announcement arithmetic reconciliation, not prediction backtest',compared,skipped,failures,checks,candidates};
-fs.mkdirSync(new URL('../work/',import.meta.url),{recursive:true});fs.writeFileSync(new URL('../work/verification.json',import.meta.url),JSON.stringify(report,null,2));
+const rendered=JSON.stringify(report,null,2);
+fs.mkdirSync(new URL('../work/',import.meta.url),{recursive:true});fs.writeFileSync(new URL('../work/verification.json',import.meta.url),rendered);
+fs.mkdirSync(new URL('../data/',import.meta.url),{recursive:true});fs.writeFileSync(new URL('../data/verification.json',import.meta.url),rendered);
 console.log(JSON.stringify({asOf:snapshot.asOf,compared,skipped,failures,candidates},null,2));
 if(failures.length)process.exitCode=1;

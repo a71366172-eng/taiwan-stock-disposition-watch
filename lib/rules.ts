@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null):x is number=>x!==null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TWSE-2026-08-10-v0.2';
+export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.3';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -56,19 +56,19 @@ function mergePrices(prices:number[],matches:(p:number)=>boolean,reference:numbe
 function result(rule:number,label:string,intervals:PriceInterval[],conditions:string[],reason?:string):RuleResult{return {rule,label,status:reason?'missing':intervals.length?'conditional':'no_price',intervals,conditions,...(reason?{reason}:{})};}
 
 export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'calendar'|'calendarVerified'>,raw:unknown=DEFAULT_SCENARIO):Simulation{
-  if(stock.market!=='TWSE')throw new Error('此版本尚未驗證上櫃規則');
   const scenario=validateScenario(raw), reference=scenario.referencePrice??stock.close;
   if(!positive(reference))throw new Error('缺少有效收盤或參考價格');
   const prices=legalPrices(reference),bars=stock.bars.filter(b=>b.date<=snapshot.asOf),lastFive=bars.slice(-5),dates=snapshot.calendar.filter(d=>d<=snapshot.asOf);
   const historyOkay=lastFive.length===5&&lastFive.every(b=>positive(b.close)&&positive(b.reference)&&!b.note)&&lastFive.every((b,i)=>b.date===dates.slice(-5)[i]);
   const historicalSum=historyOkay?cumulativeQ(lastFive):q(0);
   const six=(p:number)=>historicalSum.add(money(p).div(money(reference)).sub(q(1)).mul(q(100)).trunc2());
-  const industryExempt=(p:number)=>stock.pe!==null&&positive(stock.close)&&stock.valuationDate===snapshot.asOf&&(stock.pe<0||q(stock.pe).mul(money(p)).div(money(stock.close)).cmp(q(60))>=0);
+  const peExemption=stock.market==='TPEX'?65:60;
+  const industryExempt=(p:number)=>stock.pe!==null&&positive(stock.close)&&stock.valuationDate===snapshot.asOf&&(stock.pe<0||q(stock.pe).mul(money(p)).div(money(stock.close)).cmp(q(peExemption))>=0);
   const differential=(r:Q,market:number,industry:number,min:number,exempt:boolean)=>r.cmp(q(0))>=0?(r.sub(q(market)).cmp(q(min))>=0&&(exempt||r.sub(q(industry)).cmp(q(min))>=0)):(q(market).sub(r).cmp(q(min))>=0&&(exempt||q(industry).sub(r).cmp(q(min))>=0));
   const firstMatches=(p:number)=>{const r=six(p);return p>=5&&differential(r,scenario.market6,scenario.industry6,20,industryExempt(p))&&(r.abs().cmp(q(32))>0||(r.abs().cmp(q(25))>0&&money(p).sub(money(lastFive[0].close!)).abs().cmp(q(50))>=0));};
   const shared=['普通股、正常漲跌幅限制及交易狀態不變。','未發生尚未處理的除權息、減資或其他非交易價格變動。','市場與同類平均值為輸入的情境假設，並非明日已知數據。'];
   const rules:RuleResult[]=[];
-  rules.push(result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,'每股盈餘不變，以試算價格重估本益比；負值或達 60 倍時免同類差幅比較。','同類證券至少五種；少於五種的除外條件尚需確認。','每日報酬百分比先向零截至小數兩位再加總；已與本批 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記'));
+  rules.push(result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,`每股盈餘不變，以試算價格重估本益比；負值或達 ${peExemption} 倍時免同類差幅比較。`,'同類證券至少五種；少於五種的除外條件尚需確認。','每日報酬百分比先向零截至小數兩位再加總；已與上市初始批次 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記'));
 
   rules.push(result(2,'三十／六十／九十日漲跌幅',[],[...shared,'長期企業行動及處置除外條件需完整驗證後開放。'],'第二款尚未完成企業行動與除外條件驗證，暫不提供門檻'));
 

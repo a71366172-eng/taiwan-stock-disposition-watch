@@ -47,3 +47,8 @@ test('disposition tier uses the latest 30 known business sessions',()=>{
  assert.equal(dispositionTier(recent,calendar,context.asOf),'repeat');
  assert.equal(dispositionTier(old,calendar,context.asOf),'first');
 });
+test('the shared price engine accepts TPEx common stocks',()=>{
+ const result=simulate({...base,market:'TPEX',code:'5314'},context);
+ assert.equal(result.code,'5314');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.3');
+});
