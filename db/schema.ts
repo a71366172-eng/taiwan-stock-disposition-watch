@@ -1,0 +1,3 @@
+import {sqliteTable,text,index} from 'drizzle-orm/sqlite-core';
+export const marketSnapshots=sqliteTable('market_snapshots',{id:text('id').primaryKey(),dataDate:text('data_date').notNull(),createdAt:text('created_at').notNull(),payload:text('payload').notNull()},table=>[index('idx_snapshots_date').on(table.dataDate,table.createdAt)]);
+export const simulations=sqliteTable('simulations',{id:text('id').primaryKey(),code:text('code').notNull(),targetDate:text('target_date').notNull(),createdAt:text('created_at').notNull(),payload:text('payload').notNull()},table=>[index('idx_simulations_created').on(table.createdAt)]);
