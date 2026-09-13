@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {countGate,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
+import {dispositionTier} from '../lib/disposition-tier.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
 const context={asOf:calendar.at(-1)!,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendar,calendarVerified:true};
@@ -39,4 +40,10 @@ test('daily returns truncate toward zero before summing, including negative frac
  assert.equal(cumulativeReturn([{...base.bars[0],close:104,reference:103}]),0.97);
  assert.equal(cumulativeReturn([{...base.bars[0],close:101,reference:103}]),-1.94);
  assert.equal(cumulativeReturn([{...base.bars[0],close:104,reference:103},{...base.bars[0],close:102,reference:103}]),0);
+});
+test('disposition tier uses the latest 30 known business sessions',()=>{
+ const recent={...base,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-30)!,start:null,end:null,condition:'',measure:'',content:''}]};
+ const old={...recent,dispositions:[{...recent.dispositions[0],announced:calendar.at(-31)!}]};
+ assert.equal(dispositionTier(recent,calendar,context.asOf),'repeat');
+ assert.equal(dispositionTier(old,calendar,context.asOf),'first');
 });
