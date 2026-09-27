@@ -3,6 +3,7 @@ import type {MarketSnapshot} from '../lib/market-types';
 import {simulate} from '../lib/rules';
 import {loadLatestSnapshot} from '../lib/static-data';
 import {Dashboard} from '../components/dashboard';
+import {DispositionStocks} from '../components/disposition-stocks';
 import {StockDetail} from '../components/stock-detail';
 import Methodology from '../app/methodology/page';
 import {SiteShell} from '../components/site-shell';
@@ -19,6 +20,7 @@ export function StaticApp(){
  if(path==='/methodology')return <Methodology/>;
  if(path==='/status')return <Status snapshot={snapshot} storage={storage}/>;
  if(path==='/history')return <StaticHistory/>;
+ if(path==='/dispositions')return <DispositionStocks snapshot={snapshot}/>;
  const match=path.match(/^\/stocks\/(\d{4})$/),stock=match?snapshot.stocks.find(item=>item.code===match[1]):undefined;
  if(stock&&stock.close)return <StockDetail stock={stock} snapshot={snapshot} initial={simulate(stock,snapshot)}/>;
  return <Dashboard key={`${snapshot.generatedAt}-${storage}`} initial={snapshot} storage={storage} servedAt={Date.parse(snapshot.generatedAt)}/>;
