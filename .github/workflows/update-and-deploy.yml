@@ -39,11 +39,15 @@ jobs:
           npm run data:verify
           node --experimental-strip-types --test tests/rules.test.ts
       - name: Publish immutable snapshot to Supabase
-        if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python scripts/publish_supabase.py data/market.json
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Supabase credentials are not configured; using the published static snapshot."
+            exit 0
+          fi
+          python scripts/publish_supabase.py data/market.json
       - name: Commit updated public snapshot
         run: |
           git config user.name github-actions[bot]
