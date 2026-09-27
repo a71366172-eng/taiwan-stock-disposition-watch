@@ -179,11 +179,12 @@ def main():
         date=iso(h.get('Date',''))
         description=str(h.get('Name',''))+str(h.get('Description',''))
         if date and '開始交易' not in description and '最後交易' not in description: closed.add(date)
-    target=day+dt.timedelta(days=1)
-    while target.weekday()>4 or target.isoformat() in closed: target+=dt.timedelta(days=1)
-    effective=target+dt.timedelta(days=1)
-    while effective.weekday()>4 or effective.isoformat() in closed: effective+=dt.timedelta(days=1)
-    result={'schemaVersion':2,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition and quotes','TPEX':'official attention, candidate, disposition and quotes'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'官方候選優先・條件式價格試算'}
+    forecast_dates=[]; cursor=day
+    while len(forecast_dates)<3:
+        cursor+=dt.timedelta(days=1)
+        if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
+    target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition and quotes','TPEX':'official attention, candidate, disposition and quotes'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
     fingerprint=hashlib.sha256(raw.encode()).hexdigest()[:12]

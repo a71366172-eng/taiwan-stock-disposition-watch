@@ -1,4 +1,4 @@
-import type { MarketSnapshot, PriceInterval, RuleResult, Scenario, Simulation, Stock } from './market-types';
+import type { MarketSnapshot, PriceInterval, RiskForecast, RuleResult, Scenario, Simulation, Stock } from './market-types';
 
 // Exact rational comparisons. Prices are stored in hundredths of NT dollars.
 class Q {
@@ -47,6 +47,24 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
   const paths:string[]=[];
   if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十日內十二日');
   return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
+}
+export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
+  const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
+  if(!future.length)return null;
+  if(stock.candidateReason)return {days:1,date:future[0],paths:['官方隔日候選'],official:true};
+  const history=snapshot.calendar.filter(d=>d<=snapshot.asOf),base=countGate(stock,history,snapshot.asOf);
+  const countable=new Set(stock.notices.filter(n=>n.rules.some(r=>r>=1&&r<=8)).map(n=>n.date));
+  for(let index=0;index<future.length;index++){
+    const days=(index+1) as 1|2|3,assumed=future.slice(0,days),sessions=[...history,...assumed];
+    const isCountable=(date:string)=>countable.has(date)||assumed.includes(date);
+    const paths:string[]=[];
+    if(base.firstStreak>0&&base.firstStreak+days>=3)paths.push('第一款連續三日');
+    if(base.anyStreak>0&&base.anyStreak+days>=5)paths.push('第 1–8 款連續五日');
+    if(sessions.slice(-10).filter(isCountable).length>=6)paths.push('十日內六日');
+    if(sessions.slice(-30).filter(isCountable).length>=12)paths.push('三十日內十二日');
+    if(paths.length)return {days,date:future[index],paths,official:false};
+  }
+  return null;
 }
 function mergePrices(prices:number[],matches:(p:number)=>boolean,reference:number,rule:number):PriceInterval[]{
   const intervals:PriceInterval[]=[];let current:PriceInterval|undefined;
