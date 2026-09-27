@@ -1,10 +1,66 @@
 {
-  "asOf": "2026-09-11",
+  "asOf": "2026-09-24",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 24,
-  "skipped": 54,
+  "compared": 57,
+  "skipped": 70,
   "failures": [],
   "checks": [
+    {
+      "code": "1560",
+      "date": "2026-09-24",
+      "announced": 28.03,
+      "calculated": 28.03,
+      "pass": true
+    },
+    {
+      "code": "1560",
+      "date": "2026-09-23",
+      "announced": 27.17,
+      "calculated": 27.17,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-23",
+      "announced": 36.11,
+      "calculated": 36.11,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-21",
+      "announced": 37.61,
+      "calculated": 37.61,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-18",
+      "announced": 44.06,
+      "calculated": 44.06,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-17",
+      "announced": 45.96,
+      "calculated": 45.96,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-16",
+      "announced": 41.47,
+      "calculated": 41.47,
+      "pass": true
+    },
+    {
+      "code": "2305",
+      "date": "2026-09-14",
+      "announced": 39.69,
+      "calculated": 39.69,
+      "pass": true
+    },
     {
       "code": "2305",
       "date": "2026-09-11",
@@ -34,10 +90,80 @@
       "pass": true
     },
     {
-      "code": "3229",
-      "date": "2026-09-11",
-      "announced": 34.19,
-      "calculated": 34.19,
+      "code": "2468",
+      "date": "2026-09-18",
+      "announced": 36.21,
+      "calculated": 36.21,
+      "pass": true
+    },
+    {
+      "code": "3016",
+      "date": "2026-09-24",
+      "announced": 34.01,
+      "calculated": 34.01,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-17",
+      "announced": 26.79,
+      "calculated": 26.79,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-13",
+      "announced": 25.28,
+      "calculated": 25.28,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-12",
+      "announced": 34.24,
+      "calculated": 34.24,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-11",
+      "announced": 36.58,
+      "calculated": 36.58,
+      "pass": true
+    },
+    {
+      "code": "3167",
+      "date": "2026-08-10",
+      "announced": 31.79,
+      "calculated": 31.79,
+      "pass": true
+    },
+    {
+      "code": "3443",
+      "date": "2026-09-24",
+      "announced": 33.59,
+      "calculated": 33.59,
+      "pass": true
+    },
+    {
+      "code": "3443",
+      "date": "2026-09-23",
+      "announced": 34.16,
+      "calculated": 34.16,
+      "pass": true
+    },
+    {
+      "code": "3443",
+      "date": "2026-09-22",
+      "announced": 28.35,
+      "calculated": 28.35,
+      "pass": true
+    },
+    {
+      "code": "3443",
+      "date": "2026-08-17",
+      "announced": 26.26,
+      "calculated": 26.26,
       "pass": true
     },
     {
@@ -45,6 +171,104 @@
       "date": "2026-08-10",
       "announced": 35.88,
       "calculated": 35.88,
+      "pass": true
+    },
+    {
+      "code": "3450",
+      "date": "2026-08-07",
+      "announced": 35.92,
+      "calculated": 35.92,
+      "pass": true
+    },
+    {
+      "code": "3450",
+      "date": "2026-08-06",
+      "announced": 31.74,
+      "calculated": 31.74,
+      "pass": true
+    },
+    {
+      "code": "3653",
+      "date": "2026-09-24",
+      "announced": 28.73,
+      "calculated": 28.73,
+      "pass": true
+    },
+    {
+      "code": "3653",
+      "date": "2026-08-19",
+      "announced": 30.83,
+      "calculated": 30.83,
+      "pass": true
+    },
+    {
+      "code": "4956",
+      "date": "2026-09-23",
+      "announced": 33.07,
+      "calculated": 33.07,
+      "pass": true
+    },
+    {
+      "code": "4956",
+      "date": "2026-09-21",
+      "announced": 39.97,
+      "calculated": 39.97,
+      "pass": true
+    },
+    {
+      "code": "6168",
+      "date": "2026-09-24",
+      "announced": 33.22,
+      "calculated": 33.22,
+      "pass": true
+    },
+    {
+      "code": "6168",
+      "date": "2026-09-23",
+      "announced": 36.34,
+      "calculated": 36.34,
+      "pass": true
+    },
+    {
+      "code": "6168",
+      "date": "2026-09-22",
+      "announced": 40.37,
+      "calculated": 40.37,
+      "pass": true
+    },
+    {
+      "code": "6168",
+      "date": "2026-09-21",
+      "announced": 39.02,
+      "calculated": 39.02,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-21",
+      "announced": 41.39,
+      "calculated": 41.39,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-18",
+      "announced": 36.04,
+      "calculated": 36.04,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-17",
+      "announced": 41.77,
+      "calculated": 41.77,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-16",
+      "announced": 32.04,
+      "calculated": 32.04,
       "pass": true
     },
     {
@@ -76,45 +300,101 @@
       "pass": true
     },
     {
-      "code": "6933",
-      "date": "2026-09-04",
-      "announced": 31.33,
-      "calculated": 31.33,
+      "code": "6426",
+      "date": "2026-09-23",
+      "announced": 28.18,
+      "calculated": 28.18,
       "pass": true
     },
     {
-      "code": "6933",
-      "date": "2026-09-03",
-      "announced": 36.37,
-      "calculated": 36.37,
+      "code": "6426",
+      "date": "2026-08-12",
+      "announced": 25.76,
+      "calculated": 25.76,
       "pass": true
     },
     {
-      "code": "6933",
-      "date": "2026-09-02",
-      "announced": 55.1,
-      "calculated": 55.1,
+      "code": "6426",
+      "date": "2026-08-11",
+      "announced": 33.74,
+      "calculated": 33.74,
       "pass": true
     },
     {
-      "code": "6933",
-      "date": "2026-09-01",
-      "announced": 50.37,
-      "calculated": 50.37,
+      "code": "6426",
+      "date": "2026-08-10",
+      "announced": 38.15,
+      "calculated": 38.15,
       "pass": true
     },
     {
-      "code": "6933",
+      "code": "6526",
+      "date": "2026-09-24",
+      "announced": 30.08,
+      "calculated": 30.08,
+      "pass": true
+    },
+    {
+      "code": "6526",
+      "date": "2026-09-23",
+      "announced": 31.04,
+      "calculated": 31.04,
+      "pass": true
+    },
+    {
+      "code": "6715",
+      "date": "2026-09-23",
+      "announced": 26.11,
+      "calculated": 26.11,
+      "pass": true
+    },
+    {
+      "code": "6715",
+      "date": "2026-09-22",
+      "announced": 27.66,
+      "calculated": 27.66,
+      "pass": true
+    },
+    {
+      "code": "6715",
+      "date": "2026-09-21",
+      "announced": 35.28,
+      "calculated": 35.28,
+      "pass": true
+    },
+    {
+      "code": "6715",
+      "date": "2026-09-18",
+      "announced": 26.56,
+      "calculated": 26.56,
+      "pass": true
+    },
+    {
+      "code": "6715",
       "date": "2026-08-31",
-      "announced": 45.26,
-      "calculated": 45.26,
+      "announced": -32.47,
+      "calculated": -32.47,
       "pass": true
     },
     {
-      "code": "6933",
+      "code": "6715",
       "date": "2026-08-28",
-      "announced": 31.38,
-      "calculated": 31.38,
+      "announced": -31.51,
+      "calculated": -31.51,
+      "pass": true
+    },
+    {
+      "code": "6902",
+      "date": "2026-09-24",
+      "announced": 35.54,
+      "calculated": 35.54,
+      "pass": true
+    },
+    {
+      "code": "6902",
+      "date": "2026-09-22",
+      "announced": 32.58,
+      "calculated": 32.58,
       "pass": true
     },
     {
@@ -123,61 +403,26 @@
       "announced": 31.34,
       "calculated": 31.34,
       "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-08-07",
-      "announced": 31.62,
-      "calculated": 31.62,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-08-06",
-      "announced": 30.12,
-      "calculated": 30.12,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-07-30",
-      "announced": -31.5,
-      "calculated": -31.5,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-07-17",
-      "announced": -25.22,
-      "calculated": -25.22,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-06-23",
-      "announced": 25.34,
-      "calculated": 25.34,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-06-22",
-      "announced": 32.52,
-      "calculated": 32.52,
-      "pass": true
-    },
-    {
-      "code": "8996",
-      "date": "2026-06-18",
-      "announced": 28.17,
-      "calculated": 28.17,
-      "pass": true
     }
   ],
   "candidates": [
     {
-      "code": "8996",
-      "officialReason": "115年9月1日至115年9月11日等九個營業日已有五次",
+      "code": "1560",
+      "officialReason": "115年9月23日至115年9月24日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "nineCount": 2,
+        "twentyNineCount": 2
+      }
+    },
+    {
+      "code": "3450",
+      "officialReason": "115年9月14日至115年9月24日等九個營業日已有五次",
       "reconstructed": {
         "official": true,
         "paths": [
@@ -185,38 +430,42 @@
           "三十日內十二日"
         ],
         "firstStreak": 0,
-        "anyStreak": 3,
+        "anyStreak": 0,
         "nineCount": 5,
         "twentyNineCount": 11
       }
     },
     {
-      "code": "5314",
-      "officialReason": "115年09月10日至115年09月11日連續二次",
+      "code": "4956",
+      "officialReason": "115年9月21日至115年9月24日連續四次",
       "reconstructed": {
         "official": true,
-        "paths": [],
-        "firstStreak": 1,
-        "anyStreak": 1,
-        "nineCount": 1,
-        "twentyNineCount": 1
+        "paths": [
+          "連續五日"
+        ],
+        "firstStreak": 0,
+        "anyStreak": 4,
+        "nineCount": 4,
+        "twentyNineCount": 4
       }
     },
     {
-      "code": "6872",
-      "officialReason": "115年09月10日至115年09月11日連續二次",
+      "code": "6526",
+      "officialReason": "115年9月23日至115年9月24日連續二次",
       "reconstructed": {
         "official": true,
-        "paths": [],
-        "firstStreak": 1,
-        "anyStreak": 1,
-        "nineCount": 1,
-        "twentyNineCount": 1
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "nineCount": 2,
+        "twentyNineCount": 2
       }
     },
     {
-      "code": "8227",
-      "officialReason": "115年09月10日至115年09月11日連續二次",
+      "code": "7792",
+      "officialReason": "115年09月23日至115年09月24日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [],
