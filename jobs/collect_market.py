@@ -126,8 +126,14 @@ def main():
     f_map={x.get('Code'):x for x in fundamentals}
     tpex_quote_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_quotes if iso(x.get('Date'))==as_of}
     tpex_f_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_fundamentals}
-    twse_symbols=set(candidates)|{n['code'] for n in today}|{d['code'] for d in active}
-    tpex_symbols=set(tpex_candidates)|{n['code'] for n in today}|{d['code'] for d in active}
+    # The attention feeds can overlap across markets and may include recently
+    # transferred/delisted names. Use each market's quote roster as its security
+    # master, without requiring the quote row itself to match as_of (the feeds
+    # can differ by one session).
+    twse_market_symbols={str(x.get('Code','')) for x in quotes}
+    tpex_market_symbols={str(x.get('SecuritiesCompanyCode','')) for x in tpex_quotes}
+    twse_symbols=set(candidates)|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
+    tpex_symbols=set(tpex_candidates)|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')
