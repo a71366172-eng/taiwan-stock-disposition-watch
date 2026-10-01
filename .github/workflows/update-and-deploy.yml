@@ -33,6 +33,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Collect official TWSE and TPEx data
+        continue-on-error: true # Keep deploying the last verified snapshot if the two public feeds temporarily report different dates.
         run: python jobs/collect_market.py
       - name: Verify snapshot and rules
         run: |
