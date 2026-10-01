@@ -132,8 +132,11 @@ def main():
     # can differ by one session).
     twse_market_symbols={str(x.get('Code','')) for x in quotes}
     tpex_market_symbols={str(x.get('SecuritiesCompanyCode','')) for x in tpex_quotes}
-    twse_symbols=set(candidates)|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
-    tpex_symbols=set(tpex_candidates)|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
+    # Candidate feeds also overlap across markets. Require roster membership
+    # before collecting them, otherwise a TWSE candidate appears again as a
+    # price-less TPEx record (and vice versa).
+    twse_symbols={code for code in candidates if code in twse_market_symbols}|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
+    tpex_symbols={code for code in tpex_candidates if code in tpex_market_symbols}|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')
