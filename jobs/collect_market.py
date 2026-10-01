@@ -75,10 +75,17 @@ def main():
     tpex_quotes=get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes')
     twse_dates=sorted({iso(x.get('Date')) for x in quotes if iso(x.get('Date'))})
     tpex_dates=sorted({iso(x.get('Date')) for x in tpex_quotes if iso(x.get('Date'))})
-    if not twse_dates or not tpex_dates or twse_dates[-1]!=tpex_dates[-1]:
-        raise ValueError(f'Market quote dates do not match: TWSE={twse_dates[-1:]}, TPEX={tpex_dates[-1:]}')
-    as_of=args.as_of or twse_dates[-1]
-    if as_of!=twse_dates[-1]: raise ValueError('The quote endpoints only expose the latest snapshot date.')
+    if not twse_dates or not tpex_dates:
+        raise ValueError(f'Market quote dates unavailable: TWSE={twse_dates[-1:]}, TPEX={tpex_dates[-1:]}')
+    # The two official daily quote feeds can publish at different times. Anchor
+    # the whole snapshot to the newest feed date, then recover any lagging
+    # market's prices from its official per-stock daily history endpoint below.
+    latest_quote_date=max(twse_dates[-1],tpex_dates[-1])
+    date_gap=abs((dt.date.fromisoformat(twse_dates[-1])-dt.date.fromisoformat(tpex_dates[-1])).days)
+    if date_gap>4:
+        raise ValueError(f'Market quote feeds are more than four calendar days apart: TWSE={twse_dates[-1]}, TPEX={tpex_dates[-1]}')
+    as_of=args.as_of or latest_quote_date
+    if as_of!=latest_quote_date: raise ValueError('The quote endpoints only expose recent snapshots; historical collection is not supported.')
     day=dt.date.fromisoformat(as_of); compact=as_of.replace('-',''); start=(day-dt.timedelta(days=105)).strftime('%Y%m%d')
     notices=get(f'https://www.twse.com.tw/announcement/notice?response=json&startDate={start}&endDate={compact}')
     cand=get(f'https://www.twse.com.tw/announcement/notetrans?response=json&date={compact}')
@@ -119,8 +126,8 @@ def main():
     f_map={x.get('Code'):x for x in fundamentals}
     tpex_quote_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_quotes if iso(x.get('Date'))==as_of}
     tpex_f_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_fundamentals}
-    twse_symbols=set(candidates)|{n['code'] for n in today if n['code'] in quote_map}|{d['code'] for d in active if d['code'] in quote_map}
-    tpex_symbols=set(tpex_candidates)|{n['code'] for n in today if n['code'] in tpex_quote_map}|{d['code'] for d in active if d['code'] in tpex_quote_map}
+    twse_symbols=set(candidates)|{n['code'] for n in today}|{d['code'] for d in active}
+    tpex_symbols=set(tpex_candidates)|{n['code'] for n in today}|{d['code'] for d in active}
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')
@@ -136,6 +143,9 @@ def main():
                     bars.append({'date':date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':strip(r[9]) if len(r)>9 else ''})
             time.sleep(.3)
         bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
+        as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
+        if code in candidates and (not as_of_bar or as_of_bar['close'] is None):
+            raise ValueError(f'Missing official TWSE daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
         latest=stock_notices[0] if stock_notices else {}
         f=f_map.get(code,{})
@@ -144,8 +154,14 @@ def main():
         pb=number(f.get('PBratio'))
         if pb is None and latest.get('date')==as_of:
             match=re.search(r'股價淨值比為\s*([\d.]+)',latest.get('reason','')); pb=float(match.group(1)) if match else None
-        close=number(q.get('ClosingPrice')); change=number(q.get('Change'))
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':number(q.get('TradeVolume')),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        close=number(q.get('ClosingPrice')) if q else None
+        change=number(q.get('Change')) if q else None
+        volume=number(q.get('TradeVolume')) if q else None
+        if as_of_bar:
+            close=as_of_bar['close'] if close is None else close
+            change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
+            volume=as_of_bar['volume'] if volume is None else volume
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
@@ -160,6 +176,9 @@ def main():
                     bars.append({'date':trading_date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':''})
             time.sleep(.2)
         bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
+        as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
+        if code in tpex_candidates and (not as_of_bar or as_of_bar['close'] is None):
+            raise ValueError(f'Missing official TPEx daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
         latest=stock_notices[0] if stock_notices else {}; f=tpex_f_map.get(code,{})
         pe=number(f.get('PriceEarningRatio'))
@@ -167,8 +186,14 @@ def main():
         pb=number(f.get('PriceBookRatio'))
         if pb is None and latest.get('date')==as_of:
             match=re.search(r'股價淨值比為\s*([\d.]+)',latest.get('reason','')); pb=float(match.group(1)) if match else None
-        close=number(q.get('Close')); change=number(q.get('Change'))
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':number(q.get('TradingShares')),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        close=number(q.get('Close')) if q else None
+        change=number(q.get('Change')) if q else None
+        volume=number(q.get('TradingShares')) if q else None
+        if as_of_bar:
+            close=as_of_bar['close'] if close is None else close
+            change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
+            volume=as_of_bar['volume'] if volume is None else volume
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
@@ -193,6 +218,6 @@ def main():
     tmp=dest/'market.pending.json'; tmp.write_text(raw,encoding='utf-8'); tmp.replace(dest/'market.json')
     public=ROOT/'public'/'data'; public.mkdir(parents=True,exist_ok=True)
     (public/'market.json').write_text(raw,encoding='utf-8')
-    print(json.dumps({'asOf':as_of,'stocks':len(stocks),'twseCandidates':len(candidates),'tpexCandidates':len(tpex_candidates),'todayNotices':len(today),'calendarVerified':bool(holidays),'errors':len(errors),'output':str(dest/'market.json')},ensure_ascii=False))
+    print(json.dumps({'asOf':as_of,'quoteDates':{'TWSE':twse_dates[-1],'TPEX':tpex_dates[-1]},'stocks':len(stocks),'twseCandidates':len(candidates),'tpexCandidates':len(tpex_candidates),'todayNotices':len(today),'calendarVerified':bool(holidays),'errors':len(errors),'output':str(dest/'market.json')},ensure_ascii=False))
 
 if __name__=='__main__': main()
