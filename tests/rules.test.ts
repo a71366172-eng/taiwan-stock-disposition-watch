@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn} from '../lib/rules.ts';
+import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
@@ -27,6 +27,11 @@ test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
 });
 test('sixth-clause strict market PE comparison excludes equality at 100',()=>{
  const r=simulate(base,context,DEFAULT_SCENARIO).rules.find(x=>x.rule===6)!;assert.equal(r.intervals[0].from,100.5);assert.equal(r.status,'conditional');
+});
+test('sixth-clause volume combines the 3,000-lot floor with 5% of issued shares',()=>{
+ assert.equal(sixthClauseMinimumShares(100_000_000),5_000_000);
+ assert.equal(sixthClauseMinimumShares(10_000_000),3_000_000);
+ assert.equal(sixthClauseMinimumShares(null),null);
 });
 test('missing valuation does not become zero/no-risk',()=>assert.equal(simulate({...base,pb:null},context).rules.find(x=>x.rule===6)?.status,'missing'));
 test('cumulative return is daily sum using reference, not end-to-end compounding',()=>assert.equal(cumulativeReturn([{...base.bars[0],close:110,reference:100},{...base.bars[0],close:99,reference:110}]),0));

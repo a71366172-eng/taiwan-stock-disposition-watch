@@ -4,7 +4,7 @@ Standard library only. No credentials, no adjusted-price substitution.
 Run: python jobs/collect_market.py [--as-of YYYY-MM-DD]
 """
 from __future__ import annotations
-import argparse, datetime as dt, hashlib, json, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse
+import argparse, csv, datetime as dt, hashlib, io, json, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -41,6 +41,29 @@ def get(url: str, required=True):
                     return payload
                 except Exception:
                     pass
+            if attempt < 2: time.sleep(1 + attempt * 2)
+            else:
+                errors.append(f'{url}: {type(exc).__name__}: {str(exc)[:100]}')
+                if required: raise
+                return None
+
+def get_csv(url: str, required=True):
+    cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.csv')
+    if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
+        sources.append({'url':url, 'observedAt':dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat()})
+        return list(csv.DictReader(io.StringIO(cache.read_text(encoding='utf-8-sig'))))
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'TaiwanStockWatch/0.1 (public-data research)', 'Accept':'text/csv'})
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                content=resp.read().decode('utf-8-sig')
+            rows=list(csv.DictReader(io.StringIO(content)))
+            if len(rows)<500 or not rows or '公司代號' not in rows[0]:
+                raise ValueError('官方公司基本資料 CSV 欄位或筆數異常')
+            cache.write_text(content, encoding='utf-8-sig')
+            sources.append({'url':url, 'observedAt':dt.datetime.now(dt.timezone.utc).isoformat()})
+            return rows
+        except Exception as exc:
             if attempt < 2: time.sleep(1 + attempt * 2)
             else:
                 errors.append(f'{url}: {type(exc).__name__}: {str(exc)[:100]}')
@@ -91,7 +114,8 @@ def main():
     cand=get(f'https://www.twse.com.tw/announcement/notetrans?response=json&date={compact}')
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
-    firms=get('https://openapi.twse.com.tw/v1/opendata/t187ap03_L',False) or []
+    firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv')
+    tpex_firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv')
     holidays=get('https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule',False) or []
     exrights=get('https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL',False)
     tpex_notices_raw=get('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information')
@@ -100,6 +124,11 @@ def main():
     tpex_fundamentals=get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis',False) or []
     # Company master restricts this build to common shares, not ETFs or warrants.
     company={str(x.get('公司代號','')):x for x in firms}
+    tpex_company={str(x.get('公司代號','')):x for x in tpex_firms}
+    def issued_shares(row):
+        for key,value in row.items():
+            if '已發行普通股數' in str(key): return number(value)
+        return None
     is_common=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',code)) and (code in company if company else True)
     all_notices=[twse_notice(r) for r in notices.get('data',[]) if is_common(str(r[1]))]
     all_notices=[x for x in all_notices if x['date'] and x['date']<=as_of]
@@ -170,7 +199,7 @@ def main():
             close=as_of_bar['close'] if close is None else close
             change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
             volume=as_of_bar['volume'] if volume is None else volume
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
@@ -202,7 +231,7 @@ def main():
             close=as_of_bar['close'] if close is None else close
             change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
             volume=as_of_bar['volume'] if volume is None else volume
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
@@ -218,7 +247,7 @@ def main():
         cursor+=dt.timedelta(days=1)
         if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition and quotes','TPEX':'official attention, candidate, disposition and quotes'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition, quotes and MOPS issued common shares','TPEX':'official attention, candidate, disposition, quotes and MOPS issued common shares'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
     fingerprint=hashlib.sha256(raw.encode()).hexdigest()[:12]

@@ -27,6 +27,7 @@ export async function refreshOfficial(previous:MarketSnapshot):Promise<MarketSna
  const companyUrl='https://openapi.twse.com.tw/v1/opendata/t187ap03_L';
  const companies=await fetchJson<Row[]>(companyUrl);if(!Array.isArray(companies)||companies.length<100)throw new Error('普通股公司分類無法核對');sources.push(companyUrl);
  const companyCodes=new Set(companies.map(c=>String(c['公司代號'])));
+ const issuedSharesByCode=new Map(companies.map(c=>[String(c['公司代號']),numeric(c['已發行普通股數或TDR原股發行股數'])]));
  const symbols=new Set([...candidates.keys(),...todayNotices.map(n=>n.code),...dispositions.filter(d=>d.end&&d.end>=asOf).map(d=>d.code)].filter(code=>companyCodes.has(code)));
  const qByCode=new Map(quotes.filter(q=>toDate(q.Date)===asOf).map(q=>[String(q.Code),q]));
  const stocks:Stock[]=[];
@@ -37,7 +38,7 @@ export async function refreshOfficial(previous:MarketSnapshot):Promise<MarketSna
   // Keep official special-event annotations from the daily report.
   newBar.note=bars.findLast(b=>b.date===asOf)?.note||'';
   bars=[...new Map([...bars,newBar].map(b=>[b.date,b])).values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-150);
-  stocks.push({code,name:String(quote.Name),market:'TWSE',industry:old?.industry||'',close,change,changePercent:reference&&change!==null?change/reference*100:null,volume:numeric(quote.TradeVolume),pe:numeric(f.PEratio),pb:numeric(f.PBratio),valuationDate:asOf,bars,notices:notices.filter(n=>n.code===code).sort((a,b)=>b.date.localeCompare(a.date)),candidateReason:candidates.get(code)||null,dispositions:dispositions.filter(d=>d.code===code)});
+  stocks.push({code,name:String(quote.Name),market:'TWSE',industry:old?.industry||'',close,change,changePercent:reference&&change!==null?change/reference*100:null,volume:numeric(quote.TradeVolume),issuedShares:issuedSharesByCode.get(code)??null,pe:numeric(f.PEratio),pb:numeric(f.PBratio),valuationDate:asOf,bars,notices:notices.filter(n=>n.code===code).sort((a,b)=>b.date.localeCompare(a.date)),candidateReason:candidates.get(code)||null,dispositions:dispositions.filter(d=>d.code===code)});
  }
  const closed=new Set(holidayRows.filter(h=>!/(開始交易|最後交易)/.test(String(h.Name)+String(h.Description))).map(h=>toDate(h.Date)));
  const next=(date:string)=>{const d=new Date(`${date}T00:00:00Z`);do{d.setUTCDate(d.getUTCDate()+1);}while([0,6].includes(d.getUTCDay())||closed.has(d.toISOString().slice(0,10)));return d.toISOString().slice(0,10);};

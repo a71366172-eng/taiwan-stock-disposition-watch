@@ -24,6 +24,11 @@ export function validateScenario(input:unknown):Scenario{
   return result;
 }
 export function tickCents(c:number){return c<1000?1:c<5000?5:c<10000?10:c<50000?50:c<100000?100:500;}
+/** Rule six needs both 3,000 trading units and 5% turnover; common-stock units are 1,000 shares. */
+export function sixthClauseMinimumShares(issuedShares:number|null|undefined):number|null{
+  if(!positive(issuedShares))return null;
+  return Math.max(3_000_000,Math.ceil(issuedShares*0.05));
+}
 export function legalPrices(reference:number):number[]{
   if(!positive(reference)||reference>1000000)throw new Error('無效參考價');
   const base=Math.round(reference*100);const lo=Math.ceil(base*9/10),hi=Math.floor(base*11/10);const prices:number[]=[];
