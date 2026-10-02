@@ -35,5 +35,9 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 .stock-panel .table-scroll{overflow-x:auto}
 .stock-panel .table-scroll table:not(.risk-table){min-width:1250px}
 .stock-extra-metrics{min-width:270px}
+.expanded-stock-grid{grid-template-columns:minmax(0,1fr)}
+.expanded-stock-grid .side-column{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.expanded-stock-grid .stock-panel .table-scroll table:not(.risk-table){min-width:1100px}
+.expanded-stock-grid .stock-panel th,.expanded-stock-grid .stock-panel td{padding-left:8px;padding-right:8px}
 @media(max-width:1050px){.risk-table{min-width:950px}.risk-table thead tr,.risk-stock-row{grid-template-columns:145px 95px minmax(350px,1fr) 265px 30px}}
-@media(max-width:760px){.risk-table{min-width:950px!important}.risk-table thead{display:block}.risk-table thead tr,.risk-stock-row{grid-template-columns:145px 95px minmax(350px,1fr) 265px 30px}.stock-panel .table-scroll table:not(.risk-table){min-width:1250px}.stock-extra-metrics{min-width:270px}}
+@media(max-width:760px){.risk-table{min-width:950px!important}.risk-table thead{display:block}.risk-table thead tr,.risk-stock-row{grid-template-columns:145px 95px minmax(350px,1fr) 265px 30px}.stock-panel .table-scroll table:not(.risk-table),.expanded-stock-grid .stock-panel .table-scroll table:not(.risk-table){min-width:1100px}.stock-extra-metrics{min-width:270px}.expanded-stock-grid .side-column{grid-template-columns:1fr}}
