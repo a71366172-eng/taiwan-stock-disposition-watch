@@ -9,7 +9,7 @@ class Q {
   add(q:Q){return new Q(this.n*q.d+q.n*this.d,this.d*q.d)} sub(q:Q){return this.add(new Q(-q.n,q.d))} mul(q:Q){return new Q(this.n*q.n,this.d*q.d)} div(q:Q){return new Q(this.n*q.d,this.d*q.n)} cmp(q:Q){const v=this.n*q.d-q.n*this.d;return v<0n?-1:v>0n?1:0} abs(){return new Q(this.n<0n?-this.n:this.n,this.d)} num(){return Number(this.n)/Number(this.d)} trunc2(){return new Q(this.n*100n/this.d,100n)}
 }
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
-const positive=(x:number|null):x is number=>x!==null&&Number.isFinite(x)&&x>0;
+const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
 export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.3';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';

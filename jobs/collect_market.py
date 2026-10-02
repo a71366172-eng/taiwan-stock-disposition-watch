@@ -23,7 +23,7 @@ def get(url: str, required=True):
             req = urllib.request.Request(url, headers={'User-Agent': 'TaiwanStockWatch/0.1 (public-data research)', 'Accept':'application/json'})
             with urllib.request.urlopen(req, timeout=25) as resp:
                 payload = json.loads(resp.read().decode('utf-8-sig'))
-            if isinstance(payload, dict) and payload.get('stat') not in (None, 'OK'):
+            if isinstance(payload, dict) and payload.get('stat') is not None and str(payload['stat']).upper() != 'OK':
                 raise ValueError(str(payload.get('stat'))[:100])
             cache.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
             sources.append({'url':url, 'observedAt':dt.datetime.now(dt.timezone.utc).isoformat()})
@@ -73,6 +73,75 @@ def get_csv(url: str, required=True):
 def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
     except (ValueError, TypeError): return None
+
+def institutional_net_5(dates, market):
+    """Sum official daily three-institution net shares across five sessions."""
+    totals={}
+    for date in dates:
+        if market=='TWSE':
+            url=f'https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date={date.replace("-", "")}&selectType=ALLBUT0999'
+            report=get(url, False)
+            if not isinstance(report, dict) or not report.get('data'):
+                return None
+            fields=[strip(field) for field in report.get('fields',[])]
+            try: net_index=next(i for i,field in enumerate(fields) if '三大法人買賣超股數' in field)
+            except StopIteration:
+                errors.append(f'{url}: missing institutional net-share column')
+                return None
+            rows=((str(row[0]).strip(),number(row[net_index])) for row in report['data'] if len(row)>net_index)
+        else:
+            roc=dt.date.fromisoformat(date).year-1911
+            date_param=f'{roc}/{date[5:7]}/{date[8:10]}'
+            url='https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','se':'EW','t':'D','d':date_param})
+            report=get(url, False)
+            if not isinstance(report, dict) or not report.get('tables'):
+                return None
+            table=report['tables'][0]
+            fields=[strip(field) for field in table.get('fields',[])]
+            try: net_index=next(i for i,field in enumerate(fields) if '三大法人買賣超股數合計' in field)
+            except StopIteration:
+                errors.append(f'{url}: missing institutional net-share column')
+                return None
+            rows=((str(row[0]).strip(),number(row[net_index])) for row in table.get('data',[]) if len(row)>net_index)
+        for code,net in rows:
+            if net is not None and re.fullmatch(r'[1-9]\d{3}',code):
+                totals[code]=totals.get(code,0)+int(net)
+    return totals
+
+def day_trade_shares(as_of, market):
+    """Read per-stock official same-day round-trip volume, in shares."""
+    if market=='TWSE':
+        url=f'https://www.twse.com.tw/exchangeReport/TWTB4U?response=json&date={as_of.replace("-", "")}&selectType=All'
+        report=get(url,False)
+        if not isinstance(report,dict): return None
+        tables=report.get('tables') or [report]
+        for table in tables:
+            fields=[strip(field) for field in table.get('fields',[])]
+            try:
+                code_index=next(i for i,field in enumerate(fields) if '證券代號' in field)
+                shares_index=next(i for i,field in enumerate(fields) if '當日沖銷交易成交股數' in field)
+            except StopIteration: continue
+            rows=table.get('data') or []
+            if rows:
+                return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
+        errors.append(f'{url}: missing per-stock day-trading table')
+        return None
+    roc=dt.date.fromisoformat(as_of).year-1911
+    date_param=f'{roc}/{as_of[5:7]}/{as_of[8:10]}'
+    url='https://www.tpex.org.tw/web/stock/trading/intraday_stat/intraday_trading_stat_result.php?'+urllib.parse.urlencode({'l':'zh-tw','d':date_param,'s':'0,asc,0','o':'json'})
+    report=get(url,False)
+    if not isinstance(report,dict): return None
+    for table in report.get('tables',[]):
+        fields=[strip(field) for field in table.get('fields',[])]
+        try:
+            code_index=next(i for i,field in enumerate(fields) if '證券代號' in field)
+            shares_index=next(i for i,field in enumerate(fields) if '當日沖銷交易成交股數' in field)
+        except StopIteration: continue
+        rows=table.get('data') or []
+        if rows:
+            return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
+    errors.append(f'{url}: missing per-stock day-trading table')
+    return None
 
 def iso(v):
     digits = re.findall(r'\d+', str(v))
@@ -235,8 +304,25 @@ def main():
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
+    for stock in stocks:
+        company_row=(company if stock['market']=='TWSE' else tpex_company).get(stock['code'],{})
+        stock['paidInCapital']=number(company_row.get('實收資本額'))
+    day_trade_twse=day_trade_shares(as_of,'TWSE')
+    day_trade_tpex=day_trade_shares(as_of,'TPEX')
+    for stock in stocks:
+        reported=day_trade_twse if stock['market']=='TWSE' else day_trade_tpex
+        stock['dayTradeShares']=reported.get(stock['code']) if reported is not None else None
     # Calendar is derived from a broad-market listed stock's actual sessions, plus official holiday records for future dates.
     calendar=sorted({b['date'] for s in stocks for b in s['bars']})
+    last_five=calendar[-5:]
+    if len(last_five)==5 and last_five[-1]==as_of:
+        twse_net=institutional_net_5(last_five,'TWSE')
+        tpex_net=institutional_net_5(last_five,'TPEX')
+        for stock in stocks:
+            market_net=twse_net if stock['market']=='TWSE' else tpex_net
+            stock['institutionalNet5Shares']=market_net.get(stock['code'],0) if market_net is not None else None
+    else:
+        for stock in stocks: stock['institutionalNet5Shares']=None
     closed=set()
     for h in holidays:
         date=iso(h.get('Date',''))
@@ -247,7 +333,7 @@ def main():
         cursor+=dt.timedelta(days=1)
         if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition, quotes and MOPS issued common shares','TPEX':'official attention, candidate, disposition, quotes and MOPS issued common shares'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition, quotes, MOPS issued shares and five-session institutional net','TPEX':'official attention, candidate, disposition, quotes, MOPS issued shares and five-session institutional net'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
     fingerprint=hashlib.sha256(raw.encode()).hexdigest()[:12]
