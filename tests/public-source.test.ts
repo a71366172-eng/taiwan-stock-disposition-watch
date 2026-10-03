@@ -7,6 +7,7 @@ test('published official source links stay available', () => {
   assert.equal(publicSourceUrl('https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2330'), 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2330');
   assert.equal(publicSourceUrl('https://www.tpex.org.tw/www/zh-tw/bulletin/attention?cate=&code=6538&endDate=20261002&order=date&response=json&startDate=20260619&type=code'), 'https://www.tpex.org.tw/www/zh-tw/bulletin/attention?cate=&code=6538&endDate=20261002&order=date&response=json&startDate=20260619&type=code');
   assert.equal(publicSourceUrl('https://isin.twse.com.tw/isin/C_public.jsp?strMode=3'), 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=3');
+  assert.equal(publicSourceUrl('https://openapi.taifex.com.tw/v1/SSFLists'), 'https://openapi.taifex.com.tw/v1/SSFLists');
 });
 
 test('source links reject credentials, unexpected parameters, and unapproved hosts', () => {
