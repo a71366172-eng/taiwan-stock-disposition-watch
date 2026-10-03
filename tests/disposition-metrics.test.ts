@@ -20,3 +20,16 @@ test('20MA deviation is unavailable when fewer than 20 valid closes exist',()=>{
   assert.equal(metrics.ma20,null);
   assert.equal(metrics.ma20DeviationPercent,null);
 });
+
+test('5-day and 10-day changes compare with closes five and ten trading sessions earlier',()=>{
+  const bars=Array.from({length:11},(_,index)=>bar(index+1,index===0?80:index===5?100:index===10?110:90));
+  const metrics=dispositionMetrics(disposition,stock(bars),'2026-09-11');
+  assert.ok(Math.abs(metrics.fiveDayChangePercent!-10)<1e-10);
+  assert.ok(Math.abs(metrics.tenDayChangePercent!-37.5)<1e-10);
+});
+
+test('short history does not produce a misleading 5-day or 10-day change',()=>{
+  const metrics=dispositionMetrics(disposition,stock(Array.from({length:5},(_,index)=>bar(index+1,100))),'2026-09-05');
+  assert.equal(metrics.fiveDayChangePercent,null);
+  assert.equal(metrics.tenDayChangePercent,null);
+});
