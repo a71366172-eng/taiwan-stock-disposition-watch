@@ -76,8 +76,15 @@ def quote_url(date, market):
 
 
 def collect_day(task):
-    date, market = task
-    quotes = parse_quotes(fetch_json(quote_url(date, market)))
+    date, market, diagnostic = task
+    payload = fetch_json(quote_url(date, market))
+    quotes = parse_quotes(payload)
+    if diagnostic and not quotes:
+        if isinstance(payload, dict):
+            tables = payload.get('tables') or []
+            print(f'Comparison feed shape {market} {date}: keys={list(payload)[:12]}, fields={[table.get("fields") for table in tables[:2] if isinstance(table, dict)]}, sample={str((tables[0].get("data") or [])[:1])[:300] if tables and isinstance(tables[0], dict) else str(payload.get("data", ""))[:300]}', flush=True)
+        else:
+            print(f'Comparison feed shape {market} {date}: {type(payload).__name__} {str(payload)[:300]}', flush=True)
     return date, market, quotes
 
 
@@ -104,7 +111,7 @@ def main():
             if bar['date'] in dates and number(bar.get('close')) is not None:
                 entry['bars'][bar['date']] = bar['close']
     previous_dates = {name: set(previous.get('collectedDates', {}).get(name, [])) for name in ('TWSE', 'TPEX')}
-    tasks = [(date, name) for name in ('TWSE', 'TPEX') for date in dates if date not in previous_dates[name]]
+    tasks = [(date, name, date == dates[-1]) for name in ('TWSE', 'TPEX') for date in dates if date not in previous_dates[name]]
     collected = {name: previous_dates[name] & set(dates) for name in ('TWSE', 'TPEX')}
     with ThreadPoolExecutor(max_workers=4) as pool:
         for date, name, quotes in pool.map(collect_day, tasks):
