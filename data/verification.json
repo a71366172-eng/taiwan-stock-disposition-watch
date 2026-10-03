@@ -413,11 +413,13 @@
       "officialReason": "115年09月29日至115年10月02日連續四次",
       "reconstructed": {
         "official": true,
-        "paths": [],
+        "paths": [
+          "連續五日"
+        ],
         "firstStreak": 0,
-        "anyStreak": 1,
-        "nineCount": 1,
-        "twentyNineCount": 1
+        "anyStreak": 4,
+        "nineCount": 4,
+        "twentyNineCount": 6
       }
     },
     {
@@ -425,11 +427,14 @@
       "officialReason": "115年09月18日至115年10月02日等九個營業日已有五次",
       "reconstructed": {
         "official": true,
-        "paths": [],
+        "paths": [
+          "十日內六日",
+          "三十日內十二日"
+        ],
         "firstStreak": 0,
         "anyStreak": 0,
-        "nineCount": 0,
-        "twentyNineCount": 0
+        "nineCount": 5,
+        "twentyNineCount": 12
       }
     },
     {
@@ -437,11 +442,13 @@
       "officialReason": "115年10月01日至115年10月02日連續二次",
       "reconstructed": {
         "official": true,
-        "paths": [],
-        "firstStreak": 1,
-        "anyStreak": 1,
-        "nineCount": 1,
-        "twentyNineCount": 1
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 3,
+        "nineCount": 3,
+        "twentyNineCount": 3
       }
     }
   ]
