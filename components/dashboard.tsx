@@ -12,7 +12,7 @@ import {dispositionTier,dispositionTierLabel,type DispositionTier} from '../lib/
 import {loadLatestSnapshot} from '../lib/static-data';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition';
 function buildResults(snapshot:MarketSnapshot){return new Map(snapshot.stocks.map(stock=>{try{return [stock.code,simulate(stock,snapshot)] as const;}catch{return [stock.code,undefined] as const;}}));}
-function OfficialCandidateDot(){return <span className="official-candidate-dot" role="img" aria-label="官方累計候選" title="官方累計候選"/>;}
+function OfficialCandidateDot(){return <><span className="official-candidate-dot" role="img" aria-label="官方累計候選" title="官方累計候選"/><span className="badge blue">預計 1 個交易日內</span></>;}
 function gateProgress(stock:Stock,calendar:string[],asOf:string){
  const dates=calendar.filter(date=>date<=asOf),noticeDates=new Map(stock.notices.map(notice=>[notice.date,new Set(notice.rules)]));
  const first=(date:string)=>noticeDates.get(date)?.has(1)||false,any=(date:string)=>[...(noticeDates.get(date)||[])].some(rule=>rule>=1&&rule<=8);
