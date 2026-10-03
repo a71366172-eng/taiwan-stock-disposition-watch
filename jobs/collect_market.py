@@ -4,7 +4,8 @@ Standard library only. No credentials, no adjusted-price substitution.
 Run: python jobs/collect_market.py [--as-of YYYY-MM-DD]
 """
 from __future__ import annotations
-import argparse, csv, datetime as dt, hashlib, io, json, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse
+import argparse, csv, datetime as dt, hashlib, io, json, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse, unicodedata
+from html.parser import HTMLParser
 from concurrent.futures import ThreadPoolExecutor
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -12,8 +13,8 @@ RAW = ROOT / 'work' / 'raw'
 RAW.mkdir(parents=True, exist_ok=True)
 errors: list[str] = []
 sources: list[dict] = []
-PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'mopsfin.twse.com.tw'}
-PUBLIC_QUERY_KEYS = {'cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 't', 'type'}
+PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'openapi.taifex.com.tw', 'mopsfin.twse.com.tw', 'isin.twse.com.tw'}
+PUBLIC_QUERY_KEYS = {'cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 'strMode', 't', 'type'}
 
 def public_source_url(url: str):
     try:
@@ -103,8 +104,10 @@ def get_csv(url: str, required=True):
             with urllib.request.urlopen(req, timeout=25) as resp:
                 content=resp.read().decode('utf-8-sig')
             rows=list(csv.DictReader(io.StringIO(content)))
-            if len(rows)<500 or not rows or '公司代號' not in rows[0]:
-                raise ValueError('官方公司基本資料 CSV 欄位或筆數異常')
+            valid_company=bool(rows) and '公司代號' in rows[0]
+            valid_warrant=bool(rows) and any('標的' in key for key in rows[0])
+            if not rows or not (valid_company or valid_warrant) or (valid_warrant and len(rows)<100):
+                raise ValueError('官方 CSV 欄位異常')
             cache.write_text(content, encoding='utf-8-sig')
             record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
             return rows
@@ -114,6 +117,67 @@ def get_csv(url: str, required=True):
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
                 return None
+
+def get_text(url: str, required=True, retries=2, timeout=25):
+    cache=RAW/(hashlib.sha256(url.encode()).hexdigest()+'.html')
+    if cache.exists() and time.time()-cache.stat().st_mtime<3600:
+        record_source(url,dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat())
+        return cache.read_text(encoding='utf-8')
+    for attempt in range(retries):
+        try:
+            req=urllib.request.Request(url,headers={'User-Agent':'TaiwanStockWatch/0.1 (public-data research)','Accept':'text/html'})
+            with urllib.request.urlopen(req,timeout=timeout) as resp: content=resp.read().decode(resp.headers.get_content_charset() or 'cp950',errors='replace')
+            if '<table' not in content.lower(): raise ValueError('Expected official ISIN HTML table')
+            cache.write_text(content,encoding='utf-8')
+            record_source(url,dt.datetime.now(dt.timezone.utc).isoformat())
+            return content
+        except Exception as exc:
+            if attempt<retries-1: time.sleep(1+attempt)
+            else:
+                errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
+                if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
+                return None
+
+def get_tpex_warrants(as_of: str):
+    """Load the full, public TPEx warrant table from its official page API."""
+    url='https://www.tpex.org.tw/www/zh-tw/warrant/wntmand'
+    payload=post_json(url,{},retries=2,timeout=25)
+    # The browser's public data API lives under /www; reject HTML/error payloads.
+    if isinstance(payload,dict):
+        tables=payload.get('tables') or []
+        rows=tables[0].get('data') if tables and isinstance(tables[0],dict) else payload.get('data')
+        fields=tables[0].get('fields',[]) if tables else []
+        if isinstance(rows,list) and len(rows)>=100 and any('標的代號' in str(field) for field in fields):
+            return [dict(zip(fields,row)) for row in rows if isinstance(row,list) and len(row)==len(fields)]
+    return None
+
+def parse_isin_convertibles(document: str, as_of: str, common_codes: set[str]) -> set[str]:
+    """Read active convertible bond issuers from TWSE's official ISIN HTML table."""
+    class Rows(HTMLParser):
+        def __init__(self):
+            super().__init__(); self.rows=[]; self.row=None; self.cell=None
+        def handle_starttag(self, tag, attrs):
+            if tag=='tr': self.row=[]
+            elif tag in ('td','th') and self.row is not None: self.cell=[]
+        def handle_data(self, data):
+            if self.cell is not None: self.cell.append(data)
+        def handle_endtag(self, tag):
+            if tag in ('td','th') and self.cell is not None:
+                self.row.append(unicodedata.normalize('NFKC',' '.join(self.cell)).replace('\xa0',' ').strip()); self.cell=None
+            elif tag=='tr' and self.row is not None:
+                self.rows.append(self.row); self.row=None
+    parser=Rows(); parser.feed(document)
+    in_cb=False; result=set(); as_of_date=dt.date.fromisoformat(as_of)
+    for row in parser.rows:
+        first=row[0] if row else ''
+        if first=='轉換公司債': in_cb=True; continue
+        if first=='公司債': break
+        if not in_cb or len(row)<4: continue
+        match=re.match(r'([1-9]\d{3})\d{1,2}(?:\s|$)',first)
+        expiry=iso(row[3])
+        if match and match.group(1) in common_codes and expiry and dt.date.fromisoformat(expiry)>=as_of_date:
+            result.add(match.group(1))
+    return result
 
 def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
@@ -294,6 +358,16 @@ def main():
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
     firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv')
     tpex_firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv')
+    # Link active official derivatives/structured-product rosters back to
+    # their underlying common stocks. A failed feed stays unknown (None).
+    futures_raw=get('https://openapi.taifex.com.tw/v1/SSFLists',False)
+    listed_warrants=get('https://openapi.twse.com.tw/v1/opendata/t187ap37_L',False)
+    # The official TPEx page publishes its active warrant list as a public CSV.
+    tpex_warrants=get_tpex_warrants(as_of)
+    # This official ISIN table contains listed and OTC convertible bonds in
+    # separate sections, with the underlying code embedded in each bond code.
+    isin_url='https://isin.twse.com.tw/isin/C_public.jsp?strMode=3'
+    isin_document=get_text(isin_url,False)
     holidays=get('https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule',False) or []
     exrights=get('https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL',False)
     tpex_notices_raw=get('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information')
@@ -303,6 +377,33 @@ def main():
     # Company master restricts this build to common shares, not ETFs or warrants.
     company={str(x.get('公司代號','')):x for x in firms}
     tpex_company={str(x.get('公司代號','')):x for x in tpex_firms}
+    def product_codes(rows, keys):
+        result=set()
+        for row in rows or []:
+            if isinstance(row,dict):
+                for key in keys:
+                    value=str(next((value for source_key,value in row.items() if source_key==key or key in source_key), '')).strip()
+                    match=re.search(r'(?<!\d)([1-9]\d{3})(?!\d)',value)
+                    if match: result.add(match.group(1)); break
+        return result
+    futures_codes=product_codes(futures_raw,('StockCode',))
+    tpex_warrant_codes=set()
+    for warrant in tpex_warrants or []:
+        text=' '.join(str(value) for key,value in warrant.items() if '標的代號' in key)
+        match=re.search(r'(?<!\d)([1-9]\d{3})(?!\d)',text)
+        if match: tpex_warrant_codes.add(match.group(1))
+    cb_codes=parse_isin_convertibles(isin_document,as_of,set(company)|set(tpex_company)) if isin_document else set()
+    futures_available=isinstance(futures_raw,list) and len(futures_raw)>=100 and len(futures_codes)>=50
+    listed_name_to_code={unicodedata.normalize('NFKC',strip(row.get('公司簡稱',''))).replace(' ',''):code for roster in (company,tpex_company) for code,row in roster.items() if row.get('公司簡稱')}
+    listed_warrant_codes=set()
+    for row in listed_warrants or []:
+        underlying=next((value for key,value in row.items() if key.startswith('標的證券/')), '')
+        name=unicodedata.normalize('NFKC',strip(underlying)).replace(' ','')
+        code=listed_name_to_code.get(name)
+        if code: listed_warrant_codes.add(code)
+    warrant_codes=listed_warrant_codes|tpex_warrant_codes
+    warrants_available=isinstance(listed_warrants,list) and len(listed_warrants)>=100 and len(listed_warrant_codes)>=30 and isinstance(tpex_warrants,list) and len(tpex_warrants)>=100 and len(tpex_warrant_codes)>=30
+    cb_available=bool(isin_document) and len(cb_codes)>=50
     def issued_shares(row):
         for key,value in row.items():
             if '已發行普通股數' in str(key): return number(value)
@@ -475,7 +576,12 @@ def main():
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
-    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'industry':stock.get('industry',''),'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
+    for stock in stocks:
+        code=stock['code']
+        stock['hasStockFutures']=(code in futures_codes) if futures_available else None
+        stock['hasWarrants']=(code in warrant_codes) if warrants_available else None
+        stock['hasConvertibleBonds']=(code in cb_codes) if cb_available else None
+    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'industry':stock.get('industry',''),'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'hasStockFutures':stock.get('hasStockFutures'),'hasWarrants':stock.get('hasWarrants'),'hasConvertibleBonds':stock.get('hasConvertibleBonds'),'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
     for stock in stocks: stock['bars']=stock['bars'][-31:]
     for stock in stocks:
@@ -507,7 +613,8 @@ def main():
         cursor+=dt.timedelta(days=1)
         if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    product_coverage={'stockFutures':futures_available,'warrants':warrants_available,'convertibleBonds':cb_available}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
     fingerprint=hashlib.sha256(raw.encode()).hexdigest()[:12]
@@ -516,7 +623,7 @@ def main():
     tmp=dest/'market.pending.json'; tmp.write_text(raw,encoding='utf-8'); tmp.replace(dest/'market.json')
     public=ROOT/'public'/'data'; public.mkdir(parents=True,exist_ok=True)
     (public/'market.json').write_text(raw,encoding='utf-8')
-    screener_result={'asOf':as_of,'generatedAt':result['generatedAt'],'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'stocks':screener_stocks}
+    screener_result={'asOf':as_of,'generatedAt':result['generatedAt'],'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'productCoverage':product_coverage,'stocks':screener_stocks}
     screener_raw=json.dumps(screener_result,ensure_ascii=False,separators=(',',':'))
     (dest/'screener.json').write_text(screener_raw,encoding='utf-8')
     screener_public=public/'screener.json'; screener_public.parent.mkdir(parents=True,exist_ok=True); screener_public.write_text(screener_raw,encoding='utf-8')

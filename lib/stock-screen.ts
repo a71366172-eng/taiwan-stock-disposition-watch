@@ -23,7 +23,7 @@ export function buildScreenRows(snapshot:ScreenerSnapshot):ScreenRow[]{
   });
 }
 
-export function screenStocks(rows:ScreenRow[],filters:{query:string;market:string;industry?:string;minPrice:string;maxPrice:string;minChangeToday?:string;maxChangeToday?:string;minChange30:string;maxChange30:string;minVolume:string;minTurnover:string},sort:ScreenSort,direction:SortDirection='desc'){
+export function screenStocks(rows:ScreenRow[],filters:{query:string;market:string;industry?:string;stockFutures?:string;warrants?:string;convertibleBonds?:string;minPrice:string;maxPrice:string;minChangeToday?:string;maxChangeToday?:string;minChange30:string;maxChange30:string;minVolume:string;minTurnover:string},sort:ScreenSort,direction:SortDirection='desc'){
   const numberOrNull=(value:string)=>value.trim()===''?null:Number(value);
   const minPrice=numberOrNull(filters.minPrice),maxPrice=numberOrNull(filters.maxPrice),minChangeToday=numberOrNull(filters.minChangeToday??''),maxChangeToday=numberOrNull(filters.maxChangeToday??''),minChange=numberOrNull(filters.minChange30),maxChange=numberOrNull(filters.maxChange30),minVolume=numberOrNull(filters.minVolume),minTurnover=numberOrNull(filters.minTurnover);
   return rows.filter(row=>{
@@ -31,6 +31,9 @@ export function screenStocks(rows:ScreenRow[],filters:{query:string;market:strin
     return (!filters.query||`${stock.code} ${stock.name}`.toLocaleLowerCase().includes(filters.query.trim().toLocaleLowerCase()))
       &&(filters.market==='ALL'||stock.market===filters.market)
       &&(!filters.industry||filters.industry==='ALL'||(filters.industry==='__UNCLASSIFIED__'?!stock.industry?.trim():stock.industry===filters.industry))
+      &&(filters.stockFutures==='ALL'||filters.stockFutures===undefined||(filters.stockFutures==='YES'?stock.hasStockFutures===true:stock.hasStockFutures===false))
+      &&(filters.warrants==='ALL'||filters.warrants===undefined||(filters.warrants==='YES'?stock.hasWarrants===true:stock.hasWarrants===false))
+      &&(filters.convertibleBonds==='ALL'||filters.convertibleBonds===undefined||(filters.convertibleBonds==='YES'?stock.hasConvertibleBonds===true:stock.hasConvertibleBonds===false))
       &&(minPrice===null||(stock.close!==null&&stock.close>=minPrice))&&(maxPrice===null||(stock.close!==null&&stock.close<=maxPrice))
       &&(minChangeToday===null||(stock.changePercent!==null&&stock.changePercent>=minChangeToday))&&(maxChangeToday===null||(stock.changePercent!==null&&stock.changePercent<=maxChangeToday))
       &&(minChange===null||(row.change30!==null&&row.change30>=minChange))&&(maxChange===null||(row.change30!==null&&row.change30<=maxChange))

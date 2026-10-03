@@ -40,3 +40,15 @@ test('industry filter and sortable industry header support classified and unclas
   assert.deepEqual(screenStocks(rows,{...filters,industry:'__UNCLASSIFIED__'},'code').map(row=>row.stock.code),['3333']);
   assert.deepEqual(screenStocks(rows,filters,'industry','asc').map(row=>row.stock.code),['3333','1111','2222']);
 });
+
+test('derivative product filters distinguish yes, no, and unavailable data',()=>{
+  const rows=buildScreenRows(snapshot([
+    {...stock('1111',[10]),hasStockFutures:true,hasWarrants:false,hasConvertibleBonds:true},
+    {...stock('2222',[10]),hasStockFutures:false,hasWarrants:true,hasConvertibleBonds:false},
+    {...stock('3333',[10]),hasStockFutures:null,hasWarrants:undefined,hasConvertibleBonds:null},
+  ]));
+  assert.deepEqual(screenStocks(rows,{...filters,stockFutures:'YES'},'code').map(row=>row.stock.code),['1111']);
+  assert.deepEqual(screenStocks(rows,{...filters,warrants:'NO'},'code').map(row=>row.stock.code),['1111']);
+  assert.deepEqual(screenStocks(rows,{...filters,convertibleBonds:'YES'},'code').map(row=>row.stock.code),['1111']);
+  assert.deepEqual(screenStocks(rows,{...filters,stockFutures:'NO'},'code').map(row=>row.stock.code),['2222']);
+});
