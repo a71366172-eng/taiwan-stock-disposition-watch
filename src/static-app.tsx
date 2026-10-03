@@ -5,6 +5,7 @@ import {loadLatestSnapshot} from '../lib/static-data';
 import {Dashboard} from '../components/dashboard';
 import {DispositionStocks} from '../components/disposition-stocks';
 import {StockDetail} from '../components/stock-detail';
+import {StockCompare} from '../components/stock-compare';
 import Methodology from '../app/methodology/page';
 import {SiteShell} from '../components/site-shell';
 import {listLocalSimulations} from '../lib/local-simulations';
@@ -20,6 +21,7 @@ export function StaticApp(){
  if(!snapshot)return <SiteShell><section className="panel"><div className="empty-state"><h2>{error||'正在載入最新市場快照…'}</h2><p>{error?'請確認 public/data/market.json 已隨網站發布。':'將優先讀取 Supabase，失敗時改用靜態快照。'}</p></div></section></SiteShell>;
  if(path==='/methodology')return <Methodology/>;
  if(path==='/status')return <Status snapshot={snapshot} storage={storage}/>;
+ if(path==='/compare')return <StockCompare snapshot={snapshot}/>;
  if(path==='/history')return <StaticHistory/>;
  if(path==='/dispositions')return <DispositionStocks snapshot={snapshot}/>;
  const match=path.match(/^\/stocks\/(\d{4})$/),stock=match?snapshot.stocks.find(item=>item.code===match[1]):undefined;

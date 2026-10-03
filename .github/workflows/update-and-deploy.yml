@@ -37,11 +37,13 @@ jobs:
       - name: Collect official TWSE and TPEx data
         continue-on-error: true # Keep deploying the last verified snapshot if the two public feeds temporarily report different dates.
         run: python jobs/collect_market.py
+      - name: Collect all-stock comparison history
+        run: python jobs/collect_comparison.py
       - name: Verify snapshot and rules
         run: |
           npm run data:verify
-          node --experimental-strip-types --test tests/rules.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts
-          python -m unittest discover -s tests -p 'test_source_redaction.py'
+          node --experimental-strip-types --test tests/rules.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts tests/stock-comparison.test.ts
+          python -m unittest discover -s tests -p 'test_*.py'
       - name: Publish immutable snapshot to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -56,7 +58,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add data/market.json public/data/market.json data/verification.json
+          git add data/market.json public/data/market.json data/verification.json data/comparison.json public/data/comparison.json
           git diff --cached --quiet || git commit -m "data: update official market snapshot"
           git push
       - name: Build static site

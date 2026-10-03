@@ -1,0 +1,14 @@
+.compare-panel{margin-bottom:24px}
+.compare-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px 22px}
+.compare-inputs label{display:grid;gap:7px;color:#aebbc4;font-size:12px}
+.compare-inputs input{width:100%;min-width:0;padding:11px 12px;background:#252a2e;border:1px solid #475058;border-radius:6px;color:#e8edf0;font-size:14px}
+.compare-inputs input:focus{outline:2px solid #348cff;outline-offset:2px}
+.compare-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:0 22px 18px}
+.compare-summary>div{min-width:0;padding:12px;background:#252a2e;border:1px solid #41494f;border-radius:7px}
+.compare-summary small,.compare-summary span{display:block;color:#9caab3;font-size:11px;line-height:1.5}
+.compare-summary strong{display:block;margin:7px 0 3px;color:#e8edf0;font:650 20px Consolas,monospace}
+.compare-summary strong.up{color:#ff737a}.compare-summary strong.down{color:#4fd2a2}
+.compare-chart{height:360px;margin:4px 18px 22px}
+.compare-note{margin:0 22px 20px;color:#b8c4ca;font-size:13px}
+@media(max-width:950px){.compare-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.compare-inputs{grid-template-columns:1fr;padding:16px}.compare-summary{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 16px 16px}.compare-summary strong{font-size:17px}.compare-chart{height:300px;margin:0 6px 18px}}
