@@ -201,6 +201,14 @@ def roc_date(value: str):
     date=dt.date.fromisoformat(value)
     return f'{date.year-1911:03d}/{date.month:02d}/{date.day:02d}'
 
+def fill_quote_from_bar(bar, close, change, volume):
+    if not bar: return close,change,volume
+    close=bar.get('close') if close is None else close
+    reference=bar.get('reference')
+    if change is None and close is not None and reference is not None: change=close-reference
+    volume=bar.get('volume') if volume is None else volume
+    return close,change,volume
+
 CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14}
 def strip(v): return re.sub('<[^>]+>', '', str(v)).strip()
 def notice_rules(reason):
@@ -421,10 +429,7 @@ def main():
         close=number(q.get('ClosingPrice')) if q else None
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradeVolume')) if q else None
-        if as_of_bar:
-            close=as_of_bar['close'] if close is None else close
-            change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
-            volume=as_of_bar['volume'] if volume is None else volume
+        close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
         return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
@@ -460,10 +465,7 @@ def main():
         close=number(q.get('Close')) if q else None
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradingShares')) if q else None
-        if as_of_bar:
-            close=as_of_bar['close'] if close is None else close
-            change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
-            volume=as_of_bar['volume'] if volume is None else volume
+        close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
         return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:

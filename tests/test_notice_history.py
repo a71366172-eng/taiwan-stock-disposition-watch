@@ -10,6 +10,12 @@ from jobs.collect_market import tpex_historical_notices
 
 
 class TpexHistoricalNoticeTests(unittest.TestCase):
+    def test_quote_fallback_tolerates_older_bars_without_reference(self):
+        self.assertEqual(
+            collect_market.fill_quote_from_bar({"close": 41.5, "volume": 12000}, None, None, None),
+            (41.5, None, 12000),
+        )
+
     def test_parses_official_table_rows_for_nonconsecutive_history(self):
         payload = {
             "tables": [{
