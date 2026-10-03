@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
+import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
 const context={asOf:calendar.at(-1)!,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendar,calendarVerified:true};
@@ -69,4 +70,12 @@ test('three-session risk estimates the earliest continued countable-attention pa
  const notices=[2,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
  const projected=forecastDispositionRisk({...base,notices},forecastContext);
  assert.equal(projected?.days,3);assert.ok(projected?.paths.includes('第 1–8 款連續五日'));
+});
+test('guaranteed next-session label requires official candidate and first-clause coverage across all legal prices',()=>{
+ const robust={...base,close:109,candidateReason:'官方累計候選',bars:base.bars.map((bar,index)=>index>=calendar.length-5?{...bar,close:109,reference:100}:bar)};
+ const robustResult=simulate(robust,context);
+ assert.equal(isGuaranteedDispositionNextSession(robust,robustResult),true);
+ assert.equal(isGuaranteedDispositionNextSession({...robust,candidateReason:null},robustResult),false);
+ const narrow={...robust,bars:base.bars};
+ assert.equal(isGuaranteedDispositionNextSession(narrow,simulate(narrow,context)),false);
 });

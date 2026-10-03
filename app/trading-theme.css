@@ -54,3 +54,4 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 .disposition-header-button span{color:#79bbff;font-size:12px}
 .disposition-header-reason{font-size:10px}
 @media(max-width:760px){.disposition-list-header{min-width:760px;grid-template-columns:150px minmax(390px,1fr) 180px}.disposition-header-stock>span{display:none}}
+.risk-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.risk-badges .badge{white-space:nowrap}.badge.must-close-badge{background:#762b35;color:#ffd2d6;border:1px solid #b64655}.stock-panel td .must-close-badge{display:inline-flex;margin-left:5px}
