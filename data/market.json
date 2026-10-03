@@ -8,7 +8,7 @@
     "2026-10-06",
     "2026-10-07"
   ],
-  "generatedAt": "2026-10-03T10:56:24.803835+00:00",
+  "generatedAt": "2026-10-03T11:18:13.065359+00:00",
   "calendarVerified": true,
   "classificationVerified": true,
   "corporateActionsAvailable": true,
@@ -25995,667 +25995,667 @@
   "sources": [
     {
       "url": "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
-      "observedAt": "2026-10-03T10:55:07.694918+00:00"
+      "observedAt": "2026-10-03T11:17:02.922588+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes",
-      "observedAt": "2026-10-03T10:55:10.220799+00:00"
+      "observedAt": "2026-10-03T11:17:04.387410+00:00"
     },
     {
       "url": "https://www.twse.com.tw/announcement/notice?response=json&startDate=20260619&endDate=20261002",
-      "observedAt": "2026-10-03T10:55:12.959466+00:00"
+      "observedAt": "2026-10-03T11:17:06.665011+00:00"
     },
     {
       "url": "https://www.twse.com.tw/announcement/notetrans?response=json&date=20261002",
-      "observedAt": "2026-10-03T10:55:14.194289+00:00"
+      "observedAt": "2026-10-03T11:17:07.665690+00:00"
     },
     {
       "url": "https://www.twse.com.tw/announcement/punish?response=json&startDate=20260619&endDate=20261002",
-      "observedAt": "2026-10-03T10:55:16.116367+00:00"
+      "observedAt": "2026-10-03T11:17:09.422514+00:00"
     },
     {
       "url": "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL",
-      "observedAt": "2026-10-03T10:55:17.263866+00:00"
+      "observedAt": "2026-10-03T11:17:10.634649+00:00"
     },
     {
       "url": "https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv",
-      "observedAt": "2026-10-03T10:55:19.380642+00:00"
+      "observedAt": "2026-10-03T11:17:12.354928+00:00"
     },
     {
       "url": "https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv",
-      "observedAt": "2026-10-03T10:55:21.231930+00:00"
+      "observedAt": "2026-10-03T11:17:15.033088+00:00"
     },
     {
       "url": "https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule",
-      "observedAt": "2026-10-03T10:55:22.004591+00:00"
+      "observedAt": "2026-10-03T11:17:15.736272+00:00"
     },
     {
       "url": "https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL",
-      "observedAt": "2026-10-03T10:55:22.787451+00:00"
+      "observedAt": "2026-10-03T11:17:16.417729+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_information",
-      "observedAt": "2026-10-03T10:55:23.043204+00:00"
+      "observedAt": "2026-10-03T11:17:17.302230+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_note",
-      "observedAt": "2026-10-03T10:55:23.343129+00:00"
+      "observedAt": "2026-10-03T11:17:17.566548+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/openapi/v1/tpex_disposal_information",
-      "observedAt": "2026-10-03T10:55:24.694111+00:00"
+      "observedAt": "2026-10-03T11:17:18.763608+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis",
-      "observedAt": "2026-10-03T10:55:26.463157+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2030",
-      "observedAt": "2026-10-03T10:55:28.385822+00:00"
+      "observedAt": "2026-10-03T11:17:20.621266+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=1709",
-      "observedAt": "2026-10-03T10:55:28.387081+00:00"
+      "observedAt": "2026-10-03T11:17:21.462649+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:28.405261+00:00"
+      "observedAt": "2026-10-03T11:17:21.481033+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2030",
+      "observedAt": "2026-10-03T11:17:21.587502+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:28.541546+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2030",
-      "observedAt": "2026-10-03T10:55:29.773957+00:00"
+      "observedAt": "2026-10-03T11:17:21.614402+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=1709",
-      "observedAt": "2026-10-03T10:55:29.793346+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:29.804977+00:00"
+      "observedAt": "2026-10-03T11:17:22.424761+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:29.892072+00:00"
+      "observedAt": "2026-10-03T11:17:22.424948+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2030",
+      "observedAt": "2026-10-03T11:17:22.573684+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2033",
+      "observedAt": "2026-10-03T11:17:22.575720+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:30.963131+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2340",
-      "observedAt": "2026-10-03T10:55:30.991781+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:31.123947+00:00"
+      "observedAt": "2026-10-03T11:17:23.551088+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2455",
-      "observedAt": "2026-10-03T10:55:31.125424+00:00"
+      "observedAt": "2026-10-03T11:17:23.551323+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=2305",
+      "observedAt": "2026-10-03T11:17:23.551666+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2340",
+      "observedAt": "2026-10-03T11:17:23.676544+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2340",
-      "observedAt": "2026-10-03T10:55:32.169112+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:32.369076+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:32.399395+00:00"
+      "observedAt": "2026-10-03T11:17:24.514778+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2455",
-      "observedAt": "2026-10-03T10:55:32.561609+00:00"
+      "observedAt": "2026-10-03T11:17:24.518531+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=2033",
+      "observedAt": "2026-10-03T11:17:24.529023+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=2305",
+      "observedAt": "2026-10-03T11:17:24.532566+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2466",
-      "observedAt": "2026-10-03T10:55:33.174687+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:33.383675+00:00"
+      "observedAt": "2026-10-03T11:17:25.655532+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:33.791790+00:00"
+      "observedAt": "2026-10-03T11:17:25.666038+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2468",
-      "observedAt": "2026-10-03T10:55:33.913659+00:00"
+      "observedAt": "2026-10-03T11:17:25.805626+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=2033",
+      "observedAt": "2026-10-03T11:17:25.808103+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2466",
-      "observedAt": "2026-10-03T10:55:34.540305+00:00"
+      "observedAt": "2026-10-03T11:17:26.617525+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=2033",
-      "observedAt": "2026-10-03T10:55:34.547232+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2468",
-      "observedAt": "2026-10-03T10:55:35.199508+00:00"
+      "observedAt": "2026-10-03T11:17:26.630100+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=2305",
-      "observedAt": "2026-10-03T10:55:35.203676+00:00"
+      "observedAt": "2026-10-03T11:17:26.771378+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2484",
-      "observedAt": "2026-10-03T10:55:35.879149+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2468",
+      "observedAt": "2026-10-03T11:17:26.815569+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:35.919220+00:00"
+      "observedAt": "2026-10-03T11:17:27.742657+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3055",
-      "observedAt": "2026-10-03T10:55:36.383279+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=2484",
+      "observedAt": "2026-10-03T11:17:27.884354+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3094",
-      "observedAt": "2026-10-03T10:55:36.386223+00:00"
+      "observedAt": "2026-10-03T11:17:27.919474+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3055",
+      "observedAt": "2026-10-03T11:17:27.962730+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:37.086042+00:00"
+      "observedAt": "2026-10-03T11:17:28.710937+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=2484",
-      "observedAt": "2026-10-03T10:55:37.381096+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3055",
-      "observedAt": "2026-10-03T10:55:37.429271+00:00"
+      "observedAt": "2026-10-03T11:17:28.935012+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3094",
-      "observedAt": "2026-10-03T10:55:37.593558+00:00"
+      "observedAt": "2026-10-03T11:17:28.939940+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:38.105582+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3055",
+      "observedAt": "2026-10-03T11:17:28.953103+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3443",
-      "observedAt": "2026-10-03T10:55:38.270347+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3167",
-      "observedAt": "2026-10-03T10:55:38.389131+00:00"
+      "observedAt": "2026-10-03T11:17:29.852636+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3518",
-      "observedAt": "2026-10-03T10:55:38.801069+00:00"
+      "observedAt": "2026-10-03T11:17:30.044856+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:39.268924+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=3016",
+      "observedAt": "2026-10-03T11:17:30.056144+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3167",
+      "observedAt": "2026-10-03T11:17:30.056750+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3443",
-      "observedAt": "2026-10-03T10:55:39.272083+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3518",
-      "observedAt": "2026-10-03T10:55:39.641469+00:00"
+      "observedAt": "2026-10-03T11:17:30.787545+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3167",
-      "observedAt": "2026-10-03T10:55:39.756925+00:00"
+      "observedAt": "2026-10-03T11:17:31.173448+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=3016",
+      "observedAt": "2026-10-03T11:17:31.186163+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3518",
+      "observedAt": "2026-10-03T11:17:31.194402+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=3701",
-      "observedAt": "2026-10-03T10:55:40.275774+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:40.301310+00:00"
+      "observedAt": "2026-10-03T11:17:31.762758+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6168",
-      "observedAt": "2026-10-03T10:55:41.076439+00:00"
+      "observedAt": "2026-10-03T11:17:32.299039+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6155",
-      "observedAt": "2026-10-03T10:55:41.077780+00:00"
+      "observedAt": "2026-10-03T11:17:32.325018+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=3016",
+      "observedAt": "2026-10-03T11:17:32.497153+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=3701",
-      "observedAt": "2026-10-03T10:55:41.274506+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=3016",
-      "observedAt": "2026-10-03T10:55:41.521020+00:00"
+      "observedAt": "2026-10-03T11:17:32.945228+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6155",
-      "observedAt": "2026-10-03T10:55:42.302878+00:00"
+      "observedAt": "2026-10-03T11:17:33.464404+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6168",
-      "observedAt": "2026-10-03T10:55:42.314039+00:00"
+      "observedAt": "2026-10-03T11:17:33.472382+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=3016",
+      "observedAt": "2026-10-03T11:17:33.483269+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6225",
-      "observedAt": "2026-10-03T10:55:42.662466+00:00"
+      "observedAt": "2026-10-03T11:17:33.930080+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6426",
-      "observedAt": "2026-10-03T10:55:42.876883+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:43.684377+00:00"
+      "observedAt": "2026-10-03T11:17:34.436614+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6526",
-      "observedAt": "2026-10-03T10:55:43.702667+00:00"
+      "observedAt": "2026-10-03T11:17:34.455152+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6533",
+      "observedAt": "2026-10-03T11:17:34.608047+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6225",
-      "observedAt": "2026-10-03T10:55:43.704990+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6426",
-      "observedAt": "2026-10-03T10:55:43.920798+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8021",
-      "observedAt": "2026-10-03T10:55:44.762713+00:00"
+      "observedAt": "2026-10-03T11:17:34.911028+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:44.842473+00:00"
+      "observedAt": "2026-10-03T11:17:35.734133+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6526",
-      "observedAt": "2026-10-03T10:55:44.845917+00:00"
+      "observedAt": "2026-10-03T11:17:35.869149+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6426",
+      "observedAt": "2026-10-03T11:17:35.931637+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:44.891413+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=8021",
-      "observedAt": "2026-10-03T10:55:45.744953+00:00"
+      "observedAt": "2026-10-03T11:17:35.933364+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:45.880891+00:00"
+      "observedAt": "2026-10-03T11:17:36.664534+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:45.890934+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8021",
+      "observedAt": "2026-10-03T11:17:36.858372+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:45.903809+00:00"
+      "observedAt": "2026-10-03T11:17:36.905901+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8996",
-      "observedAt": "2026-10-03T10:55:46.907460+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8201",
+      "observedAt": "2026-10-03T11:17:36.928628+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:47.077924+00:00"
+      "observedAt": "2026-10-03T11:17:37.611961+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:47.103592+00:00"
+      "observedAt": "2026-10-03T11:17:37.891870+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:47.235058+00:00"
+      "observedAt": "2026-10-03T11:17:37.903254+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=8996",
-      "observedAt": "2026-10-03T10:55:48.042250+00:00"
-    },
-    {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:48.075253+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=8021",
+      "observedAt": "2026-10-03T11:17:37.920824+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:48.083576+00:00"
+      "observedAt": "2026-10-03T11:17:38.536981+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20261001&stockNo=8996",
+      "observedAt": "2026-10-03T11:17:38.861693+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260801&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:48.648853+00:00"
+      "observedAt": "2026-10-03T11:17:39.104064+00:00"
     },
     {
-      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=6533",
-      "observedAt": "2026-10-03T10:55:49.108145+00:00"
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=6533",
+      "observedAt": "2026-10-03T11:17:39.115580+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:49.119691+00:00"
+      "observedAt": "2026-10-03T11:17:39.476923+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260901&stockNo=8996",
+      "observedAt": "2026-10-03T11:17:39.997854+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260701&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:49.664116+00:00"
+      "observedAt": "2026-10-03T11:17:40.097580+00:00"
+    },
+    {
+      "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=6533",
+      "observedAt": "2026-10-03T11:17:40.254364+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=6672",
-      "observedAt": "2026-10-03T10:55:50.328106+00:00"
+      "observedAt": "2026-10-03T11:17:40.430833+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260601&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:50.674449+00:00"
+      "observedAt": "2026-10-03T11:17:41.273814+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=20260501&stockNo=8201",
-      "observedAt": "2026-10-03T10:55:51.748120+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3219&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:52.342523+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3374&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:52.347368+00:00"
+      "observedAt": "2026-10-03T11:17:42.268337+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=2221&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:52.927260+00:00"
+      "observedAt": "2026-10-03T11:17:42.948082+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3219&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:42.955838+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3163&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:52.970020+00:00"
+      "observedAt": "2026-10-03T11:17:42.958759+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3374&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:53.016788+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=2221&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:53.386433+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3219&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:53.632938+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3374&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:42.960020+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3163&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:53.635142+00:00"
+      "observedAt": "2026-10-03T11:17:44.486070+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3374&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:44.996681+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=2221&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:45.080543+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3219&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:45.138817+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3441&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:53.639224+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4174&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.106797+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3441&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.137462+00:00"
+      "observedAt": "2026-10-03T11:17:45.552940+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.479066+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4174&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.582781+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4542&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.616150+00:00"
+      "observedAt": "2026-10-03T11:17:45.971133+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3624&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:54.745475+00:00"
+      "observedAt": "2026-10-03T11:17:46.167254+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3441&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:46.202355+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4174&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:46.267246+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:55.002485+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4556&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:55.254444+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4556&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:55.772223+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4542&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:55.852231+00:00"
+      "observedAt": "2026-10-03T11:17:46.459315+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3624&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:56.306147+00:00"
+      "observedAt": "2026-10-03T11:17:47.226863+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4556&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:47.833253+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4542&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:47.836021+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4174&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:47.841980+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F08%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:56.520103+00:00"
+      "observedAt": "2026-10-03T11:17:47.853666+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5013&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:56.921576+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4556&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:48.855733+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F07%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:57.243906+00:00"
+      "observedAt": "2026-10-03T11:17:48.873209+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4542&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:48.873875+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4979&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:57.494631+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5013&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:57.585109+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4979&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:57.985566+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5016&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:58.296249+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6173&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:58.661946+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5016&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:58.964372+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6173&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:59.314507+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4991&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:59.559670+00:00"
+      "observedAt": "2026-10-03T11:17:49.466433+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F06%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:59.615747+00:00"
+      "observedAt": "2026-10-03T11:17:49.487263+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6218&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:55:59.633155+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5013&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:49.501007+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6244&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.002240+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4991&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:49.797481+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4979&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:49.961433+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=3455&date=2026%2F05%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.081417+00:00"
+      "observedAt": "2026-10-03T11:17:49.985522+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6218&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.090357+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6244&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.453863+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5013&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.115490+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=4991&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.663803+00:00"
+      "observedAt": "2026-10-03T11:17:50.296349+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6661&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.895892+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5016&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.421798+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6173&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.471466+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6218&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.571756+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6244&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.773972+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=5016&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.904810+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6173&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:50.934263+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6218&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:51.061833+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6244&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:51.388397+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:00.934668+00:00"
+      "observedAt": "2026-10-03T11:17:51.398630+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:01.133253+00:00"
+      "observedAt": "2026-10-03T11:17:52.237857+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6661&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:01.519898+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:01.533256+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6661&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:52.256979+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7772&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:01.533556+00:00"
+      "observedAt": "2026-10-03T11:17:52.263089+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7792&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:01.980284+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F08%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.303214+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7772&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.325557+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:52.263532+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.386898+00:00"
+      "observedAt": "2026-10-03T11:17:52.729356+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7792&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.426677+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6661&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:52.740659+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F07%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.757091+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F08%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:52.746526+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F08%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.857507+00:00"
+      "observedAt": "2026-10-03T11:17:53.200785+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8227&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.881237+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7792&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.202512+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8084&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:02.925119+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F07%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.225971+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8227&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:03.420711+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F06%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:03.421541+00:00"
-    },
-    {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8084&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.042161+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7772&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.311207+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F07%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.070113+00:00"
+      "observedAt": "2026-10-03T11:17:53.659098+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F05%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.079166+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=7792&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.659936+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8358&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.083372+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F06%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.688532+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8358&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.699204+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8084&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:53.776634+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=9960&date=2026%2F10%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.706589+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8227&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:54.130488+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F06%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:04.709259+00:00"
+      "observedAt": "2026-10-03T11:17:54.140630+00:00"
     },
     {
-      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=9960&date=2026%2F09%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:05.165841+00:00"
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6538&date=2026%2F05%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:54.148278+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=6708&date=2026%2F05%2F01&id=&response=json",
-      "observedAt": "2026-10-03T10:56:05.167280+00:00"
+      "observedAt": "2026-10-03T11:17:54.599253+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8227&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:54.603752+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8358&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:54.652163+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8084&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:54.890757+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=9960&date=2026%2F10%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:55.070388+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=8358&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:55.185221+00:00"
+    },
+    {
+      "url": "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?code=9960&date=2026%2F09%2F01&id=&response=json",
+      "observedAt": "2026-10-03T11:17:55.570076+00:00"
     },
     {
       "url": "https://www.twse.com.tw/exchangeReport/TWTB4U?response=json&date=20261002&selectType=All",
-      "observedAt": "2026-10-03T10:56:07.055347+00:00"
+      "observedAt": "2026-10-03T11:17:57.078247+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/trading/intraday_stat/intraday_trading_stat_result.php?l=zh-tw&d=115%2F10%2F02&s=0%2Casc%2C0&o=json",
-      "observedAt": "2026-10-03T10:56:07.760604+00:00"
+      "observedAt": "2026-10-03T11:17:57.358330+00:00"
     },
     {
       "url": "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=20260924&selectType=ALLBUT0999",
-      "observedAt": "2026-10-03T10:56:10.507725+00:00"
+      "observedAt": "2026-10-03T11:17:59.798027+00:00"
     },
     {
       "url": "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=20260929&selectType=ALLBUT0999",
-      "observedAt": "2026-10-03T10:56:13.464615+00:00"
+      "observedAt": "2026-10-03T11:18:01.944577+00:00"
     },
     {
       "url": "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=20260930&selectType=ALLBUT0999",
-      "observedAt": "2026-10-03T10:56:14.837495+00:00"
+      "observedAt": "2026-10-03T11:18:03.587393+00:00"
     },
     {
       "url": "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=20261001&selectType=ALLBUT0999",
-      "observedAt": "2026-10-03T10:56:16.033528+00:00"
+      "observedAt": "2026-10-03T11:18:04.938577+00:00"
     },
     {
       "url": "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=20261002&selectType=ALLBUT0999",
-      "observedAt": "2026-10-03T10:56:18.823106+00:00"
+      "observedAt": "2026-10-03T11:18:06.204134+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=115%2F09%2F24",
-      "observedAt": "2026-10-03T10:56:19.725174+00:00"
+      "observedAt": "2026-10-03T11:18:07.260561+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=115%2F09%2F29",
-      "observedAt": "2026-10-03T10:56:21.104281+00:00"
+      "observedAt": "2026-10-03T11:18:08.438854+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=115%2F09%2F30",
-      "observedAt": "2026-10-03T10:56:21.931037+00:00"
+      "observedAt": "2026-10-03T11:18:10.449075+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=115%2F10%2F01",
-      "observedAt": "2026-10-03T10:56:23.363243+00:00"
+      "observedAt": "2026-10-03T11:18:11.707250+00:00"
     },
     {
       "url": "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=EW&t=D&d=115%2F10%2F02",
-      "observedAt": "2026-10-03T10:56:24.801895+00:00"
+      "observedAt": "2026-10-03T11:18:13.063981+00:00"
     }
   ],
   "ingestionErrors": [],
