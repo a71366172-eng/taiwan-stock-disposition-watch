@@ -25,6 +25,13 @@ function ranks(values:number[]):number[]{
   return result;
 }
 
+function standardDeviation(values:number[]):number{
+  const mean=values.reduce((sum,value)=>sum+value,0)/values.length;
+  return Math.sqrt(values.reduce((sum,value)=>sum+(value-mean)**2,0)/values.length);
+}
+
+const SYNC_WEIGHTS={pearson:0.4,spearman:0.3,returnDifference:0.3} as const;
+
 export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessions=30){
   const secondByDate=new Map(second.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0).map(bar=>[bar.date,bar.close]));
   const common=first.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0&&secondByDate.has(bar.date)).sort((a,b)=>a.date.localeCompare(b.date)).slice(-(sessions+1));
@@ -37,8 +44,22 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const correlation=pearson(firstReturns,secondReturns);
   const spearman=pearson(ranks(firstReturns),ranks(secondReturns));
   const returnDifferenceVolatility=count>=15?Math.sqrt(daily.reduce((sum,row)=>sum+(row.first-row.second)**2,0)/count):null;
+  const smoothed=daily.slice(2).map((_,index)=>({
+    first:(daily[index].first+daily[index+1].first+daily[index+2].first)/3,
+    second:(daily[index].second+daily[index+1].second+daily[index+2].second)/3,
+  }));
+  const smoothedFirst=smoothed.map(row=>row.first);
+  const smoothedSecond=smoothed.map(row=>row.second);
+  const smoothedPearson=pearson(smoothedFirst,smoothedSecond);
+  const smoothedSpearman=pearson(ranks(smoothedFirst),ranks(smoothedSecond));
+  const smoothedDifferenceVolatility=smoothed.length>=15?standardDeviation(smoothed.map(row=>row.first-row.second)):null;
+  const typicalSmoothedVolatility=smoothed.length>=15?(standardDeviation(smoothedFirst)+standardDeviation(smoothedSecond))/2:null;
+  const returnDifferenceSimilarity=smoothedDifferenceVolatility!==null&&typicalSmoothedVolatility!==null&&typicalSmoothedVolatility>0
+    ?Math.max(0,Math.min(1,1-smoothedDifferenceVolatility/typicalSmoothedVolatility)):null;
+  const synchronizationRate=smoothedPearson!==null&&smoothedSpearman!==null&&returnDifferenceSimilarity!==null
+    ?Math.round(100*(SYNC_WEIGHTS.pearson*(smoothedPearson+1)/2+SYNC_WEIGHTS.spearman*(smoothedSpearman+1)/2+SYNC_WEIGHTS.returnDifference*returnDifferenceSimilarity)):null;
   const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count*100:null;
   const firstChange=count?chart.at(-1)!.first:null;
   const secondChange=count?chart.at(-1)!.second:null;
-  return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+  return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
 }

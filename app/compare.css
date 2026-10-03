@@ -8,6 +8,7 @@
 .compare-button:focus-visible{outline:2px solid #79bbff;outline-offset:2px}
 .compare-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 22px 18px}
 .compare-summary>div{min-width:0;padding:12px;background:#252a2e;border:1px solid #41494f;border-radius:7px}
+.compare-summary>.compare-sync-rate{grid-column:span 2;background:#17314a;border-color:#2e628e}.compare-sync-rate strong{font-size:30px;color:#9dccff}
 .compare-summary small,.compare-summary span{display:block;color:#9caab3;font-size:11px;line-height:1.5}
 .compare-summary strong{display:block;margin:7px 0 3px;color:#e8edf0;font:650 20px Consolas,monospace}
 .compare-summary strong.up{color:#ff737a}.compare-summary strong.down{color:#4fd2a2}
@@ -16,3 +17,4 @@
 @media(max-width:950px){.compare-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:950px){.compare-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.compare-button{grid-column:1/-1}}
 @media(max-width:620px){.compare-inputs{grid-template-columns:1fr;padding:16px}.compare-summary{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 16px 16px}.compare-summary strong{font-size:17px}.compare-chart{height:300px;margin:0 6px 18px}}
+@media(max-width:620px){.compare-summary>.compare-sync-rate{grid-column:span 2}.compare-summary>.compare-sync-rate strong{font-size:26px}}

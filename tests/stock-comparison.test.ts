@@ -34,3 +34,17 @@ test('comparison declines to score insufficient overlapping sessions or zero-var
   assert.equal(compareStocks(first,short).returnDifferenceVolatility,null);
   assert.equal(compareStocks(first,stock('3333',Array(31).fill(100))).correlation,null);
 });
+
+test('3-day smoothed synchronization is weighted, bounded, and reaches 100 for identical returns',()=>{
+  const returns=Array.from({length:30},(_,index)=>Math.sin(index*1.7)*0.025+Math.cos(index*.6)*0.01);
+  const closes=(initial:number)=>returns.reduce((bars,dailyReturn)=>{bars.push(bars.at(-1)!*(1+dailyReturn));return bars},[initial]);
+  const result=compareStocks(stock('1111',closes(100)),stock('2222',closes(250)));
+  assert.equal(result.smoothedSessionCount,28);
+  assert.equal(result.synchronizationRate,100);
+  assert.equal(result.synchronizationWeights.pearson,.4);
+  assert.equal(result.synchronizationWeights.spearman,.3);
+  assert.equal(result.synchronizationWeights.returnDifference,.3);
+  const noisy=compareStocks(stock('1111',closes(100)),stock('2222',closes(250).map((value,index)=>value*(index%2?1.005:.995))));
+  assert.ok(noisy.synchronizationRate!>=0&&noisy.synchronizationRate!<=100);
+  assert.ok(noisy.synchronizationRate!<100);
+});
