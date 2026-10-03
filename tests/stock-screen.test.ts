@@ -3,8 +3,8 @@ import test from 'node:test';
 import {buildScreenRows,screenStocks} from '../lib/stock-screen.ts';
 import type {ScreenerSnapshot,ScreenerStock} from '../lib/market-types.ts';
 
-function stock(code:string,closes:number[],market='TWSE'):ScreenerStock{
-  return {code,name:`股票${code}`,market,close:closes.at(-1)??null,change:1,changePercent:1,volume:1000000,issuedShares:10000000,paidInCapital:100000000,bars:closes.map((close,index)=>({date:new Date(Date.UTC(2026,0,index+1)).toISOString().slice(0,10),close}))};
+function stock(code:string,closes:number[],market='TWSE',industry='半導體業'):ScreenerStock{
+  return {code,name:`股票${code}`,market,industry,close:closes.at(-1)??null,change:1,changePercent:1,volume:1000000,issuedShares:10000000,paidInCapital:100000000,bars:closes.map((close,index)=>({date:new Date(Date.UTC(2026,0,index+1)).toISOString().slice(0,10),close}))};
 }
 
 const snapshot=(stocks:ScreenerStock[])=>({asOf:'2026-02-01',generatedAt:'2026-02-01T00:00:00Z',stocks} as ScreenerSnapshot);
@@ -32,4 +32,11 @@ test('today change can be sorted and filtered with inclusive bounds',()=>{
   assert.deepEqual(screenStocks(rows,filters,'changeToday').map(row=>row.stock.code),['1111','3333','2222']);
   assert.deepEqual(screenStocks(rows,filters,'changeToday','asc').map(row=>row.stock.code),['2222','3333','1111']);
   assert.deepEqual(screenStocks(rows,{...filters,minChangeToday:'0',maxChangeToday:'2'},'changeToday').map(row=>row.stock.code),['3333']);
+});
+
+test('industry filter and sortable industry header support classified and unclassified stocks',()=>{
+  const rows=buildScreenRows(snapshot([stock('1111',[10],'TWSE','半導體業'),stock('2222',[10],'TPEX','航運業'),stock('3333',[10],'TWSE','') ]));
+  assert.deepEqual(screenStocks(rows,{...filters,industry:'航運業'},'code').map(row=>row.stock.code),['2222']);
+  assert.deepEqual(screenStocks(rows,{...filters,industry:'__UNCLASSIFIED__'},'code').map(row=>row.stock.code),['3333']);
+  assert.deepEqual(screenStocks(rows,filters,'industry','asc').map(row=>row.stock.code),['3333','1111','2222']);
 });

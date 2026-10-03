@@ -119,6 +119,11 @@ def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
     except (ValueError, TypeError): return None
 
+INDUSTRY_NAMES={'01':'水泥工業','02':'食品工業','03':'塑膠工業','04':'紡織纖維','05':'電機機械','06':'電器電纜','08':'玻璃陶瓷','09':'造紙工業','10':'鋼鐵工業','11':'橡膠工業','12':'汽車工業','14':'建材營造','15':'航運業','16':'觀光餐旅','17':'金融保險','18':'貿易百貨','19':'綜合','20':'其他','21':'化學工業','22':'生技醫療業','23':'油電燃氣業','24':'半導體業','25':'電腦及週邊設備業','26':'光電業','27':'通信網路業','28':'電子零組件業','29':'電子通路業','30':'資訊服務業','31':'其他電子業','32':'文化創意業','33':'農業科技業','34':'電子商務業','35':'綠能環保','36':'數位雲端','37':'運動休閒','38':'居家生活'}
+def industry_name(value):
+    normalized=str(value or '').strip()
+    return INDUSTRY_NAMES.get(normalized,normalized)
+
 def institutional_net_5(dates, market):
     """Sum official daily three-institution net shares across five sessions."""
     totals={}
@@ -430,7 +435,7 @@ def main():
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradeVolume')) if q else None
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
@@ -466,11 +471,11 @@ def main():
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradingShares')) if q else None
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(tpex_company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
-    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
+    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'industry':stock.get('industry',''),'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
     for stock in stocks: stock['bars']=stock['bars'][-31:]
     for stock in stocks:
