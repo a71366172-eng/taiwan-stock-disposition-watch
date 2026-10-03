@@ -1,5 +1,5 @@
-const officialHosts = new Set(['www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'mopsfin.twse.com.tw']);
-const publicQueryKeys = new Set(['cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 't', 'type']);
+const officialHosts = new Set(['www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'mopsfin.twse.com.tw', 'isin.twse.com.tw']);
+const publicQueryKeys = new Set(['cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 'strMode', 't', 'type']);
 
 export function publicSourceUrl(value:string):string|null {
   try {
