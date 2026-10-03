@@ -4,7 +4,7 @@ Standard library only. No credentials, no adjusted-price substitution.
 Run: python jobs/collect_market.py [--as-of YYYY-MM-DD]
 """
 from __future__ import annotations
-import argparse, csv, datetime as dt, hashlib, io, json, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse, unicodedata
+import argparse, csv, datetime as dt, hashlib, io, json, os, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse, unicodedata
 from html.parser import HTMLParser
 from concurrent.futures import ThreadPoolExecutor
 
@@ -28,6 +28,24 @@ def public_source_url(url: str):
 
 def record_source(url: str, observed_at: str):
     sources.append({'url': public_source_url(url), 'observedAt': observed_at})
+
+def select_history_batch(slots: list[int], taipei_now: dt.datetime, override: str | None = None, previous_batch: int | None = None) -> int:
+    """Return a zero-based refresh batch; manual runs can continue the last published batch."""
+    if override:
+        requested = override.strip().lower()
+        if requested == 'next':
+            if previous_batch is not None and 1 <= int(previous_batch) <= len(slots):
+                return int(previous_batch) % len(slots)
+        else:
+            try:
+                batch_number = int(requested)
+            except ValueError as exc:
+                raise ValueError('HISTORY_BATCH_OVERRIDE must be next or a batch number') from exc
+            if not 1 <= batch_number <= len(slots):
+                raise ValueError(f'HISTORY_BATCH_OVERRIDE must be between 1 and {len(slots)}')
+            return batch_number - 1
+    current_slot = taipei_now.hour + taipei_now.minute / 60
+    return min(range(len(slots)), key=lambda index: abs(current_slot - slots[index]))
 
 def get(url: str, required=True, retries=3, timeout=25):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.json')
@@ -491,13 +509,14 @@ def main():
     # history for untouched stocks, and always refresh official risk names.
     taipei_now=dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)
     slots=[8,12,14,18,23]
-    history_batch=min(range(len(slots)),key=lambda index:abs((taipei_now.hour+ taipei_now.minute/60)-slots[index]))
     old_snapshot_path=ROOT/'public'/'data'/'screener.json'
     try:
         old_snapshot=json.loads(old_snapshot_path.read_text(encoding='utf-8'))
         old_bars={f"{item.get('market')}:{item.get('code')}":item.get('bars',[]) for item in old_snapshot.get('stocks',[])}
     except (OSError,ValueError,AttributeError):
+        old_snapshot={}
         old_bars={}
+    history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
     refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}
     refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}
     months=[]

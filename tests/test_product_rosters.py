@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import parse_isin_convertibles
+from jobs.collect_market import parse_isin_convertibles, select_history_batch
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):
@@ -17,6 +17,27 @@ class ConvertibleBondRosterTests(unittest.TestCase):
         html = '''<table><tr><td>轉換公司債</td></tr>
         <tr><td>00A01 ETF CB</td><td>ISIN</td><td>2025/01/01</td><td>2028/01/01</td></tr></table>'''
         self.assertEqual(parse_isin_convertibles(html, '2026-10-03', {'0050'}), set())
+
+
+class HistoryBatchSelectionTests(unittest.TestCase):
+    def test_manual_next_continues_after_last_published_batch(self):
+        slots = [8, 12, 14, 18, 23]
+        now = dt.datetime(2026, 10, 4, 7, 20)
+        self.assertEqual(select_history_batch(slots, now, 'next', 1), 1)
+
+    def test_manual_next_wraps_after_last_batch(self):
+        self.assertEqual(select_history_batch([8, 12, 14, 18, 23], dt.datetime(2026, 10, 4, 7), 'next', 5), 0)
+
+    def test_manual_batch_override_is_one_based_and_validated(self):
+        slots = [8, 12, 14, 18, 23]
+        now = dt.datetime(2026, 10, 4, 7, 20)
+        self.assertEqual(select_history_batch(slots, now, '5', 1), 4)
+        with self.assertRaises(ValueError):
+            select_history_batch(slots, now, '6', 1)
+
+    def test_scheduled_runs_continue_to_select_by_time_slot(self):
+        slots = [8, 12, 14, 18, 23]
+        self.assertEqual(select_history_batch(slots, dt.datetime(2026, 10, 4, 17, 45)), 3)
 
 
 if __name__ == '__main__':
