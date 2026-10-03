@@ -1,8 +1,8 @@
 {
   "asOf": "2026-10-02",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 49,
-  "skipped": 64,
+  "compared": 45,
+  "skipped": 68,
   "failures": [],
   "checks": [
     {
@@ -69,20 +69,6 @@
       "pass": true
     },
     {
-      "code": "2033",
-      "date": "2026-08-14",
-      "announced": 34.25,
-      "calculated": 34.25,
-      "pass": true
-    },
-    {
-      "code": "2033",
-      "date": "2026-08-12",
-      "announced": 34.67,
-      "calculated": 34.67,
-      "pass": true
-    },
-    {
       "code": "2305",
       "date": "2026-09-23",
       "announced": 36.11,
@@ -132,24 +118,17 @@
       "pass": true
     },
     {
-      "code": "2305",
-      "date": "2026-06-24",
-      "announced": 35.81,
-      "calculated": 35.81,
+      "code": "2455",
+      "date": "2026-09-02",
+      "announced": 26.59,
+      "calculated": 26.59,
       "pass": true
     },
     {
-      "code": "2305",
-      "date": "2026-06-23",
-      "announced": 40.92,
-      "calculated": 40.92,
-      "pass": true
-    },
-    {
-      "code": "2305",
-      "date": "2026-06-22",
-      "announced": 50.49,
-      "calculated": 50.49,
+      "code": "2455",
+      "date": "2026-09-01",
+      "announced": 33.12,
+      "calculated": 33.12,
       "pass": true
     },
     {
@@ -192,13 +171,6 @@
       "date": "2026-09-24",
       "announced": 34.01,
       "calculated": 34.01,
-      "pass": true
-    },
-    {
-      "code": "3016",
-      "date": "2026-07-30",
-      "announced": -33.08,
-      "calculated": -33.08,
       "pass": true
     },
     {
@@ -265,6 +237,13 @@
       "pass": true
     },
     {
+      "code": "6225",
+      "date": "2026-08-26",
+      "announced": 36.04,
+      "calculated": 36.04,
+      "pass": true
+    },
+    {
       "code": "6426",
       "date": "2026-09-23",
       "announced": 28.18,
@@ -318,13 +297,6 @@
       "date": "2026-10-01",
       "announced": 28.28,
       "calculated": 28.28,
-      "pass": true
-    },
-    {
-      "code": "6672",
-      "date": "2026-06-25",
-      "announced": 27.61,
-      "calculated": 27.61,
       "pass": true
     },
     {
