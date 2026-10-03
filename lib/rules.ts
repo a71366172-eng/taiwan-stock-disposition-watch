@@ -56,7 +56,10 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
   const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
   if(!future.length)return null;
-  if(stock.candidateReason)return {days:1,date:future[0],paths:['官方隔日候選'],official:true};
+  // The exchange's accumulation list is conditional: another qualifying
+  // attention notice on the next session would trigger disposition. It is
+  // not itself a declaration that a disposition will happen tomorrow.
+  if(stock.candidateReason)return {days:1,date:future[0],paths:['次一營業日再達注意標準時，將公告處置'],official:true};
   const history=snapshot.calendar.filter(d=>d<=snapshot.asOf),base=countGate(stock,history,snapshot.asOf);
   const countable=new Set(stock.notices.filter(n=>n.rules.some(r=>r>=1&&r<=8)).map(n=>n.date));
   for(let index=0;index<future.length;index++){

@@ -1,0 +1,31 @@
+import unittest
+
+from jobs.collect_market import tpex_historical_notices
+
+
+class TpexHistoricalNoticeTests(unittest.TestCase):
+    def test_parses_official_table_rows_for_nonconsecutive_history(self):
+        payload = {
+            "tables": [{
+                "fields": ["公告日期", "證券代號", "證券名稱", "注意交易資訊", "收盤價", "本益比"],
+                "data": [
+                    ["115/09/18", "6538", "倉和", "連續達公布注意交易資訊標準（第一款）", "360.00", "20.5"],
+                    ["115/09/30", "6538", "倉和", "最近六個營業日達公布注意交易資訊標準（第一款）", "368.00", "21.0"],
+                    ["115/10/01", "6538", "倉和", "最近六個營業日達公布注意交易資訊標準（第1款）", "370.00", "21.2"],
+                    ["115/09/29", "3455", "由田", "其他股票注意資訊", "50.00", "10.0"],
+                ],
+            }]
+        }
+
+        notices = tpex_historical_notices(payload, "6538")
+
+        self.assertEqual([notice["date"] for notice in notices], ["2026-09-18", "2026-09-30", "2026-10-01"])
+        self.assertEqual([notice["code"] for notice in notices], ["6538", "6538", "6538"])
+        self.assertEqual([notice["rules"] for notice in notices], [[1], [1], [1]])
+
+    def test_empty_official_response_is_a_complete_empty_history(self):
+        self.assertEqual(tpex_historical_notices({"tables": [{"fields": [], "data": []}]}, "6538"), [])
+
+
+if __name__ == "__main__":
+    unittest.main()

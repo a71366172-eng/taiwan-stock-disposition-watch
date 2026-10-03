@@ -40,8 +40,8 @@ jobs:
       - name: Verify snapshot and rules
         run: |
           npm run data:verify
-          node --experimental-strip-types --test tests/rules.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts tests/stock-comparison.test.ts
-          python -m unittest discover -s tests -p 'test_source_redaction.py'
+          node --experimental-strip-types --test tests/rules.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts tests/stock-comparison.test.ts tests/stock-screen.test.ts
+          python -m unittest discover -s tests -p 'test_*.py'
       - name: Publish immutable snapshot to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -57,6 +57,9 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add data/market.json public/data/market.json data/verification.json
+          if [ -f data/screener.json ] && [ -f public/data/screener.json ]; then
+            git add data/screener.json public/data/screener.json
+          fi
           git diff --cached --quiet || git commit -m "data: update official market snapshot"
           git push
       - name: Build static site

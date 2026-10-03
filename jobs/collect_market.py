@@ -13,7 +13,7 @@ RAW.mkdir(parents=True, exist_ok=True)
 errors: list[str] = []
 sources: list[dict] = []
 PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'mopsfin.twse.com.tw'}
-PUBLIC_QUERY_KEYS = {'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 't'}
+PUBLIC_QUERY_KEYS = {'cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 't', 'type'}
 
 def public_source_url(url: str):
     try:
@@ -169,12 +169,61 @@ def iso(v):
 
 CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14}
 def strip(v): return re.sub('<[^>]+>', '', str(v)).strip()
+def notice_rules(reason):
+    rules=set()
+    for value in re.findall(r'第([0-9]{1,2}|[一二三四五六七八九十]+)款',str(reason)):
+        rule=int(value) if value.isdigit() else CN.get(value)
+        if rule is not None: rules.add(rule)
+    return sorted(rules)
 def twse_notice(row):
-    return {'code':str(row[1]),'name':row[2],'date':iso(row[5]),'reason':strip(row[4]),'rules':sorted(set(CN[x] for x in re.findall(r'第([一二三四五六七八九十]+)款', row[4]) if x in CN)), 'close':number(row[6]),'pe':number(row[7])}
+    return {'code':str(row[1]),'name':row[2],'date':iso(row[5]),'reason':strip(row[4]),'rules':notice_rules(row[4]), 'close':number(row[6]),'pe':number(row[7])}
 
 def tpex_notice(row):
     reason=strip(row.get('TradingInformation',''))
-    return {'code':str(row.get('SecuritiesCompanyCode','')),'name':row.get('CompanyName',''),'date':iso(row.get('Date')),'reason':reason,'rules':sorted(set(CN[x] for x in re.findall(r'第([一二三四五六七八九十]+)款',reason) if x in CN)),'close':number(row.get('ClosePrice')),'pe':number(row.get('PriceEarningRatio'))}
+    return {'code':str(row.get('SecuritiesCompanyCode','')),'name':row.get('CompanyName',''),'date':iso(row.get('Date')),'reason':reason,'rules':notice_rules(reason),'close':number(row.get('ClosePrice')),'pe':number(row.get('PriceEarningRatio'))}
+
+def tpex_historical_notices(payload, code):
+    """Normalize the official TPEx historical attention query, tolerating its tabular response variants."""
+    if not isinstance(payload, dict): return []
+    result=[]
+    tables=payload.get('tables') or []
+    if not tables and ('fields' in payload or 'data' in payload): tables=[payload]
+    for table in tables:
+        fields=[strip(field) for field in table.get('fields',[])]
+        rows=table.get('data') or []
+        for row in rows:
+            if isinstance(row,dict):
+                get_value=lambda *terms: next((v for k,v in row.items() if any(term in strip(k) for term in terms)),None)
+                values={'date':get_value('公告日期','日期'),'code':get_value('證券代號','代號'),'name':get_value('證券名稱','名稱'),'reason':get_value('注意交易資訊','交易資訊','注意原因'),'close':get_value('收盤價'),'pe':get_value('本益比')}
+            else:
+                values={}
+                for key,terms in {'date':('公告日期','日期'),'code':('證券代號','代號'),'name':('證券名稱','名稱'),'reason':('注意交易資訊','交易資訊','注意原因'),'close':('收盤價',),'pe':('本益比',)}.items():
+                    index=next((i for i,field in enumerate(fields) if any(term in field for term in terms)),None)
+                    values[key]=row[index] if index is not None and index<len(row) else None
+            row_code=str(values.get('code') or code).strip()
+            notice_date=iso(values.get('date'))
+            reason=strip(values.get('reason') or '')
+            if row_code!=code or not notice_date or not reason: continue
+            result.append({'code':code,'name':strip(values.get('name') or ''),'date':notice_date,'reason':reason,'rules':notice_rules(reason),'close':number(values.get('close')),'pe':number(values.get('pe'))})
+    return result
+
+def fetch_tpex_historical_notices(code, start_date, end_date):
+    """Fetch one TPEx common stock's official attention announcements for a date range."""
+    start=dt.date.fromisoformat(start_date).strftime('%Y%m%d')
+    end=dt.date.fromisoformat(end_date).strftime('%Y%m%d')
+    url='https://www.tpex.org.tw/www/zh-tw/bulletin/attention?'+urllib.parse.urlencode({'cate':'','code':code,'endDate':end,'order':'date','response':'json','startDate':start,'type':'code'})
+    payload=get(url,False)
+    if payload is None: return None
+    return tpex_historical_notices(payload,code)
+
+def fetch_twse_historical_notices(code, start_date, end_date):
+    """Supplement the broad TWSE feed with an official per-security history query."""
+    start=dt.date.fromisoformat(start_date).strftime('%Y%m%d')
+    end=dt.date.fromisoformat(end_date).strftime('%Y%m%d')
+    url='https://www.twse.com.tw/announcement/notice?'+urllib.parse.urlencode({'response':'json','startDate':start,'endDate':end,'stockNo':code})
+    payload=get(url,False)
+    if payload is None: return None
+    return [twse_notice(row) for row in payload.get('data',[]) if len(row)>5 and str(row[1]).strip()==code and iso(row[5])]
 
 def main():
     parser=argparse.ArgumentParser(); parser.add_argument('--as-of'); args=parser.parse_args()
@@ -220,9 +269,8 @@ def main():
     is_tpex_common=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',code))
     tpex_notices=[tpex_notice(r) for r in tpex_notices_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode','')))]
     tpex_notices=[x for x in tpex_notices if x['date']==as_of]
-    all_notices.extend(tpex_notices)
     tpex_candidates={str(r.get('SecuritiesCompanyCode','')):strip(r.get('AccumulationSituation','')) for r in tpex_candidates_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode',''))) and iso(r.get('Date'))==as_of}
-    today=[n for n in all_notices if n['date']==as_of]
+    today=[n for n in all_notices if n['date']==as_of]+[n for n in tpex_notices if n['date']==as_of]
     dispositions=[]
     for r in punish.get('data',[]):
         if not is_common(str(r[2])): continue
@@ -235,9 +283,9 @@ def main():
         period=str(r.get('DispositionPeriod','')).split('~')
         dispositions.append({'code':code,'name':r.get('CompanyName',code),'announced':announced,'start':iso(period[0]) if period else None,'end':iso(period[1]) if len(period)>1 else None,'condition':strip(r.get('DispositionReasons','')),'measure':'櫃買中心正式處置','content':strip(r.get('DisposalCondition',''))})
     active=[d for d in dispositions if d['end'] and d['end']>=as_of]
-    quote_map={x['Code']:x for x in quotes if iso(x.get('Date'))==as_of}
+    quote_map={x['Code']:x for x in quotes}
     f_map={x.get('Code'):x for x in fundamentals}
-    tpex_quote_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_quotes if iso(x.get('Date'))==as_of}
+    tpex_quote_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_quotes}
     tpex_f_map={str(x.get('SecuritiesCompanyCode','')):x for x in tpex_fundamentals}
     # The attention feeds can overlap across markets and may include recently
     # transferred/delisted names. Use each market's quote roster as its security
@@ -248,16 +296,59 @@ def main():
     # Candidate feeds also overlap across markets. Require roster membership
     # before collecting them, otherwise a TWSE candidate appears again as a
     # price-less TPEx record (and vice versa).
-    twse_symbols={code for code in candidates if code in twse_market_symbols}|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
-    tpex_symbols={code for code in tpex_candidates if code in tpex_market_symbols}|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
+    risk_twse_symbols={code for code in candidates if code in twse_market_symbols}|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
+    risk_tpex_symbols={code for code in tpex_candidates if code in tpex_market_symbols}|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
+    # Both exchanges publish official per-day historical attention notices.
+    # Verify/fill recent announcement history for every risk stock directly
+    # from both exchanges. TPEx OpenAPI above is current-day only.
+    history_start=(day-dt.timedelta(days=105)).isoformat()
+    for code in sorted(risk_twse_symbols):
+        historical=fetch_twse_historical_notices(code,history_start,as_of)
+        if historical is None:
+            errors.append(f'TWSE historical attention history unavailable for {code}')
+            continue
+        by_date={notice['date']:notice for notice in all_notices if notice['code']==code}
+        by_date.update({notice['date']:notice for notice in historical})
+        all_notices=[notice for notice in all_notices if notice['code']!=code]+list(by_date.values())
+    tpex_history_complete=set()
+    for code in sorted(risk_tpex_symbols):
+        historical=fetch_tpex_historical_notices(code,history_start,as_of)
+        if historical is None:
+            errors.append(f'TPEx historical attention history unavailable for {code}')
+            continue
+        tpex_history_complete.add(code)
+        by_date={notice['date']:notice for notice in tpex_notices if notice['code']==code}
+        by_date.update({notice['date']:notice for notice in historical})
+        tpex_notices=[notice for notice in tpex_notices if notice['code']!=code]+list(by_date.values())
+    all_notices.extend(tpex_notices)
+    today=[n for n in all_notices if n['date']==as_of]
+    # Keep the screener's universe aligned with every common stock in both
+    # official quote rosters, not only the attention/disposition watchlist.
+    twse_symbols={code for code in twse_market_symbols if is_common(code)}
+    tpex_symbols={code for code in tpex_market_symbols if is_tpex_common(code)}
+    priority_twse={code for code in candidates if code in twse_symbols}|{n['code'] for n in today if n['code'] in twse_symbols}|{d['code'] for d in active if d['code'] in twse_symbols}
+    priority_tpex={code for code in tpex_candidates if code in tpex_symbols}|{n['code'] for n in today if n['code'] in tpex_symbols}|{d['code'] for d in active if d['code'] in tpex_symbols}
+    # Split the broad history refresh across the five existing daily runs.
+    # We still publish every stock's current quote each run, retain previous
+    # history for untouched stocks, and always refresh official risk names.
+    taipei_now=dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)
+    slots=[8,12,14,18,23]
+    history_batch=min(range(len(slots)),key=lambda index:abs((taipei_now.hour+ taipei_now.minute/60)-slots[index]))
+    old_snapshot_path=ROOT/'public'/'data'/'screener.json'
+    try:
+        old_snapshot=json.loads(old_snapshot_path.read_text(encoding='utf-8'))
+        old_bars={f"{item.get('market')}:{item.get('code')}":item.get('bars',[]) for item in old_snapshot.get('stocks',[])}
+    except (OSError,ValueError,AttributeError):
+        old_bars={}
+    refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}
+    refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')
     def load_twse_stock(code):
         q=quote_map.get(code,{})
         bars=[]
-        # Long-window history is collected for real candidates; other stocks start with two months.
-        for month in months if code in candidates else months[:2]:
+        for month in months if code in candidates else months[:3] if code in refresh_twse else []:
             payload=get(f'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={month}&stockNo={code}',False)
             for r in (payload or {}).get('data',[]):
                 date=iso(r[0]); close=number(r[6]); change=number(r[7]); reference=close-change if close is not None and change is not None else None
@@ -265,6 +356,8 @@ def main():
                     bars.append({'date':date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':strip(r[9]) if len(r)>9 else ''})
             time.sleep(.3)
         bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
+        if code not in refresh_twse:
+            bars=[b for b in old_bars.get(f'TWSE:{code}',[]) if b.get('date','')<=as_of]
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
         if code in candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TWSE daily history for candidate {code} on {as_of}')
@@ -283,11 +376,11 @@ def main():
             close=as_of_bar['close'] if close is None else close
             change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
             volume=as_of_bar['volume'] if volume is None else volume
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':True,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
-        for month in months if code in tpex_candidates else months[:2]:
+        for month in months if code in tpex_candidates else months[:3] if code in refresh_tpex else []:
             date=f'{month[:4]}/{month[4:6]}/01'
             url='https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?'+urllib.parse.urlencode({'code':code,'date':date,'id':'','response':'json'})
             payload=get(url,False) or {}
@@ -298,6 +391,8 @@ def main():
                     bars.append({'date':trading_date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':''})
             time.sleep(.2)
         bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
+        if code not in refresh_tpex:
+            bars=[b for b in old_bars.get(f'TPEX:{code}',[]) if b.get('date','')<=as_of]
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
         if code in tpex_candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TPEx daily history for candidate {code} on {as_of}')
@@ -315,10 +410,13 @@ def main():
             close=as_of_bar['close'] if close is None else close
             change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
             volume=as_of_bar['volume'] if volume is None else volume
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':'','close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
+    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
+    stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
+    for stock in stocks: stock['bars']=stock['bars'][-31:]
     for stock in stocks:
         company_row=(company if stock['market']=='TWSE' else tpex_company).get(stock['code'],{})
         stock['paidInCapital']=number(company_row.get('實收資本額'))
@@ -348,7 +446,7 @@ def main():
         cursor+=dt.timedelta(days=1)
         if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':'official attention, candidate, disposition, quotes, MOPS issued shares and five-session institutional net','TPEX':'official attention, candidate, disposition, quotes, MOPS issued shares and five-session institutional net'},'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'coverage':{'TWSE':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
     fingerprint=hashlib.sha256(raw.encode()).hexdigest()[:12]
@@ -357,6 +455,10 @@ def main():
     tmp=dest/'market.pending.json'; tmp.write_text(raw,encoding='utf-8'); tmp.replace(dest/'market.json')
     public=ROOT/'public'/'data'; public.mkdir(parents=True,exist_ok=True)
     (public/'market.json').write_text(raw,encoding='utf-8')
-    print(json.dumps({'asOf':as_of,'quoteDates':{'TWSE':twse_dates[-1],'TPEX':tpex_dates[-1]},'stocks':len(stocks),'twseCandidates':len(candidates),'tpexCandidates':len(tpex_candidates),'todayNotices':len(today),'calendarVerified':bool(holidays),'errors':len(errors),'output':str(dest/'market.json')},ensure_ascii=False))
+    screener_result={'asOf':as_of,'generatedAt':result['generatedAt'],'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'stocks':screener_stocks}
+    screener_raw=json.dumps(screener_result,ensure_ascii=False,separators=(',',':'))
+    (dest/'screener.json').write_text(screener_raw,encoding='utf-8')
+    screener_public=public/'screener.json'; screener_public.parent.mkdir(parents=True,exist_ok=True); screener_public.write_text(screener_raw,encoding='utf-8')
+    print(json.dumps({'asOf':as_of,'quoteDates':{'TWSE':twse_dates[-1],'TPEX':tpex_dates[-1]},'riskStocks':len(stocks),'screenerStocks':len(screener_stocks),'twseCandidates':len(candidates),'tpexCandidates':len(tpex_candidates),'todayNotices':len(today),'historyRefreshBatch':history_batch+1,'refreshedHistoryStocks':len(refresh_twse)+len(refresh_tpex),'calendarVerified':bool(holidays),'errors':len(errors),'output':str(dest/'market.json'),'screenerOutput':str(dest/'screener.json')},ensure_ascii=False))
 
 if __name__=='__main__': main()

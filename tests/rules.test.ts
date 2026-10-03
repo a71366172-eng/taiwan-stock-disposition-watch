@@ -61,7 +61,7 @@ test('the shared price engine accepts TPEx common stocks',()=>{
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);
- assert.deepEqual(official,{days:1,date:'2026-04-01',paths:['官方隔日候選'],official:true});
+ assert.deepEqual(official,{days:1,date:'2026-04-01',paths:['次一營業日再達注意標準時，將公告處置'],official:true});
  const notice={code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60};
  const projected=forecastDispositionRisk({...base,notices:[notice]},forecastContext);
  assert.equal(projected?.days,2);assert.deepEqual(projected?.paths,['第一款連續三日']);
