@@ -9,6 +9,7 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 .disposition-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
 .disposition-metrics>div:last-child strong{font-size:12px}
 .detail-grid{grid-template-columns:minmax(0,1fr)}
+.tradingview-link{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:8px 12px;border:1px solid #3b78b7;border-radius:6px;background:#17314a;color:#9dccff;font-size:13px;font-weight:600;text-decoration:none;transition:background .15s,border-color .15s}.tradingview-link:hover{background:#1c4164;border-color:#64aaff}.tradingview-link span{color:#9cabb6;font-size:11px;font-weight:400}.tradingview-link:focus-visible{outline:2px solid #79bbff;outline-offset:2px}
 .disposition-metrics strong.up{color:#ff737a}.disposition-metrics strong.down{color:#4fd2a2}
 .disposition-tools .disposition-sort{display:flex}
 @media(max-width:1050px){.disposition-card{grid-template-columns:150px minmax(340px,1.8fr) minmax(160px,1fr)}}

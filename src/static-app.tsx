@@ -5,7 +5,7 @@ import {loadLatestSnapshot} from '../lib/static-data';
 import {Dashboard} from '../components/dashboard';
 import {DispositionStocks} from '../components/disposition-stocks';
 import {StockDetail} from '../components/stock-detail';
-import {StockCompare} from '../components/stock-compare';
+import {StockCompare} from '../components/stock-compare-live';
 import Methodology from '../app/methodology/page';
 import {SiteShell} from '../components/site-shell';
 import {listLocalSimulations} from '../lib/local-simulations';
