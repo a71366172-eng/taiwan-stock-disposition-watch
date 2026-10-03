@@ -302,24 +302,28 @@ def main():
     # Verify/fill recent announcement history for every risk stock directly
     # from both exchanges. TPEx OpenAPI above is current-day only.
     history_start=(day-dt.timedelta(days=105)).isoformat()
-    for code in sorted(risk_twse_symbols):
-        historical=fetch_twse_historical_notices(code,history_start,as_of)
-        if historical is None:
-            errors.append(f'TWSE historical attention history unavailable for {code}')
-            continue
-        by_date={notice['date']:notice for notice in all_notices if notice['code']==code}
-        by_date.update({notice['date']:notice for notice in historical})
-        all_notices=[notice for notice in all_notices if notice['code']!=code]+list(by_date.values())
+    twse_history_codes=sorted(risk_twse_symbols)
+    with ThreadPoolExecutor(max_workers=8) as history_pool:
+        twse_history=history_pool.map(lambda item:fetch_twse_historical_notices(item,history_start,as_of),twse_history_codes)
+        for code,historical in zip(twse_history_codes,twse_history):
+            if historical is None:
+                errors.append(f'TWSE historical attention history unavailable for {code}')
+                continue
+            by_date={notice['date']:notice for notice in all_notices if notice['code']==code}
+            by_date.update({notice['date']:notice for notice in historical})
+            all_notices=[notice for notice in all_notices if notice['code']!=code]+list(by_date.values())
     tpex_history_complete=set()
-    for code in sorted(risk_tpex_symbols):
-        historical=fetch_tpex_historical_notices(code,history_start,as_of)
-        if historical is None:
-            errors.append(f'TPEx historical attention history unavailable for {code}')
-            continue
-        tpex_history_complete.add(code)
-        by_date={notice['date']:notice for notice in tpex_notices if notice['code']==code}
-        by_date.update({notice['date']:notice for notice in historical})
-        tpex_notices=[notice for notice in tpex_notices if notice['code']!=code]+list(by_date.values())
+    tpex_history_codes=sorted(risk_tpex_symbols)
+    with ThreadPoolExecutor(max_workers=8) as history_pool:
+        tpex_history=history_pool.map(lambda item:fetch_tpex_historical_notices(item,history_start,as_of),tpex_history_codes)
+        for code,historical in zip(tpex_history_codes,tpex_history):
+            if historical is None:
+                errors.append(f'TPEx historical attention history unavailable for {code}')
+                continue
+            tpex_history_complete.add(code)
+            by_date={notice['date']:notice for notice in tpex_notices if notice['code']==code}
+            by_date.update({notice['date']:notice for notice in historical})
+            tpex_notices=[notice for notice in tpex_notices if notice['code']!=code]+list(by_date.values())
     all_notices.extend(tpex_notices)
     today=[n for n in all_notices if n['date']==as_of]
     # Keep the screener's universe aligned with every common stock in both
