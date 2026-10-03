@@ -10,14 +10,27 @@ test('comparison aligns common dates and uses daily returns, not just cumulative
   const result=compareStocks(first,second);
   assert.equal(result.sessionCount,30);
   assert.ok(Math.abs(result.correlation!-1)<1e-10);
+  assert.ok(Math.abs(result.spearman!-1)<1e-10);
+  assert.ok(Math.abs(result.returnDifferenceVolatility!)<1e-10);
   assert.equal(result.sameDirection,100);
   assert.ok(Math.abs(result.firstChange!-30)<1e-10);
   assert.ok(Math.abs(result.spread!)<1e-10);
+});
+
+test('Spearman handles tied daily-return ranks and volatility measures daily return gap',()=>{
+  const firstReturns=Array.from({length:30},(_,index)=>[0,1,1,2,3,3,4,5,5,6][index%10]);
+  const secondReturns=firstReturns.map((value,index)=>value+(index%4===0?1:0));
+  const closes=(returns:number[])=>returns.reduce((bars,change)=>{bars.push(bars.at(-1)!*(1+change/100));return bars},[100]);
+  const result=compareStocks(stock('1111',closes(firstReturns)),stock('2222',closes(secondReturns)));
+  assert.ok(result.spearman!>0.9);
+  assert.ok(result.returnDifferenceVolatility!>0);
 });
 
 test('comparison declines to score insufficient overlapping sessions or zero-variance prices',()=>{
   const first=stock('1111',Array.from({length:31},(_,index)=>100+index));
   const short=stock('2222',Array.from({length:10},(_,index)=>200+index));
   assert.equal(compareStocks(first,short).correlation,null);
+  assert.equal(compareStocks(first,short).spearman,null);
+  assert.equal(compareStocks(first,short).returnDifferenceVolatility,null);
   assert.equal(compareStocks(first,stock('3333',Array(31).fill(100))).correlation,null);
 });
