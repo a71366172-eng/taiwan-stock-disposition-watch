@@ -12,11 +12,26 @@ RAW = ROOT / 'work' / 'raw'
 RAW.mkdir(parents=True, exist_ok=True)
 errors: list[str] = []
 sources: list[dict] = []
+PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'mopsfin.twse.com.tw'}
+PUBLIC_QUERY_KEYS = {'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 't'}
+
+def public_source_url(url: str):
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != 'https' or parsed.hostname not in PUBLIC_SOURCE_HOSTS or parsed.username or parsed.password or parsed.port:
+            return '來源端點未公開'
+        public_query = urllib.parse.urlencode([(key, value) for key, value in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True) if key in PUBLIC_QUERY_KEYS])
+        return urllib.parse.urlunsplit(('https', parsed.hostname, parsed.path, public_query, ''))
+    except ValueError:
+        return '來源端點未公開'
+
+def record_source(url: str, observed_at: str):
+    sources.append({'url': public_source_url(url), 'observedAt': observed_at})
 
 def get(url: str, required=True):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.json')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
-        sources.append({'url':url, 'observedAt':dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat()})
+        record_source(url, dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat())
         return json.loads(cache.read_text(encoding='utf-8'))
     for attempt in range(3):
         try:
@@ -26,7 +41,7 @@ def get(url: str, required=True):
             if isinstance(payload, dict) and payload.get('stat') is not None and str(payload['stat']).upper() != 'OK':
                 raise ValueError(str(payload.get('stat'))[:100])
             cache.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
-            sources.append({'url':url, 'observedAt':dt.datetime.now(dt.timezone.utc).isoformat()})
+            record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
             return payload
         except Exception as exc:
             # TPEx's current certificate chain is rejected by Python 3.14 on
@@ -37,20 +52,20 @@ def get(url: str, required=True):
                     completed=subprocess.run(['curl','--compressed','--retry','3','--retry-all-errors','-L','--fail','--silent','--show-error',url],check=True,capture_output=True)
                     payload=json.loads(completed.stdout.decode('utf-8-sig'))
                     cache.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
-                    sources.append({'url':url, 'observedAt':dt.datetime.now(dt.timezone.utc).isoformat()})
+                    record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
                     return payload
                 except Exception:
                     pass
             if attempt < 2: time.sleep(1 + attempt * 2)
             else:
-                errors.append(f'{url}: {type(exc).__name__}: {str(exc)[:100]}')
-                if required: raise
+                errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
+                if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
                 return None
 
 def get_csv(url: str, required=True):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.csv')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
-        sources.append({'url':url, 'observedAt':dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat()})
+        record_source(url, dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat())
         return list(csv.DictReader(io.StringIO(cache.read_text(encoding='utf-8-sig'))))
     for attempt in range(3):
         try:
@@ -61,13 +76,13 @@ def get_csv(url: str, required=True):
             if len(rows)<500 or not rows or '公司代號' not in rows[0]:
                 raise ValueError('官方公司基本資料 CSV 欄位或筆數異常')
             cache.write_text(content, encoding='utf-8-sig')
-            sources.append({'url':url, 'observedAt':dt.datetime.now(dt.timezone.utc).isoformat()})
+            record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
             return rows
         except Exception as exc:
             if attempt < 2: time.sleep(1 + attempt * 2)
             else:
-                errors.append(f'{url}: {type(exc).__name__}: {str(exc)[:100]}')
-                if required: raise
+                errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
+                if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
                 return None
 
 def number(v):
@@ -86,7 +101,7 @@ def institutional_net_5(dates, market):
             fields=[strip(field) for field in report.get('fields',[])]
             try: net_index=next(i for i,field in enumerate(fields) if '三大法人買賣超股數' in field)
             except StopIteration:
-                errors.append(f'{url}: missing institutional net-share column')
+                errors.append(f'{public_source_url(url)}: missing institutional net-share column')
                 return None
             rows=((str(row[0]).strip(),number(row[net_index])) for row in report['data'] if len(row)>net_index)
         else:
@@ -100,7 +115,7 @@ def institutional_net_5(dates, market):
             fields=[strip(field) for field in table.get('fields',[])]
             try: net_index=next(i for i,field in enumerate(fields) if '三大法人買賣超股數合計' in field)
             except StopIteration:
-                errors.append(f'{url}: missing institutional net-share column')
+                errors.append(f'{public_source_url(url)}: missing institutional net-share column')
                 return None
             rows=((str(row[0]).strip(),number(row[net_index])) for row in table.get('data',[]) if len(row)>net_index)
         for code,net in rows:
@@ -124,7 +139,7 @@ def day_trade_shares(as_of, market):
             rows=table.get('data') or []
             if rows:
                 return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
-        errors.append(f'{url}: missing per-stock day-trading table')
+        errors.append(f'{public_source_url(url)}: missing per-stock day-trading table')
         return None
     roc=dt.date.fromisoformat(as_of).year-1911
     date_param=f'{roc}/{as_of[5:7]}/{as_of[8:10]}'
@@ -140,7 +155,7 @@ def day_trade_shares(as_of, market):
         rows=table.get('data') or []
         if rows:
             return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
-    errors.append(f'{url}: missing per-stock day-trading table')
+    errors.append(f'{public_source_url(url)}: missing per-stock day-trading table')
     return None
 
 def iso(v):

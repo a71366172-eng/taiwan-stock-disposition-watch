@@ -40,7 +40,8 @@ jobs:
       - name: Verify snapshot and rules
         run: |
           npm run data:verify
-          node --experimental-strip-types --test tests/rules.test.ts
+          node --experimental-strip-types --test tests/rules.test.ts tests/public-source.test.ts
+          python -m unittest discover -s tests -p 'test_source_redaction.py'
       - name: Publish immutable snapshot to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
