@@ -22,3 +22,14 @@ test('screening combines market, price, volume, turnover and valid-return filter
   assert.deepEqual(screenStocks(rows,{...filters,market:'TWSE',minPrice:'100',minChange30:'20',minVolume:'900',minTurnover:'9'},'change30').map(row=>row.stock.code),['1111']);
   assert.deepEqual(screenStocks(rows,{...filters,minChange30:'0'},'change30').map(row=>row.stock.code),['1111']);
 });
+
+test('today change can be sorted and filtered with inclusive bounds',()=>{
+  const rows=buildScreenRows(snapshot([
+    {...stock('1111',[10]),changePercent:3},
+    {...stock('2222',[10]),changePercent:-2},
+    {...stock('3333',[10]),changePercent:1},
+  ]));
+  assert.deepEqual(screenStocks(rows,filters,'changeToday').map(row=>row.stock.code),['1111','3333','2222']);
+  assert.deepEqual(screenStocks(rows,filters,'changeToday','asc').map(row=>row.stock.code),['2222','3333','1111']);
+  assert.deepEqual(screenStocks(rows,{...filters,minChangeToday:'0',maxChangeToday:'2'},'changeToday').map(row=>row.stock.code),['3333']);
+});

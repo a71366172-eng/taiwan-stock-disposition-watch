@@ -1,6 +1,8 @@
 import type {ScreenerSnapshot,ScreenerStock} from './market-types';
 
 export type ScreenRow={stock:ScreenerStock;tradingDays:number;change5:number|null;change10:number|null;change30:number|null;ma20Deviation:number|null};
+export type ScreenSort='code'|'price'|'changeToday'|'change5'|'change10'|'change30'|'volume'|'turnover'|'ma20';
+export type SortDirection='asc'|'desc';
 
 function closeHistory(stock:ScreenerStock){
   return stock.bars.filter(bar=>bar.close!==null&&Number.isFinite(bar.close)&&bar.close>0).sort((a,b)=>a.date.localeCompare(b.date));
@@ -20,18 +22,23 @@ export function buildScreenRows(snapshot:ScreenerSnapshot):ScreenRow[]{
   });
 }
 
-export function screenStocks(rows:ScreenRow[],filters:{query:string;market:string;minPrice:string;maxPrice:string;minChange30:string;maxChange30:string;minVolume:string;minTurnover:string},sort:'change30'|'change10'|'change5'|'price'|'volume'|'turnover'){
+export function screenStocks(rows:ScreenRow[],filters:{query:string;market:string;minPrice:string;maxPrice:string;minChangeToday?:string;maxChangeToday?:string;minChange30:string;maxChange30:string;minVolume:string;minTurnover:string},sort:ScreenSort,direction:SortDirection='desc'){
   const numberOrNull=(value:string)=>value.trim()===''?null:Number(value);
-  const minPrice=numberOrNull(filters.minPrice),maxPrice=numberOrNull(filters.maxPrice),minChange=numberOrNull(filters.minChange30),maxChange=numberOrNull(filters.maxChange30),minVolume=numberOrNull(filters.minVolume),minTurnover=numberOrNull(filters.minTurnover);
+  const minPrice=numberOrNull(filters.minPrice),maxPrice=numberOrNull(filters.maxPrice),minChangeToday=numberOrNull(filters.minChangeToday??''),maxChangeToday=numberOrNull(filters.maxChangeToday??''),minChange=numberOrNull(filters.minChange30),maxChange=numberOrNull(filters.maxChange30),minVolume=numberOrNull(filters.minVolume),minTurnover=numberOrNull(filters.minTurnover);
   return rows.filter(row=>{
     const {stock}=row,volume=stock.volume,turnover=volume!=null&&stock.issuedShares!=null&&stock.issuedShares>0?volume/stock.issuedShares*100:null;
     return (!filters.query||`${stock.code} ${stock.name}`.toLocaleLowerCase().includes(filters.query.trim().toLocaleLowerCase()))
       &&(filters.market==='ALL'||stock.market===filters.market)
       &&(minPrice===null||(stock.close!==null&&stock.close>=minPrice))&&(maxPrice===null||(stock.close!==null&&stock.close<=maxPrice))
+      &&(minChangeToday===null||(stock.changePercent!==null&&stock.changePercent>=minChangeToday))&&(maxChangeToday===null||(stock.changePercent!==null&&stock.changePercent<=maxChangeToday))
       &&(minChange===null||(row.change30!==null&&row.change30>=minChange))&&(maxChange===null||(row.change30!==null&&row.change30<=maxChange))
       &&(minVolume===null||(volume!==null&&volume/1000>=minVolume))&&(minTurnover===null||(turnover!==null&&turnover>=minTurnover));
   }).sort((a,b)=>{
-    const value=(row:ScreenRow)=>sort==='price'?row.stock.close:sort==='volume'?row.stock.volume:sort==='turnover'&&row.stock.volume!=null&&row.stock.issuedShares?row.stock.volume/row.stock.issuedShares*100:sort==='change5'?row.change5:sort==='change10'?row.change10:row.change30;
-    const left=value(a),right=value(b);return left===null||left===undefined?(right==null?0:1):right===null||right===undefined?-1:right-left;
+    if(sort==='code')return direction==='asc'?a.stock.code.localeCompare(b.stock.code,'zh-TW',{numeric:true}):b.stock.code.localeCompare(a.stock.code,'zh-TW',{numeric:true});
+    const value=(row:ScreenRow)=>sort==='price'?row.stock.close:sort==='changeToday'?row.stock.changePercent:sort==='volume'?row.stock.volume:sort==='turnover'&&row.stock.volume!=null&&row.stock.issuedShares?row.stock.volume/row.stock.issuedShares*100:sort==='change5'?row.change5:sort==='change10'?row.change10:sort==='ma20'?row.ma20Deviation:row.change30;
+    const left=value(a),right=value(b);
+    if(left===null||left===undefined)return right===null||right===undefined?0:1;
+    if(right===null||right===undefined)return -1;
+    return direction==='asc'?left-right:right-left;
   });
 }
