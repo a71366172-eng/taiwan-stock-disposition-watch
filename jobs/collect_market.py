@@ -363,6 +363,11 @@ def main():
         if code not in refresh_twse:
             bars=[b for b in old_bars.get(f'TWSE:{code}',[]) if b.get('date','')<=as_of]
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
+        if not as_of_bar and iso(q.get('Date'))==as_of:
+            quote_close=number(q.get('ClosingPrice')); quote_change=number(q.get('Change'))
+            if quote_close is not None:
+                as_of_bar={'date':as_of,'open':None,'high':None,'low':None,'close':quote_close,'reference':quote_close-quote_change if quote_change is not None else None,'volume':number(q.get('TradeVolume')),'note':'官方當日行情補齊'}
+                bars.append(as_of_bar)
         if code in candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TWSE daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
@@ -398,6 +403,11 @@ def main():
         if code not in refresh_tpex:
             bars=[b for b in old_bars.get(f'TPEX:{code}',[]) if b.get('date','')<=as_of]
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
+        if not as_of_bar and iso(q.get('Date'))==as_of:
+            quote_close=number(q.get('Close')); quote_change=number(q.get('Change'))
+            if quote_close is not None:
+                as_of_bar={'date':as_of,'open':None,'high':None,'low':None,'close':quote_close,'reference':quote_close-quote_change if quote_change is not None else None,'volume':number(q.get('TradingShares')),'note':'官方當日行情補齊'}
+                bars.append(as_of_bar)
         if code in tpex_candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TPEx daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
