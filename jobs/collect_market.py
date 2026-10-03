@@ -28,15 +28,15 @@ def public_source_url(url: str):
 def record_source(url: str, observed_at: str):
     sources.append({'url': public_source_url(url), 'observedAt': observed_at})
 
-def get(url: str, required=True):
+def get(url: str, required=True, retries=3, timeout=25):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.json')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
         record_source(url, dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat())
         return json.loads(cache.read_text(encoding='utf-8'))
-    for attempt in range(3):
+    for attempt in range(retries):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'TaiwanStockWatch/0.1 (public-data research)', 'Accept':'application/json'})
-            with urllib.request.urlopen(req, timeout=25) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
                 payload = json.loads(resp.read().decode('utf-8-sig'))
             if isinstance(payload, dict) and payload.get('stat') is not None and str(payload['stat']).upper() != 'OK':
                 raise ValueError(str(payload.get('stat'))[:100])
@@ -49,14 +49,14 @@ def get(url: str, required=True):
             # GitHub-hosted runners also provide curl, so keep verification on.
             if 'tpex.org.tw' in url and shutil.which('curl'):
                 try:
-                    completed=subprocess.run(['curl','--compressed','--retry','3','--retry-all-errors','-L','--fail','--silent','--show-error',url],check=True,capture_output=True)
+                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','0','-L','--fail','--silent','--show-error',url],check=True,capture_output=True)
                     payload=json.loads(completed.stdout.decode('utf-8-sig'))
                     cache.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
                     record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
                     return payload
                 except Exception:
                     pass
-            if attempt < 2: time.sleep(1 + attempt * 2)
+            if attempt < retries-1: time.sleep(1 + attempt * 2)
             else:
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
@@ -212,7 +212,7 @@ def fetch_tpex_historical_notices(code, start_date, end_date):
     start=dt.date.fromisoformat(start_date).strftime('%Y%m%d')
     end=dt.date.fromisoformat(end_date).strftime('%Y%m%d')
     url='https://www.tpex.org.tw/www/zh-tw/bulletin/attention?'+urllib.parse.urlencode({'cate':'','code':code,'endDate':end,'order':'date','response':'json','startDate':start,'type':'code'})
-    payload=get(url,False)
+    payload=get(url,False,retries=1,timeout=15)
     if payload is None: return None
     return tpex_historical_notices(payload,code)
 
