@@ -54,7 +54,7 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 .disposition-header-button span{color:#79bbff;font-size:12px}
 .disposition-header-reason{font-size:10px}
 @media(max-width:760px){.disposition-list-header{min-width:760px;grid-template-columns:150px minmax(390px,1fr) 180px}.disposition-header-stock>span{display:none}}
-.risk-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.risk-badges .badge{white-space:nowrap}.badge.must-close-badge{background:#762b35;color:#ffd2d6;border:1px solid #b64655}.stock-panel td .must-close-badge{display:inline-flex;margin-left:5px}
+.risk-badges{display:flex;align-items:center;gap:5px;flex-wrap:wrap}.risk-badges .badge{white-space:nowrap}.official-candidate-dot{display:inline-block;flex:0 0 9px;width:9px;height:9px;border-radius:50%;background:#ff5964;box-shadow:0 0 0 3px #ff596426;vertical-align:middle}.badge.must-close-badge{background:#762b35;color:#ffd2d6;border:1px solid #b64655}.stock-panel td .must-close-badge{display:inline-flex;margin-left:5px}.stock-panel td .gate-progress{min-width:390px;margin-top:8px}.stock-panel td .gate-progress-item{font-size:9px}
 .candidate-reason-note{grid-column:1/-1;align-self:center;color:#d2c390;font-size:10px;line-height:1.6}
 .topbar nav{gap:clamp(12px,2vw,32px)}
 @media(max-width:760px){.topbar nav{gap:20px;overflow-x:auto;scrollbar-width:none}.topbar nav::-webkit-scrollbar{display:none}.topbar nav a{white-space:nowrap}}

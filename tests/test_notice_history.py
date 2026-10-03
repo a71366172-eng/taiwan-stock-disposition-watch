@@ -1,5 +1,11 @@
 import unittest
+import json
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+from jobs import collect_market
 from jobs.collect_market import tpex_historical_notices
 
 
@@ -25,6 +31,28 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
 
     def test_empty_official_response_is_a_complete_empty_history(self):
         self.assertEqual(tpex_historical_notices({"tables": [{"fields": [], "data": []}]}, "6538"), [])
+
+    def test_tpex_history_posts_roc_dates_to_official_query(self):
+        payload = {
+            "stat": "ok",
+            "tables": [{
+                "fields": ["公告日期", "證券代號", "證券名稱", "注意交易資訊"],
+                "data": [["115/09/18", "6538", "倉和", "第一款注意交易資訊"]],
+            }],
+        }
+        with TemporaryDirectory() as temp_dir:
+            with patch.object(collect_market, "RAW", Path(temp_dir)), patch.object(
+                collect_market.urllib.request,
+                "urlopen",
+                return_value=BytesIO(json.dumps(payload).encode()),
+            ) as urlopen:
+                notices = collect_market.fetch_tpex_historical_notices("6538", "2026-06-19", "2026-10-02")
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.method, "POST")
+        self.assertIn(b"startDate=115%2F06%2F19", request.data)
+        self.assertIn(b"endDate=115%2F10%2F02", request.data)
+        self.assertEqual([notice["date"] for notice in notices], ["2026-09-18"])
 
 
 if __name__ == "__main__":

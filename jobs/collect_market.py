@@ -62,6 +62,36 @@ def get(url: str, required=True, retries=3, timeout=25):
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
                 return None
 
+def post_json(url: str, params: dict[str, str], retries=2, timeout=20):
+    body=urllib.parse.urlencode(params)
+    cache=RAW/(hashlib.sha256((url+'?'+body).encode()).hexdigest()+'.json')
+    if cache.exists() and time.time()-cache.stat().st_mtime<3600:
+        record_source(url+'?'+body,dt.datetime.fromtimestamp(cache.stat().st_mtime,dt.timezone.utc).isoformat())
+        return json.loads(cache.read_text(encoding='utf-8'))
+    headers={'User-Agent':'TaiwanStockWatch/0.1 (public-data research)','Accept':'application/json','Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','Referer':'https://www.tpex.org.tw/zh-tw/announce/market/attention.html','Origin':'https://www.tpex.org.tw'}
+    for attempt in range(retries):
+        try:
+            req=urllib.request.Request(url,data=body.encode(),headers=headers,method='POST')
+            with urllib.request.urlopen(req,timeout=timeout) as resp: payload=json.loads(resp.read().decode('utf-8-sig'))
+            if not isinstance(payload,dict) or str(payload.get('stat','')).lower()!='ok': raise ValueError('TPEx historical attention response invalid')
+            cache.write_text(json.dumps(payload,ensure_ascii=False),encoding='utf-8')
+            record_source(url+'?'+body,dt.datetime.now(dt.timezone.utc).isoformat())
+            return payload
+        except Exception as exc:
+            if 'tpex.org.tw' in url and shutil.which('curl'):
+                try:
+                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','0','-L','--fail','--silent','--show-error','-H',f'User-Agent: {headers["User-Agent"]}','-H',f'Referer: {headers["Referer"]}','-H','Content-Type: application/x-www-form-urlencoded; charset=UTF-8','--data-binary',body,url],check=True,capture_output=True)
+                    payload=json.loads(completed.stdout.decode('utf-8-sig'))
+                    if not isinstance(payload,dict) or str(payload.get('stat','')).lower()!='ok': raise ValueError('TPEx historical attention response invalid')
+                    cache.write_text(json.dumps(payload,ensure_ascii=False),encoding='utf-8')
+                    record_source(url+'?'+body,dt.datetime.now(dt.timezone.utc).isoformat())
+                    return payload
+                except Exception: pass
+            if attempt<retries-1: time.sleep(1+attempt*2)
+            else:
+                errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
+                return None
+
 def get_csv(url: str, required=True):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.csv')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
@@ -167,6 +197,10 @@ def iso(v):
     try: return dt.date(y,m,d).isoformat()
     except ValueError: return None
 
+def roc_date(value: str):
+    date=dt.date.fromisoformat(value)
+    return f'{date.year-1911:03d}/{date.month:02d}/{date.day:02d}'
+
 CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14}
 def strip(v): return re.sub('<[^>]+>', '', str(v)).strip()
 def notice_rules(reason):
@@ -209,10 +243,8 @@ def tpex_historical_notices(payload, code):
 
 def fetch_tpex_historical_notices(code, start_date, end_date):
     """Fetch one TPEx common stock's official attention announcements for a date range."""
-    start=dt.date.fromisoformat(start_date).strftime('%Y%m%d')
-    end=dt.date.fromisoformat(end_date).strftime('%Y%m%d')
-    url='https://www.tpex.org.tw/www/zh-tw/bulletin/attention?'+urllib.parse.urlencode({'cate':'','code':code,'endDate':end,'order':'date','response':'json','startDate':start,'type':'code'})
-    payload=get(url,False,retries=1,timeout=15)
+    url='https://www.tpex.org.tw/www/zh-tw/bulletin/attention'
+    payload=post_json(url,{'cate':'','code':code,'endDate':roc_date(end_date),'order':'date','response':'json','startDate':roc_date(start_date),'type':'code'},retries=2,timeout=20)
     if payload is None: return None
     return tpex_historical_notices(payload,code)
 
@@ -302,6 +334,7 @@ def main():
     # Verify/fill recent announcement history for every risk stock directly
     # from both exchanges. TPEx OpenAPI above is current-day only.
     history_start=(day-dt.timedelta(days=105)).isoformat()
+    twse_history_complete=set()
     twse_history_codes=sorted(risk_twse_symbols)
     with ThreadPoolExecutor(max_workers=8) as history_pool:
         twse_history=history_pool.map(lambda item:fetch_twse_historical_notices(item,history_start,as_of),twse_history_codes)
@@ -309,6 +342,10 @@ def main():
             if historical is None:
                 errors.append(f'TWSE historical attention history unavailable for {code}')
                 continue
+            if code in candidates and not historical:
+                errors.append(f'TWSE official candidate history unexpectedly empty for {code}')
+                continue
+            twse_history_complete.add(code)
             by_date={notice['date']:notice for notice in all_notices if notice['code']==code}
             by_date.update({notice['date']:notice for notice in historical})
             all_notices=[notice for notice in all_notices if notice['code']!=code]+list(by_date.values())
@@ -319,6 +356,9 @@ def main():
         for code,historical in zip(tpex_history_codes,tpex_history):
             if historical is None:
                 errors.append(f'TPEx historical attention history unavailable for {code}')
+                continue
+            if code in tpex_candidates and not historical:
+                errors.append(f'TPEx official candidate history unexpectedly empty for {code}')
                 continue
             tpex_history_complete.add(code)
             by_date={notice['date']:notice for notice in tpex_notices if notice['code']==code}
@@ -385,7 +425,7 @@ def main():
             close=as_of_bar['close'] if close is None else close
             change=close-as_of_bar['reference'] if change is None and close is not None and as_of_bar['reference'] is not None else change
             volume=as_of_bar['volume'] if volume is None else volume
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':True,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':company.get(code,{}).get('產業別',''),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
