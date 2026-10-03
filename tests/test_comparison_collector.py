@@ -16,7 +16,8 @@ class ComparisonCollectorTests(unittest.TestCase):
         rows = [{'SecuritiesCompanyCode': '8299', 'CompanyName': '群聯', 'Close': '98.5'}]
         self.assertEqual(parse_quotes(table), {'8299': ('群聯', 98.5)})
         self.assertEqual(parse_quotes(rows), {'8299': ('群聯', 98.5)})
-        self.assertIn('2026%2F10%2F02', quote_url('2026-10-02', 'TPEX'))
+        self.assertEqual(parse_quotes({'aaData': [['8299', '群聯', '98.5', '+1.0']]}), {'8299': ('群聯', 98.5)})
+        self.assertIn('115%2F10%2F02', quote_url('2026-10-02', 'TPEX'))
 
 
 if __name__ == '__main__':

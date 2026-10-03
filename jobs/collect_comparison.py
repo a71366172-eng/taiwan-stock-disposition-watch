@@ -63,6 +63,8 @@ def table_rows(payload):
 
 def parse_quotes(payload):
     rows = table_rows(payload)
+    if not rows and isinstance(payload, dict) and isinstance(payload.get('aaData'), list):
+        rows = [(str(row[0]).strip(), str(row[1]).strip(), number(row[2])) for row in payload['aaData'] if isinstance(row, list) and len(row) >= 3]
     if not rows and isinstance(payload, list):
         rows = [(str(row.get('SecuritiesCompanyCode') or row.get('Code') or '').strip(), str(row.get('CompanyName') or row.get('Name') or '').strip(), number(row.get('Close') or row.get('ClosingPrice'))) for row in payload if isinstance(row, dict)]
     return {code: (name, close) for code, name, close in rows if CODE.fullmatch(code) and close is not None}
@@ -71,8 +73,9 @@ def parse_quotes(payload):
 def quote_url(date, market):
     if market == 'TWSE':
         return f'https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&date={date.replace("-", "")}&type=ALLBUT0999'
-    query = urllib.parse.urlencode({'date': date.replace('-', '/'), 'id': '', 'response': 'json'})
-    return f'https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?{query}'
+    year, month, day = date.split('-')
+    query = urllib.parse.urlencode({'l': 'zh-tw', 'd': f'{int(year)-1911}/{month}/{day}', 'o': 'json'})
+    return f'https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?{query}'
 
 
 def collect_day(task):
