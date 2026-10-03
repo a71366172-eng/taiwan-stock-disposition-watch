@@ -30,9 +30,27 @@ function standardDeviation(values:number[]):number{
   return Math.sqrt(values.reduce((sum,value)=>sum+(value-mean)**2,0)/values.length);
 }
 
-const SYNC_WEIGHTS={pearson:0.4,spearman:0.3,returnDifference:0.3} as const;
+const SYNC_WEIGHTS={pearson:0.2,spearman:0.2,twoDayLogReturn:0.3,sameDirection:0.3} as const;
 
-export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessions=30){
+function normalizedDtw(first:number[],second:number[]):number|null{
+  if(first.length!==second.length||first.length<30)return null;
+  const minMax=(values:number[])=>{
+    const low=Math.min(...values),high=Math.max(...values),span=high-low;
+    return values.map(value=>span===0?0:(value-low)/span);
+  };
+  const a=minMax(first),b=minMax(second),cost=Array.from({length:a.length+1},()=>Array(a.length+1).fill(Number.POSITIVE_INFINITY) as number[]),length=Array.from({length:a.length+1},()=>Array(a.length+1).fill(0) as number[]);
+  cost[0][0]=0;
+  for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++){
+    const predecessors=[[cost[i-1][j-1],length[i-1][j-1]],[cost[i-1][j],length[i-1][j]],[cost[i][j-1],length[i][j-1]]].sort((left,right)=>left[0]-right[0]);
+    cost[i][j]=predecessors[0][0]+(a[i-1]-b[j-1])**2;
+    length[i][j]=predecessors[0][1]+1;
+  }
+  return length[a.length][b.length]?Math.sqrt(cost[a.length][b.length]/length[a.length][b.length]):null;
+}
+
+export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessions=30,weightTotalPercent=130){
+  const totalPercent=Math.max(100,Math.min(130,Math.round(weightTotalPercent/10)*10));
+  const weightScale=totalPercent/100;
   const secondByDate=new Map(second.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0).map(bar=>[bar.date,bar.close]));
   const common=first.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0&&secondByDate.has(bar.date)).sort((a,b)=>a.date.localeCompare(b.date)).slice(-(sessions+1));
   const points=common.map(bar=>({date:bar.date,firstClose:bar.close,secondClose:secondByDate.get(bar.date)!}));
@@ -52,14 +70,17 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const smoothedSecond=smoothed.map(row=>row.second);
   const smoothedPearson=pearson(smoothedFirst,smoothedSecond);
   const smoothedSpearman=pearson(ranks(smoothedFirst),ranks(smoothedSecond));
-  const smoothedDifferenceVolatility=smoothed.length>=15?standardDeviation(smoothed.map(row=>row.first-row.second)):null;
-  const typicalSmoothedVolatility=smoothed.length>=15?(standardDeviation(smoothedFirst)+standardDeviation(smoothedSecond))/2:null;
-  const returnDifferenceSimilarity=smoothedDifferenceVolatility!==null&&typicalSmoothedVolatility!==null&&typicalSmoothedVolatility>0
-    ?Math.max(0,Math.min(1,1-smoothedDifferenceVolatility/typicalSmoothedVolatility)):null;
-  const synchronizationRate=smoothedPearson!==null&&smoothedSpearman!==null&&returnDifferenceSimilarity!==null
-    ?Math.round(100*(SYNC_WEIGHTS.pearson*(smoothedPearson+1)/2+SYNC_WEIGHTS.spearman*(smoothedSpearman+1)/2+SYNC_WEIGHTS.returnDifference*returnDifferenceSimilarity)):null;
-  const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count*100:null;
+  const twoDayLogReturns=points.slice(2).map((point,index)=>({first:Math.log(point.firstClose/points[index].firstClose),second:Math.log(point.secondClose/points[index].secondClose)}));
+  const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count:null;
+  const twoDayLogReturnDifferenceVolatility=twoDayLogReturns.length>=15?standardDeviation(twoDayLogReturns.map(row=>row.first-row.second)):null;
+  const typicalTwoDayLogVolatility=twoDayLogReturns.length>=15?(standardDeviation(twoDayLogReturns.map(row=>row.first))+standardDeviation(twoDayLogReturns.map(row=>row.second)))/2:null;
+  const returnDifferenceSimilarity=twoDayLogReturnDifferenceVolatility!==null&&typicalTwoDayLogVolatility!==null&&typicalTwoDayLogVolatility>0
+    ?Math.max(0,Math.min(1,1-twoDayLogReturnDifferenceVolatility/typicalTwoDayLogVolatility)):null;
+  const synchronizationWeights={pearson:SYNC_WEIGHTS.pearson*weightScale,spearman:SYNC_WEIGHTS.spearman*weightScale,twoDayLogReturn:SYNC_WEIGHTS.twoDayLogReturn*weightScale,sameDirection:SYNC_WEIGHTS.sameDirection*weightScale};
+  const synchronizationRate=smoothedPearson!==null&&smoothedSpearman!==null&&returnDifferenceSimilarity!==null&&sameDirection!==null
+    ?Math.round(totalPercent*(SYNC_WEIGHTS.pearson*(smoothedPearson+1)/2+SYNC_WEIGHTS.spearman*(smoothedSpearman+1)/2+SYNC_WEIGHTS.twoDayLogReturn*returnDifferenceSimilarity+SYNC_WEIGHTS.sameDirection*sameDirection)):null;
   const firstChange=count?chart.at(-1)!.first:null;
   const secondChange=count?chart.at(-1)!.second:null;
-  return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+  const dtwDistance=normalizedDtw(points.slice(-30).map(point=>point.firstClose),points.slice(-30).map(point=>point.secondClose));
+  return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,twoDayLogReturnDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights,synchronizationWeightTotalPercent:totalPercent,sameDirection:sameDirection===null?null:sameDirection*100,dtwDistance,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
 }
