@@ -5,7 +5,7 @@ import type {Disposition,MarketSnapshot,Stock} from '../lib/market-types';
 import {SiteShell} from './site-shell';
 
 type ActiveItem={disposition:Disposition;stock?:Stock;metrics:ReturnType<typeof dispositionMetrics>};
-type Sort='end'|'return-high'|'return-low'|'five-day-high'|'five-day-low'|'ten-day-high'|'ten-day-low'|'institutional-buy'|'institutional-sell'|'ma20-high'|'ma20-low';
+type Sort='end'|'end-late'|'code-asc'|'code-desc'|'return-high'|'return-low'|'five-day-high'|'five-day-low'|'ten-day-high'|'ten-day-low'|'institutional-buy'|'institutional-sell'|'ma20-high'|'ma20-low';
 type Direction='all'|'positive'|'negative';
 const compareNullable=(a:number|null|undefined,b:number|null|undefined,descending:boolean)=>a==null?(b==null?0:1):b==null?-1:descending?b-a:a-b;
 const directionMatches=(value:number|null|undefined,direction:Direction)=>direction==='all'||(value!=null&&(direction==='positive'?value>0:value<0));
@@ -18,6 +18,8 @@ const percentTone=(value:number|null)=>value===null?'muted':value>0?'up':value<0
 
 export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
  const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
+ const toggleSort=(first:Sort,second:Sort)=>setSort(current=>current===first?second:first);
+ const sortHeader=(label:string,first:Sort,second:Sort,firstAscending:boolean)=><button type="button" className={`disposition-header-button ${sort===first||sort===second?'active':''}`} onClick={()=>toggleSort(first,second)} aria-label={`${label}，${sort===first?`目前${firstAscending?'升冪':'降冪'}，點擊切換`:sort===second?`目前${firstAscending?'降冪':'升冪'}，點擊切換`:'點擊排序'}`} aria-pressed={sort===first||sort===second}>{label}<span aria-hidden="true">{sort===first?(firstAscending?'↑':'↓'):sort===second?(firstAscending?'↓':'↑'):'↕'}</span></button>;
  const [endWithin,setEndWithin]=useState('all'),[returnDirection,setReturnDirection]=useState<Direction>('all'),[institutionalDirection,setInstitutionalDirection]=useState<Direction>('all'),[ma20Direction,setMa20Direction]=useState<Direction>('all'),[fiveDayDirection,setFiveDayDirection]=useState<Direction>('all'),[tenDayDirection,setTenDayDirection]=useState<Direction>('all');
  const referenceDate=[snapshot.asOf,todayTaipei()].sort().at(-1)!;
  const byCode=new Map(snapshot.stocks.map(stock=>[stock.code,stock]));
@@ -42,6 +44,9 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
  }).sort((a,b)=>{
   let result=0;
   if(sort==='end')result=a.metrics.calendarDaysUntilEnd-b.metrics.calendarDaysUntilEnd;
+  if(sort==='end-late')result=b.metrics.calendarDaysUntilEnd-a.metrics.calendarDaysUntilEnd;
+  if(sort==='code-asc')result=a.disposition.code.localeCompare(b.disposition.code,'zh-TW',{numeric:true});
+  if(sort==='code-desc')result=b.disposition.code.localeCompare(a.disposition.code,'zh-TW',{numeric:true});
   if(sort==='return-high')result=compareNullable(a.metrics.periodChangePercent,b.metrics.periodChangePercent,true);
   if(sort==='return-low')result=compareNullable(a.metrics.periodChangePercent,b.metrics.periodChangePercent,false);
   if(sort==='five-day-high')result=compareNullable(a.metrics.fiveDayChangePercent,b.metrics.fiveDayChangePercent,true);
@@ -70,10 +75,23 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
     <label className="disposition-sort">10 日漲跌<select value={tenDayDirection} onChange={event=>setTenDayDirection(event.target.value as Direction)}><option value="all">全部</option><option value="positive">上漲</option><option value="negative">下跌</option></select></label>
     <label className="disposition-sort">法人 5 日<select value={institutionalDirection} onChange={event=>setInstitutionalDirection(event.target.value as Direction)}><option value="all">全部</option><option value="positive">買超</option><option value="negative">賣超</option></select></label>
     <label className="disposition-sort">20MA 乖離<select value={ma20Direction} onChange={event=>setMa20Direction(event.target.value as Direction)}><option value="all">全部</option><option value="positive">均線之上</option><option value="negative">均線之下</option></select></label>
-    <label className="disposition-sort">排序<select value={sort} onChange={event=>setSort(event.target.value as Sort)}><option value="end">最早出關</option><option value="return-high">期間漲幅高至低</option><option value="return-low">期間漲幅低至高</option><option value="five-day-high">5 日漲幅高至低</option><option value="five-day-low">5 日漲幅低至高</option><option value="ten-day-high">10 日漲幅高至低</option><option value="ten-day-low">10 日漲幅低至高</option><option value="ma20-high">20MA 乖離高至低</option><option value="ma20-low">20MA 乖離低至高</option><option value="institutional-buy">法人買超高至低</option><option value="institutional-sell">法人賣超高至低</option></select></label>
+    <label className="disposition-sort">排序<select value={sort} onChange={event=>setSort(event.target.value as Sort)}><option value="end">最早出關</option><option value="end-late">最晚出關</option><option value="code-asc">代號小至大</option><option value="code-desc">代號大至小</option><option value="return-high">期間漲幅高至低</option><option value="return-low">期間漲幅低至高</option><option value="five-day-high">5 日漲幅高至低</option><option value="five-day-low">5 日漲幅低至高</option><option value="ten-day-high">10 日漲幅高至低</option><option value="ten-day-low">10 日漲幅低至高</option><option value="ma20-high">20MA 乖離高至低</option><option value="ma20-low">20MA 乖離低至高</option><option value="institutional-buy">法人買超高至低</option><option value="institutional-sell">法人賣超高至低</option></select></label>
     <div className="view-toggle" aria-label="檢視方式"><button className={view==='list'?'active':''} aria-label="列表檢視" onClick={()=>setView('list')}>≡</button><button className={view==='grid'?'active':''} aria-label="格狀檢視" onClick={()=>setView('grid')}>▦</button></div>
    </div>
-   <div className={`disposition-list ${view==='grid'?'grid-view':''}`}>{visibleItems.map(({disposition:d,stock,metrics})=>{
+   <div className={`disposition-list ${view==='grid'?'grid-view':''}`}>
+    {view==='list'&&<div className="disposition-list-header" aria-label="點擊欄位標頭排序">
+     <div className="disposition-header-stock">{sortHeader('股票代號', 'code-asc', 'code-desc', true)}<span>處置區間</span></div>
+     <div className="disposition-header-metrics">
+      {sortHeader('離出關日', 'end', 'end-late', true)}
+      {sortHeader('期間漲跌', 'return-high', 'return-low', false)}
+      {sortHeader('5 日漲幅', 'five-day-high', 'five-day-low', false)}
+      {sortHeader('10 日漲幅', 'ten-day-high', 'ten-day-low', false)}
+      {sortHeader('20MA 乖離', 'ma20-high', 'ma20-low', false)}
+      {sortHeader('法人 5 日', 'institutional-buy', 'institutional-sell', false)}
+     </div>
+     <span className="disposition-header-reason">公告原因</span>
+    </div>}
+    {visibleItems.map(({disposition:d,stock,metrics})=>{
    const repeat=/第二次|再次處置|曾發布處置交易資訊/.test(`${d.measure} ${d.content}`);
    const institutional=stock?.institutionalNet5Shares;
    return <article className={`disposition-card ${repeat?'repeat-disposition':''}`} key={`${d.code}-${d.start}`}>

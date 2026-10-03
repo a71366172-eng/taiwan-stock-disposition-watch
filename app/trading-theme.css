@@ -44,3 +44,12 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 /* Keep six disposition indicators aligned in two rows. */
 .disposition-metrics,.disposition-list.grid-view .disposition-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:760px){.disposition-list.grid-view .disposition-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.disposition-list-header{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(380px,2fr) minmax(230px,1.4fr);align-items:center;gap:12px;padding:8px 10px;margin:5px 0;color:#aebbc4;border-bottom:1px solid #49535a}
+.disposition-header-stock{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px}
+.disposition-header-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 8px}
+.disposition-header-button{display:inline-flex;align-items:center;justify-content:flex-start;gap:4px;width:100%;padding:4px 2px;border:0;border-radius:4px;background:transparent;color:#aebbc4;font-size:10px;text-align:left;cursor:pointer}
+.disposition-header-button:hover,.disposition-header-button.active{color:#79bbff;background:#273b50}
+.disposition-header-button:focus-visible{outline:2px solid #79bbff;outline-offset:2px}
+.disposition-header-button span{color:#79bbff;font-size:12px}
+.disposition-header-reason{font-size:10px}
+@media(max-width:760px){.disposition-list-header{min-width:760px;grid-template-columns:150px minmax(390px,1fr) 180px}.disposition-header-stock>span{display:none}}
