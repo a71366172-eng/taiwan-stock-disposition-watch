@@ -167,17 +167,28 @@ def get_text(url: str, required=True, retries=2, timeout=25):
                 return None
 
 def get_tpex_warrants(as_of: str):
-    """Load the full, public TPEx warrant table from its official page API."""
-    url='https://www.tpex.org.tw/www/zh-tw/warrant/wntmand'
-    payload=post_json(url,{},retries=2,timeout=25)
-    # The browser's public data API lives under /www; reject HTML/error payloads.
-    if isinstance(payload,dict):
-        tables=payload.get('tables') or []
-        rows=tables[0].get('data') if tables and isinstance(tables[0],dict) else payload.get('data')
-        fields=tables[0].get('fields',[]) if tables else []
-        if isinstance(rows,list) and len(rows)>=100 and any('標的代號' in str(field) for field in fields):
-            return [dict(zip(fields,row)) for row in rows if isinstance(row,list) and len(row)==len(fields)]
-    return None
+    """Load current TPEx warrant underlyings from its official OpenAPI roster."""
+    url='https://www.tpex.org.tw/openapi/v1/tpex_warrant_issue'
+    rows=get(url,False)
+    if not isinstance(rows,list) or len(rows)<100 or not all(key in rows[0] for key in ('Date','UnderlyingStockCode','ExpiryDate')):
+        return None
+    dates=[iso(row.get('Date')) for row in rows if isinstance(row,dict)]
+    latest=max((date for date in dates if date),default=None)
+    if not latest or latest>as_of or (dt.date.fromisoformat(as_of)-dt.date.fromisoformat(latest)).days>7:
+        errors.append(f'{public_source_url(url)}: warrant roster date unavailable or stale')
+        return None
+    return rows
+
+def parse_tpex_warrant_codes(rows: list[dict], as_of: str, common_codes: set[str]) -> set[str]:
+    """Map active TPEx warrants to listed common-stock underlyings."""
+    result=set()
+    for row in rows:
+        code=str(row.get('UnderlyingStockCode','')).strip()
+        expiry=iso(row.get('ExpiryDate'))
+        listed=iso(row.get('ListedDate'))
+        if code in common_codes and expiry and expiry>=as_of and (not listed or listed<=as_of):
+            result.add(code)
+    return result
 
 def parse_isin_convertibles(document: str, as_of: str, common_codes: set[str]) -> set[str]:
     """Read active convertible bond issuers from TWSE's official ISIN HTML table."""
@@ -390,7 +401,7 @@ def main():
     # their underlying common stocks. A failed feed stays unknown (None).
     futures_raw=get('https://openapi.taifex.com.tw/v1/SSFLists',False)
     listed_warrants=get('https://openapi.twse.com.tw/v1/opendata/t187ap37_L',False)
-    # The official TPEx page publishes its active warrant list as a public CSV.
+    # TPEx OpenAPI publishes the current underlying-stock code directly.
     tpex_warrants=get_tpex_warrants(as_of)
     # This official ISIN table contains listed and OTC convertible bonds in
     # separate sections, with the underlying code embedded in each bond code.
@@ -415,11 +426,8 @@ def main():
                     if match: result.add(match.group(1)); break
         return result
     futures_codes=product_codes(futures_raw,('StockCode',))
-    tpex_warrant_codes=set()
-    for warrant in tpex_warrants or []:
-        text=' '.join(str(value) for key,value in warrant.items() if '標的代號' in key)
-        match=re.search(r'(?<!\d)([1-9]\d{3})(?!\d)',text)
-        if match: tpex_warrant_codes.add(match.group(1))
+    tpex_common_codes={code for code in tpex_company if re.fullmatch(r'[1-9]\d{3}',code)}
+    tpex_warrant_codes=parse_tpex_warrant_codes(tpex_warrants,as_of,tpex_common_codes) if tpex_warrants else set()
     cb_codes=parse_isin_convertibles(isin_document,as_of,set(company)|set(tpex_company)) if isin_document else set()
     futures_available=isinstance(futures_raw,list) and len(futures_raw)>=100 and len(futures_codes)>=50
     listed_name_to_code={unicodedata.normalize('NFKC',strip(row.get('公司簡稱',''))).replace(' ',''):code for roster in (company,tpex_company) for code,row in roster.items() if row.get('公司簡稱')}
@@ -428,9 +436,14 @@ def main():
         underlying=next((value for key,value in row.items() if key.startswith('標的證券/')), '')
         name=unicodedata.normalize('NFKC',strip(underlying)).replace(' ','')
         code=listed_name_to_code.get(name)
-        if code: listed_warrant_codes.add(code)
+        last_trade=iso(row.get('最後交易日'))
+        if code and last_trade and last_trade>=as_of: listed_warrant_codes.add(code)
     warrant_codes=listed_warrant_codes|tpex_warrant_codes
-    warrants_available=isinstance(listed_warrants,list) and len(listed_warrants)>=100 and len(listed_warrant_codes)>=30 and isinstance(tpex_warrants,list) and len(tpex_warrants)>=100 and len(tpex_warrant_codes)>=30
+    listed_warrant_dates=[iso(row.get('出表日期')) for row in listed_warrants or [] if isinstance(row,dict)]
+    latest_listed_warrant_date=max((date for date in listed_warrant_dates if date),default=None)
+    listed_warrants_available=isinstance(listed_warrants,list) and len(listed_warrants)>=100 and len(listed_warrant_codes)>=30 and latest_listed_warrant_date is not None and abs((dt.date.fromisoformat(as_of)-dt.date.fromisoformat(latest_listed_warrant_date)).days)<=7
+    tpex_warrants_available=isinstance(tpex_warrants,list) and len(tpex_warrants)>=100 and len(tpex_warrant_codes)>=30
+    warrants_available=listed_warrants_available and tpex_warrants_available
     cb_available=bool(isin_document) and len(cb_codes)>=50
     def issued_shares(row):
         for key,value in row.items():
@@ -527,8 +540,8 @@ def main():
         old_snapshot={}
         old_bars={}
     history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
-    warrant_history_twse=select_incomplete_warrant_history(warrant_codes,twse_symbols,old_bars,'TWSE') if warrants_available else set()
-    warrant_history_tpex=select_incomplete_warrant_history(warrant_codes,tpex_symbols,old_bars,'TPEX') if warrants_available else set()
+    warrant_history_twse=select_incomplete_warrant_history(listed_warrant_codes,twse_symbols,old_bars,'TWSE') if listed_warrants_available else set()
+    warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes,tpex_symbols,old_bars,'TPEX') if tpex_warrants_available else set()
     refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}|warrant_history_twse
     refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}|warrant_history_tpex
     months=[]

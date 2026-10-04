@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import parse_isin_convertibles, select_history_batch, select_incomplete_warrant_history
+from jobs.collect_market import parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):
@@ -53,6 +53,16 @@ class HistoryBatchSelectionTests(unittest.TestCase):
         selected = select_incomplete_warrant_history(codes, codes, {}, 'TWSE', limit=75)
         self.assertEqual(len(selected), 75)
         self.assertEqual(selected, set(sorted(codes)[:75]))
+
+    def test_tpex_warrant_roster_uses_active_underlying_common_stocks(self):
+        rows = [
+            {'UnderlyingStockCode': '8069', 'ExpiryDate': '20261231', 'ListedDate': '20260101'},
+            {'UnderlyingStockCode': '8069', 'ExpiryDate': '20260930', 'ListedDate': '20260101'},
+            {'UnderlyingStockCode': '9999', 'ExpiryDate': '20261231', 'ListedDate': '20260101'},
+            {'UnderlyingStockCode': '8299', 'ExpiryDate': '20261231', 'ListedDate': '20261005'},
+        ]
+        actual = parse_tpex_warrant_codes(rows, '2026-10-02', {'8069', '8299'})
+        self.assertEqual(actual, {'8069'})
 
 
 if __name__ == '__main__':
