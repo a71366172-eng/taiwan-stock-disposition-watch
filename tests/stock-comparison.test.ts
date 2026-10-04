@@ -4,6 +4,21 @@ import {compareStocks,type ComparisonStock} from '../lib/stock-comparison.ts';
 
 const stock=(code:string,closes:number[]):ComparisonStock=>({code,name:code,market:'TWSE',bars:closes.map((close,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,close}))});
 
+test('quarter window compares 60 shared returns and 60 price ratios',()=>{
+  const closes=Array.from({length:65},(_,index)=>100+index);
+  const first=stock('1111',closes);
+  const second=stock('2222',closes.map(value=>value*2));
+  const result=compareStocks(first,second,60);
+  assert.equal(result.sessionCount,60);
+  assert.equal(result.points.length,61);
+  assert.equal(result.priceRatioSessionCount,60);
+  assert.equal(result.priceRatioPoints.length,60);
+  assert.equal(result.averagePriceRatio,0.5);
+  assert.equal(result.currentPriceRatio,0.5);
+  assert.equal(result.smoothedSessionCount,58);
+  assert.equal(result.priceRatioPoints[0].date,first.bars[5].date);
+});
+
 test('price ratio averages the latest 30 daily A/B ratios, excluding return baseline',()=>{
   const a=stock('1111',[999,...Array.from({length:30},(_,i)=>i%2?9:2)]);
   const b=stock('2222',[1,...Array.from({length:30},(_,i)=>i%2?3:1)]);

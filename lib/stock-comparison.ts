@@ -36,7 +36,7 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const secondByDate=new Map(second.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0).map(bar=>[bar.date,bar.close]));
   const common=first.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0&&secondByDate.has(bar.date)).sort((a,b)=>a.date.localeCompare(b.date)).slice(-(sessions+1));
   const points=common.map(bar=>({date:bar.date,firstClose:bar.close,secondClose:secondByDate.get(bar.date)!}));
-  // Price ratios use 30 closes; the extra baseline close belongs only to returns.
+  // Price ratios use the requested session count; the extra baseline close belongs only to returns.
   const ratioPoints=points.slice(-sessions);
   const priceRatioPoints=ratioPoints.map(point=>({date:point.date,ratio:point.firstClose/point.secondClose}));
   const averagePriceRatio=ratioPoints.length===sessions?ratioPoints.reduce((sum,point)=>sum+point.firstClose/point.secondClose,0)/sessions:null;
