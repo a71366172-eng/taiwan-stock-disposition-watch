@@ -38,6 +38,7 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const points=common.map(bar=>({date:bar.date,firstClose:bar.close,secondClose:secondByDate.get(bar.date)!}));
   // Price ratios use 30 closes; the extra baseline close belongs only to returns.
   const ratioPoints=points.slice(-sessions);
+  const priceRatioPoints=ratioPoints.map(point=>({date:point.date,ratio:point.firstClose/point.secondClose}));
   const averagePriceRatio=ratioPoints.length===sessions?ratioPoints.reduce((sum,point)=>sum+point.firstClose/point.secondClose,0)/sessions:null;
   const currentPriceRatio=points.length?points.at(-1)!.firstClose/points.at(-1)!.secondClose:null;
   const priceRatioDate=points.at(-1)?.date??null;
@@ -66,5 +67,5 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count*100:null;
   const firstChange=count?chart.at(-1)!.first:null;
   const secondChange=count?chart.at(-1)!.second:null;
-  return {points:chart,sessionCount:count,averagePriceRatio,currentPriceRatio,priceRatioDate,priceRatioSessionCount:ratioPoints.length,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+  return {points:chart,priceRatioPoints,sessionCount:count,averagePriceRatio,currentPriceRatio,priceRatioDate,priceRatioSessionCount:ratioPoints.length,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
 }

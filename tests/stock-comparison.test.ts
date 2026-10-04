@@ -12,6 +12,10 @@ test('price ratio averages the latest 30 daily A/B ratios, excluding return base
   assert.equal(result.currentPriceRatio,3);
   assert.equal(result.priceRatioSessionCount,30);
   assert.equal(result.priceRatioDate,a.bars.at(-1)!.date);
+  assert.equal(result.priceRatioPoints.length,30);
+  assert.equal(result.priceRatioPoints[0].ratio,2);
+  assert.equal(result.priceRatioPoints.at(-1)!.ratio,result.currentPriceRatio);
+  assert.equal(result.priceRatioPoints.reduce((sum,point)=>sum+point.ratio,0)/30,result.averagePriceRatio);
   assert.notEqual(result.averagePriceRatio,5.5/2);
 });
 
@@ -23,6 +27,7 @@ test('price ratios align dates and exclude zero or invalid closes without invent
   assert.equal(result.currentPriceRatio,5);
   assert.equal(result.priceRatioDate,a.bars[0].date);
   assert.equal(result.priceRatioSessionCount,1);
+  assert.deepEqual(result.priceRatioPoints,[{date:a.bars[0].date,ratio:5}]);
   const empty=compareStocks(a,stock('3333',[]));
   assert.equal(empty.currentPriceRatio,null);
   assert.equal(empty.priceRatioDate,null);

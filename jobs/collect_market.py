@@ -121,6 +121,14 @@ def validate_publication(snapshot: dict, previous: dict):
         if not {key(d) for d in previous.get('dispositions',[])}<={key(d) for d in snapshot.get('dispositions',[])}:
             raise ValueError('Snapshot withheld: disposition records lost')
 
+def merge_disposition_history(current: list[dict], previous: dict, as_of: str) -> list[dict]:
+    """Retain prior official announcements when an exchange's rolling feed omits them."""
+    cutoff=(dt.date.fromisoformat(as_of)-dt.timedelta(days=120)).isoformat()
+    key=lambda item:(item['code'],item.get('announced'),item.get('start'),item.get('end'))
+    merged={key(item):item for item in previous.get('dispositions',[]) if item.get('announced','')>=cutoff}
+    merged.update({key(item):item for item in current})
+    return list(merged.values())
+
 def tpex_company_rows_from_quotes(quotes: list[dict], previous_stocks: list[dict]) -> list[dict]:
     """Build a current TPEx common-stock roster if the MOPS master is unavailable."""
     previous={str(stock.get('code','')):stock for stock in previous_stocks if stock.get('market')=='TPEX'}
@@ -501,6 +509,10 @@ def main():
         raise ValueError(f'Market quote feeds are more than four calendar days apart: TWSE={twse_dates[-1]}, TPEX={tpex_dates[-1]}')
     as_of=args.as_of or latest_quote_date
     if as_of!=latest_quote_date: raise ValueError('The quote endpoints only expose recent snapshots; historical collection is not supported.')
+    try:
+        old_snapshot=json.loads((ROOT/'public'/'data'/'market.json').read_text(encoding='utf-8'))
+    except (OSError,ValueError,AttributeError):
+        old_snapshot={}
     day=dt.date.fromisoformat(as_of); compact=as_of.replace('-',''); start=(day-dt.timedelta(days=105)).strftime('%Y%m%d')
     notices=get(f'https://www.twse.com.tw/announcement/notice?response=json&startDate={start}&endDate={compact}')
     cand=get('https://openapi.twse.com.tw/v1/announcement/notetrans')
@@ -586,6 +598,7 @@ def main():
         if not is_tpex_common(code) or not announced or announced>as_of: continue
         period=str(r.get('DispositionPeriod','')).split('~')
         dispositions.append({'code':code,'name':r.get('CompanyName',code),'announced':announced,'start':iso(period[0]) if period else None,'end':iso(period[1]) if len(period)>1 else None,'condition':strip(r.get('DispositionReasons','')),'measure':'櫃買中心正式處置','content':strip(r.get('DisposalCondition',''))})
+    dispositions=merge_disposition_history(dispositions,old_snapshot,as_of)
     active=[d for d in dispositions if d['end'] and d['end']>=as_of]
     quote_map={x['Code']:x for x in quotes}
     f_map={x.get('Code'):x for x in fundamentals}
@@ -648,13 +661,7 @@ def main():
     # history for untouched stocks, and always refresh official risk names.
     taipei_now=dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)
     slots=[8,12,14,18,23]
-    old_snapshot_path=ROOT/'public'/'data'/'market.json'
-    try:
-        old_snapshot=json.loads(old_snapshot_path.read_text(encoding='utf-8'))
-        old_bars={f"{item.get('market')}:{item.get('code')}":item.get('bars',[]) for item in old_snapshot.get('stocks',[])}
-    except (OSError,ValueError,AttributeError):
-        old_snapshot={}
-        old_bars={}
+    old_bars={f"{item.get('market')}:{item.get('code')}":item.get('bars',[]) for item in old_snapshot.get('stocks',[])}
     history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
     warrant_history_twse=select_incomplete_warrant_history(listed_warrant_codes,twse_symbols,old_bars,'TWSE') if listed_warrants_available else set()
     warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes|listed_warrant_codes,tpex_symbols,old_bars,'TPEX') if tpex_warrants_available or listed_warrants_available else set()
