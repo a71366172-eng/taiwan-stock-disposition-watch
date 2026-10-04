@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
+from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):
@@ -20,6 +20,23 @@ class ConvertibleBondRosterTests(unittest.TestCase):
 
 
 class HistoryBatchSelectionTests(unittest.TestCase):
+    def test_complete_history_refresh_only_fetches_current_month(self):
+        months = ['20261001', '20260901', '20260801', '20260701']
+        old_bars = [{'date': f'2026-09-{day:02d}', 'close': 10} for day in range(1, 32)]
+        self.assertEqual(history_months_to_fetch(old_bars, months, True), ['20261001'])
+
+    def test_incomplete_history_backfills_three_months(self):
+        months = ['20261001', '20260901', '20260801', '20260701']
+        old_bars = [{'date': f'2026-09-{day:02d}', 'close': 10} for day in range(1, 20)]
+        self.assertEqual(history_months_to_fetch(old_bars, months, True), months[:3])
+
+    def test_history_merge_preserves_old_rows_and_prefers_fresh_corrections(self):
+        old = [{'date': '2026-09-01', 'close': 10}, {'date': '2026-09-02', 'close': 11}]
+        fresh = [{'date': '2026-09-02', 'close': 12}, {'date': '2026-10-01', 'close': 13}, {'date': '2026-10-02', 'close': 14}]
+        self.assertEqual(merge_history_bars(old, fresh, '2026-10-01'), [
+            {'date': '2026-09-01', 'close': 10}, {'date': '2026-09-02', 'close': 12}, {'date': '2026-10-01', 'close': 13},
+        ])
+
     def test_manual_next_continues_after_last_published_batch(self):
         slots = [8, 12, 14, 18, 23]
         now = dt.datetime(2026, 10, 4, 7, 20)

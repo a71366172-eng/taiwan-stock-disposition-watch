@@ -36,7 +36,6 @@ jobs:
       - run: npm ci
       - name: Collect official TWSE and TPEx data
         if: github.event_name != 'push' # Code-only releases reuse the latest verified snapshot; scheduled/manual runs refresh official data.
-        continue-on-error: true # Keep deploying the last verified snapshot if the two public feeds temporarily report different dates.
         env:
           HISTORY_BATCH_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && 'next' || '' }}
         run: python jobs/collect_market.py

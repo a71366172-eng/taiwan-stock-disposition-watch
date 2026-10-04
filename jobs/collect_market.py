@@ -77,6 +77,19 @@ def select_incomplete_warrant_history(codes: set[str], market_codes: set[str], o
             pending.append(code)
     return set(sorted(pending)[:max(0, limit)])
 
+def history_months_to_fetch(old_bars: list[dict], months: list[str], enabled: bool) -> list[str]:
+    """Refresh one current month for complete histories; backfill up to 31 sessions when incomplete."""
+    if not enabled or not months:
+        return []
+    valid_dates={bar.get('date') for bar in old_bars if bar.get('date') and bar.get('close') is not None and str(bar.get('close')).strip() not in ('','0')}
+    return months[:1] if len(valid_dates)>=31 else months[:3]
+
+def merge_history_bars(old_bars: list[dict], new_bars: list[dict], as_of: str) -> list[dict]:
+    """Keep prior sessions and let freshly fetched official rows replace corrections."""
+    merged={str(bar.get('date')):bar for bar in old_bars if bar.get('date') and bar.get('date')<=as_of}
+    merged.update({str(bar.get('date')):bar for bar in new_bars if bar.get('date') and bar.get('date')<=as_of})
+    return sorted(merged.values(),key=lambda bar:bar['date'])
+
 def tpex_company_rows_from_quotes(quotes: list[dict], previous_stocks: list[dict]) -> list[dict]:
     """Build a current TPEx common-stock roster if the MOPS master is unavailable."""
     previous={str(stock.get('code','')):stock for stock in previous_stocks if stock.get('market')=='TPEX'}
@@ -607,16 +620,16 @@ def main():
     def load_twse_stock(code):
         q=quote_map.get(code,{})
         bars=[]
-        for month in months if code in candidates else months[:3] if code in refresh_twse else []:
+        old_stock_bars=old_bars.get(f'TWSE:{code}',[])
+        fetch_months=history_months_to_fetch(old_stock_bars,months,code in candidates or code in refresh_twse)
+        for month in fetch_months:
             payload=get(f'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date={month}&stockNo={code}',False)
             for r in (payload or {}).get('data',[]):
                 date=iso(r[0]); close=number(r[6]); change=number(r[7]); reference=close-change if close is not None and change is not None else None
                 if date and date<=as_of:
                     bars.append({'date':date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':strip(r[9]) if len(r)>9 else ''})
             time.sleep(.3)
-        bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
-        if code not in refresh_twse:
-            bars=[b for b in old_bars.get(f'TWSE:{code}',[]) if b.get('date','')<=as_of]
+        bars=merge_history_bars(old_stock_bars,bars,as_of)
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
         if not as_of_bar and iso(q.get('Date'))==as_of:
             quote_close=number(q.get('ClosingPrice')); quote_change=number(q.get('Change'))
@@ -641,7 +654,9 @@ def main():
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
-        for month in months if code in tpex_candidates else months[:3] if code in refresh_tpex else []:
+        old_stock_bars=old_bars.get(f'TPEX:{code}',[])
+        fetch_months=history_months_to_fetch(old_stock_bars,months,code in tpex_candidates or code in refresh_tpex)
+        for month in fetch_months:
             date=f'{month[:4]}/{month[4:6]}/01'
             url='https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock?'+urllib.parse.urlencode({'code':code,'date':date,'id':'','response':'json'})
             payload=get(url,False) or {}
@@ -651,9 +666,7 @@ def main():
                 if trading_date and trading_date<=as_of:
                     bars.append({'date':trading_date,'open':number(r[3]),'high':number(r[4]),'low':number(r[5]),'close':close,'reference':reference,'volume':number(r[1]),'note':''})
             time.sleep(.2)
-        bars=sorted({b['date']:b for b in bars}.values(),key=lambda b:b['date'])
-        if code not in refresh_tpex:
-            bars=[b for b in old_bars.get(f'TPEX:{code}',[]) if b.get('date','')<=as_of]
+        bars=merge_history_bars(old_stock_bars,bars,as_of)
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
         if not as_of_bar and iso(q.get('Date'))==as_of:
             quote_close=number(q.get('Close')); quote_change=number(q.get('Change'))
