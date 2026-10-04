@@ -7,6 +7,7 @@ import {DispositionStocks} from '../components/disposition-stocks';
 import {StockDetail} from '../components/stock-detail';
 import {StockCompare} from '../components/stock-compare-live';
 import {StockScreener} from '../components/stock-screener';
+import {SimilarStocks} from '../components/similar-stocks';
 import Methodology from '../app/methodology/page';
 import {SiteShell} from '../components/site-shell';
 import {listLocalSimulations} from '../lib/local-simulations';
@@ -22,6 +23,7 @@ export function StaticApp(){
  if(path==='/methodology')return <Methodology/>;
  if(path==='/status')return <Status snapshot={snapshot} storage={storage}/>;
  if(path==='/compare')return <StockCompare snapshot={snapshot}/>;
+ if(path==='/compare/similar')return <SimilarStocks/>;
  if(path==='/screener')return <ScreenerRoute fallback={snapshot}/>;
  if(path==='/history')return <StaticHistory/>;
  if(path==='/dispositions')return <DispositionStocks snapshot={snapshot}/>;

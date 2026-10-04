@@ -1,6 +1,7 @@
 export type ComparisonBar={date:string;close:number};
 export type ComparisonStock={code:string;name:string;market:'TWSE'|'TPEX';bars:ComparisonBar[]};
 export type ComparisonSnapshot={schemaVersion:number;asOf:string;generatedAt:string;windowSessions:number;collectedDates:Record<string,string[]>;stocks:ComparisonStock[]};
+export type SimilarStockResult=ReturnType<typeof compareStocks>&{stock:ComparisonStock};
 
 function pearson(first:number[],second:number[],minimum=15):number|null{
   if(first.length!==second.length||first.length<minimum)return null;
@@ -83,4 +84,13 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const secondChange=count?chart.at(-1)!.second:null;
   const dtwDistance=normalizedDtw(points.slice(-30).map(point=>point.firstClose),points.slice(-30).map(point=>point.secondClose));
   return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,twoDayLogReturnDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights,synchronizationWeightTotalPercent:totalPercent,sameDirection:sameDirection===null?null:sameDirection*100,dtwDistance,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+}
+
+/** Rank the five strongest matches using the existing 0–100 synchronization score. */
+export function findSimilarStocks(reference:ComparisonStock,candidates:ComparisonStock[],limit=5):SimilarStockResult[]{
+  return candidates.filter(stock=>stock.code!==reference.code)
+    .map(stock=>({stock,...compareStocks(reference,stock,30,100)}))
+    .filter(result=>result.sessionCount>=30&&result.synchronizationRate!==null)
+    .sort((a,b)=>b.synchronizationRate!-a.synchronizationRate!||(a.dtwDistance??Infinity)-(b.dtwDistance??Infinity)||(b.smoothedPearson??-Infinity)-(a.smoothedPearson??-Infinity)||a.stock.code.localeCompare(b.stock.code,'zh-TW',{numeric:true}))
+    .slice(0,Math.max(0,limit));
 }

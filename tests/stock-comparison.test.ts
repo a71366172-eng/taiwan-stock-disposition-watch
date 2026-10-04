@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {compareStocks,type ComparisonStock} from '../lib/stock-comparison.ts';
+import {compareStocks,findSimilarStocks,type ComparisonStock} from '../lib/stock-comparison.ts';
 
 const stock=(code:string,closes:number[]):ComparisonStock=>({code,name:code,market:'TWSE',bars:closes.map((close,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,close}))});
 
@@ -68,4 +68,17 @@ test('30-session min-max DTW is scale-invariant and measures normalized curve di
   const curved=Array.from({length:31},(_,index)=>100+index*index);
   assert.ok(Math.abs(compareStocks(stock('1111',first),stock('2222',scaled)).dtwDistance!)<1e-12);
   assert.ok(compareStocks(stock('1111',first),stock('3333',curved)).dtwDistance!>0);
+});
+
+test('similar-stock ranking returns the top five valid matches and excludes the selected stock',()=>{
+  const reference=stock('1111',Array.from({length:31},(_,index)=>100+Math.sin(index*.7)*5+index*.2));
+  const identical=stock('2222',reference.bars.map(bar=>bar.close*3));
+  const noisy=stock('3333',reference.bars.map((bar,index)=>bar.close*(1+(index%4===0?.008:0))));
+  const short=stock('4444',reference.bars.slice(-12).map(bar=>bar.close));
+  const candidates=[short,noisy,...Array.from({length:6},(_,index)=>stock(`${5000+index}`,reference.bars.map((bar,barIndex)=>bar.close*(1+(index+1)*.003*Math.sin(barIndex*.31))))) ,identical,reference];
+  const ranked=findSimilarStocks(reference,candidates);
+  assert.equal(ranked.length,5);
+  assert.equal(ranked[0].stock.code,'2222');
+  assert.ok(ranked.every(result=>result.stock.code!=='1111'&&result.sessionCount===30&&result.synchronizationRate!==null));
+  assert.ok(ranked.every((result,index)=>index===0||ranked[index-1].synchronizationRate!>=result.synchronizationRate!));
 });
