@@ -7,6 +7,7 @@
 .compare-button:disabled{opacity:.6;cursor:wait}
 .compare-button:focus-visible{outline:2px solid #79bbff;outline-offset:2px}
 .compare-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 22px 18px}
+.compare-summary.compare-ratios{grid-template-columns:repeat(2,minmax(0,1fr))}
 .compare-summary>div{min-width:0;padding:12px;background:#252a2e;border:1px solid #41494f;border-radius:7px}
 .compare-summary>.compare-sync-rate{grid-column:span 1;background:#17314a;border-color:#2e628e}.compare-sync-rate strong{font-size:30px;color:#9dccff}
 .compare-summary small,.compare-summary span{display:block;color:#9caab3;font-size:11px;line-height:1.5}

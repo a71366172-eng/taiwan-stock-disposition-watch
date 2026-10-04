@@ -36,6 +36,11 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const secondByDate=new Map(second.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0).map(bar=>[bar.date,bar.close]));
   const common=first.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0&&secondByDate.has(bar.date)).sort((a,b)=>a.date.localeCompare(b.date)).slice(-(sessions+1));
   const points=common.map(bar=>({date:bar.date,firstClose:bar.close,secondClose:secondByDate.get(bar.date)!}));
+  // Price ratios use 30 closes; the extra baseline close belongs only to returns.
+  const ratioPoints=points.slice(-sessions);
+  const averagePriceRatio=ratioPoints.length===sessions?ratioPoints.reduce((sum,point)=>sum+point.firstClose/point.secondClose,0)/sessions:null;
+  const currentPriceRatio=points.length?points.at(-1)!.firstClose/points.at(-1)!.secondClose:null;
+  const priceRatioDate=points.at(-1)?.date??null;
   const daily=points.slice(1).map((point,index)=>({first:point.firstClose/points[index].firstClose-1,second:point.secondClose/points[index].secondClose-1}));
   const chart=points.map(point=>({date:point.date,first:(point.firstClose/points[0].firstClose-1)*100,second:(point.secondClose/points[0].secondClose-1)*100}));
   const count=daily.length;
@@ -61,5 +66,5 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count*100:null;
   const firstChange=count?chart.at(-1)!.first:null;
   const secondChange=count?chart.at(-1)!.second:null;
-  return {points:chart,sessionCount:count,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+  return {points:chart,sessionCount:count,averagePriceRatio,currentPriceRatio,priceRatioDate,priceRatioSessionCount:ratioPoints.length,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
 }

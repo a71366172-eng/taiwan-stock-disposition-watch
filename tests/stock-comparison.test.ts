@@ -4,6 +4,30 @@ import {compareStocks,type ComparisonStock} from '../lib/stock-comparison.ts';
 
 const stock=(code:string,closes:number[]):ComparisonStock=>({code,name:code,market:'TWSE',bars:closes.map((close,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,close}))});
 
+test('price ratio averages the latest 30 daily A/B ratios, excluding return baseline',()=>{
+  const a=stock('1111',[999,...Array.from({length:30},(_,i)=>i%2?9:2)]);
+  const b=stock('2222',[1,...Array.from({length:30},(_,i)=>i%2?3:1)]);
+  const result=compareStocks(a,b);
+  assert.equal(result.averagePriceRatio,2.5);
+  assert.equal(result.currentPriceRatio,3);
+  assert.equal(result.priceRatioSessionCount,30);
+  assert.equal(result.priceRatioDate,a.bars.at(-1)!.date);
+  assert.notEqual(result.averagePriceRatio,5.5/2);
+});
+
+test('price ratios align dates and exclude zero or invalid closes without inventing a 30-day mean',()=>{
+  const a=stock('1111',[10,20,30,40]);
+  const b=stock('2222',[2,0,NaN]);
+  const result=compareStocks(a,b);
+  assert.equal(result.averagePriceRatio,null);
+  assert.equal(result.currentPriceRatio,5);
+  assert.equal(result.priceRatioDate,a.bars[0].date);
+  assert.equal(result.priceRatioSessionCount,1);
+  const empty=compareStocks(a,stock('3333',[]));
+  assert.equal(empty.currentPriceRatio,null);
+  assert.equal(empty.priceRatioDate,null);
+});
+
 test('comparison aligns common dates and uses daily returns, not just cumulative gain',()=>{
   const first=stock('1111',Array.from({length:31},(_,index)=>100+index));
   const second=stock('2222',Array.from({length:31},(_,index)=>200+index*2));
