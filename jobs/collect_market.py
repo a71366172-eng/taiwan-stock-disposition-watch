@@ -4,7 +4,7 @@ Standard library only. No credentials, no adjusted-price substitution.
 Run: python jobs/collect_market.py [--as-of YYYY-MM-DD]
 """
 from __future__ import annotations
-import argparse, csv, datetime as dt, hashlib, io, json, os, pathlib, re, shutil, subprocess, time, urllib.request, urllib.parse, unicodedata
+import argparse, csv, datetime as dt, hashlib, io, json, os, pathlib, re, shutil, subprocess, threading, time, urllib.request, urllib.parse, unicodedata
 from html.parser import HTMLParser
 from concurrent.futures import ThreadPoolExecutor
 
@@ -13,6 +13,9 @@ RAW = ROOT / 'work' / 'raw'
 RAW.mkdir(parents=True, exist_ok=True)
 errors: list[str] = []
 sources: list[dict] = []
+_request_lock=threading.Lock()
+_last_request_at: dict[str,float] = {}
+_request_interval=max(0.0,float(os.getenv('MARKET_API_MIN_INTERVAL_SECONDS','0.4')))
 PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'openapi.taifex.com.tw', 'mopsfin.twse.com.tw', 'isin.twse.com.tw'}
 PUBLIC_QUERY_KEYS = {'cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 'strMode', 't', 'type'}
 
@@ -28,6 +31,23 @@ def public_source_url(url: str):
 
 def record_source(url: str, observed_at: str):
     sources.append({'url': public_source_url(url), 'observedAt': observed_at})
+
+def pace_request(url: str):
+    """Space request starts per host to avoid burst throttling on public APIs."""
+    host=urllib.parse.urlsplit(url).hostname or url
+    with _request_lock:
+        now=time.monotonic()
+        wait=_request_interval-(now-_last_request_at.get(host,0.0))
+        if wait>0: time.sleep(wait)
+        _last_request_at[host]=time.monotonic()
+
+def retry_delay(attempt: int, exc: Exception) -> float:
+    """Use bounded exponential backoff and honor a source Retry-After header."""
+    delay=min(2 ** attempt,8)
+    retry_after=getattr(getattr(exc,'headers',None),'get',lambda _key:None)('Retry-After')
+    try: delay=max(delay,min(float(retry_after),30))
+    except (TypeError,ValueError): pass
+    return delay
 
 def select_history_batch(slots: list[int], taipei_now: dt.datetime, override: str | None = None, previous_batch: int | None = None) -> int:
     """Return a zero-based refresh batch; manual runs can continue the last published batch."""
@@ -57,6 +77,23 @@ def select_incomplete_warrant_history(codes: set[str], market_codes: set[str], o
             pending.append(code)
     return set(sorted(pending)[:max(0, limit)])
 
+def tpex_company_rows_from_quotes(quotes: list[dict], previous_stocks: list[dict]) -> list[dict]:
+    """Build a current TPEx common-stock roster if the MOPS master is unavailable."""
+    previous={str(stock.get('code','')):stock for stock in previous_stocks if stock.get('market')=='TPEX'}
+    rows=[]
+    for quote in quotes:
+        code=str(quote.get('SecuritiesCompanyCode','')).strip()
+        if not re.fullmatch(r'[1-9]\d{3}',code):
+            continue
+        old=previous.get(code,{})
+        rows.append({
+            '公司代號':code,
+            '公司簡稱':quote.get('CompanyName') or old.get('name') or code,
+            '產業別':old.get('industry') or '',
+            '已發行普通股數或TDR原股發行股數':old.get('issuedShares') or '',
+        })
+    return rows
+
 def get(url: str, required=True, retries=3, timeout=25):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.json')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
@@ -64,6 +101,7 @@ def get(url: str, required=True, retries=3, timeout=25):
         return json.loads(cache.read_text(encoding='utf-8'))
     for attempt in range(retries):
         try:
+            pace_request(url)
             req = urllib.request.Request(url, headers={'User-Agent': 'TaiwanStockWatch/0.1 (public-data research)', 'Accept':'application/json'})
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 payload = json.loads(resp.read().decode('utf-8-sig'))
@@ -78,14 +116,15 @@ def get(url: str, required=True, retries=3, timeout=25):
             # GitHub-hosted runners also provide curl, so keep verification on.
             if 'tpex.org.tw' in url and shutil.which('curl'):
                 try:
-                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','0','-L','--fail','--silent','--show-error',url],check=True,capture_output=True)
+                    pace_request(url)
+                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','2','--retry-delay','1','-L','--fail','--silent','--show-error',url],check=True,capture_output=True)
                     payload=json.loads(completed.stdout.decode('utf-8-sig'))
                     cache.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
                     record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
                     return payload
                 except Exception:
                     pass
-            if attempt < retries-1: time.sleep(1 + attempt * 2)
+            if attempt < retries-1: time.sleep(retry_delay(attempt,exc))
             else:
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
@@ -100,6 +139,7 @@ def post_json(url: str, params: dict[str, str], retries=2, timeout=20):
     headers={'User-Agent':'TaiwanStockWatch/0.1 (public-data research)','Accept':'application/json','Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','Referer':'https://www.tpex.org.tw/zh-tw/announce/market/attention.html','Origin':'https://www.tpex.org.tw'}
     for attempt in range(retries):
         try:
+            pace_request(url)
             req=urllib.request.Request(url,data=body.encode(),headers=headers,method='POST')
             with urllib.request.urlopen(req,timeout=timeout) as resp: payload=json.loads(resp.read().decode('utf-8-sig'))
             if not isinstance(payload,dict) or str(payload.get('stat','')).lower()!='ok': raise ValueError('TPEx historical attention response invalid')
@@ -109,14 +149,15 @@ def post_json(url: str, params: dict[str, str], retries=2, timeout=20):
         except Exception as exc:
             if 'tpex.org.tw' in url and shutil.which('curl'):
                 try:
-                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','0','-L','--fail','--silent','--show-error','-H',f'User-Agent: {headers["User-Agent"]}','-H',f'Referer: {headers["Referer"]}','-H','Content-Type: application/x-www-form-urlencoded; charset=UTF-8','--data-binary',body,url],check=True,capture_output=True)
+                    pace_request(url)
+                    completed=subprocess.run(['curl','--compressed','--connect-timeout','10','--max-time',str(timeout),'--retry','2','--retry-delay','1','-L','--fail','--silent','--show-error','-H',f'User-Agent: {headers["User-Agent"]}','-H',f'Referer: {headers["Referer"]}','-H','Content-Type: application/x-www-form-urlencoded; charset=UTF-8','--data-binary',body,url],check=True,capture_output=True)
                     payload=json.loads(completed.stdout.decode('utf-8-sig'))
                     if not isinstance(payload,dict) or str(payload.get('stat','')).lower()!='ok': raise ValueError('TPEx historical attention response invalid')
                     cache.write_text(json.dumps(payload,ensure_ascii=False),encoding='utf-8')
                     record_source(url+'?'+body,dt.datetime.now(dt.timezone.utc).isoformat())
                     return payload
                 except Exception: pass
-            if attempt<retries-1: time.sleep(1+attempt*2)
+            if attempt<retries-1: time.sleep(retry_delay(attempt,exc))
             else:
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 return None
@@ -128,6 +169,7 @@ def get_csv(url: str, required=True):
         return list(csv.DictReader(io.StringIO(cache.read_text(encoding='utf-8-sig'))))
     for attempt in range(3):
         try:
+            pace_request(url)
             req = urllib.request.Request(url, headers={'User-Agent': 'TaiwanStockWatch/0.1 (public-data research)', 'Accept':'text/csv'})
             with urllib.request.urlopen(req, timeout=25) as resp:
                 content=resp.read().decode('utf-8-sig')
@@ -140,8 +182,16 @@ def get_csv(url: str, required=True):
             record_source(url, dt.datetime.now(dt.timezone.utc).isoformat())
             return rows
         except Exception as exc:
-            if attempt < 2: time.sleep(1 + attempt * 2)
+            if attempt < 2: time.sleep(retry_delay(attempt,exc))
             else:
+                # MOPS may return an HTML maintenance/challenge page with HTTP 200.
+                # The same listed-company roster is published by TWSE OpenAPI.
+                if url == 'https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv':
+                    fallback_url='https://openapi.twse.com.tw/v1/opendata/t187ap03_L'
+                    fallback=get(fallback_url,False)
+                    if isinstance(fallback,list) and len(fallback)>=100 and all(isinstance(row,dict) and row.get('公司代號') for row in fallback[:10]):
+                        record_source(fallback_url,dt.datetime.now(dt.timezone.utc).isoformat())
+                        return fallback
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
                 return None
@@ -153,6 +203,7 @@ def get_text(url: str, required=True, retries=2, timeout=25):
         return cache.read_text(encoding='utf-8')
     for attempt in range(retries):
         try:
+            pace_request(url)
             req=urllib.request.Request(url,headers={'User-Agent':'TaiwanStockWatch/0.1 (public-data research)','Accept':'text/html'})
             with urllib.request.urlopen(req,timeout=timeout) as resp: content=resp.read().decode(resp.headers.get_content_charset() or 'cp950',errors='replace')
             if '<table' not in content.lower(): raise ValueError('Expected official ISIN HTML table')
@@ -160,7 +211,7 @@ def get_text(url: str, required=True, retries=2, timeout=25):
             record_source(url,dt.datetime.now(dt.timezone.utc).isoformat())
             return content
         except Exception as exc:
-            if attempt<retries-1: time.sleep(1+attempt)
+            if attempt<retries-1: time.sleep(retry_delay(attempt,exc))
             else:
                 errors.append(f'{public_source_url(url)}: {type(exc).__name__}')
                 if required: raise RuntimeError(f'Source fetch failed: {public_source_url(url)}') from None
@@ -396,7 +447,13 @@ def main():
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
     firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv')
-    tpex_firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv')
+    tpex_firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv',False)
+    if not tpex_firms:
+        try:
+            previous_stocks=json.loads((ROOT/'public'/'data'/'screener.json').read_text(encoding='utf-8')).get('stocks',[])
+        except (OSError,ValueError,AttributeError):
+            previous_stocks=[]
+        tpex_firms=tpex_company_rows_from_quotes(tpex_quotes,previous_stocks)
     # Link active official derivatives/structured-product rosters back to
     # their underlying common stocks. A failed feed stays unknown (None).
     futures_raw=get('https://openapi.taifex.com.tw/v1/SSFLists',False)
@@ -541,7 +598,7 @@ def main():
         old_bars={}
     history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
     warrant_history_twse=select_incomplete_warrant_history(listed_warrant_codes,twse_symbols,old_bars,'TWSE') if listed_warrants_available else set()
-    warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes,tpex_symbols,old_bars,'TPEX') if tpex_warrants_available else set()
+    warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes|listed_warrant_codes,tpex_symbols,old_bars,'TPEX') if tpex_warrants_available or listed_warrants_available else set()
     refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}|warrant_history_twse
     refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}|warrant_history_tpex
     months=[]

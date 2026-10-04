@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history
+from jobs.collect_market import parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):
@@ -63,6 +63,17 @@ class HistoryBatchSelectionTests(unittest.TestCase):
         ]
         actual = parse_tpex_warrant_codes(rows, '2026-10-02', {'8069', '8299'})
         self.assertEqual(actual, {'8069'})
+
+    def test_tpex_quote_roster_fallback_keeps_common_stocks_and_prior_metadata(self):
+        quotes = [
+            {'SecuritiesCompanyCode': '8069', 'CompanyName': '元太'},
+            {'SecuritiesCompanyCode': '00679B', 'CompanyName': 'ETF'},
+        ]
+        old = [{'code': '8069', 'market': 'TPEX', 'name': '舊名', 'industry': '其他', 'issuedShares': 12345}]
+        self.assertEqual(tpex_company_rows_from_quotes(quotes, old), [{
+            '公司代號': '8069', '公司簡稱': '元太', '產業別': '其他',
+            '已發行普通股數或TDR原股發行股數': 12345,
+        }])
 
 
 if __name__ == '__main__':
