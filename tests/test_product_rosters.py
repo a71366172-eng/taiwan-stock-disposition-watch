@@ -1,7 +1,19 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
+from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, parse_twse_candidates, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
+
+
+class TwseCandidateRosterTests(unittest.TestCase):
+    def test_parses_official_openapi_candidate_fields(self):
+        rows = [
+            {'Code': '2033', 'Name': '佳大', 'RecentlyMetAttentionSecuritiesCriteria': '連續二次'},
+            {'Code': '0050', 'Name': 'ETF', 'RecentlyMetAttentionSecuritiesCriteria': '不收普通股'},
+        ]
+        self.assertEqual(parse_twse_candidates(rows, lambda code: code == '2033'), {'2033': '連續二次'})
+
+    def test_keeps_legacy_row_shape_for_cached_payloads(self):
+        self.assertEqual(parse_twse_candidates([['', '2033', '佳大', '連續二次']], lambda code: True), {'2033': '連續二次'})
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):

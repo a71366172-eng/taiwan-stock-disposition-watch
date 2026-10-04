@@ -392,6 +392,22 @@ def notice_rules(reason):
 def twse_notice(row):
     return {'code':str(row[1]),'name':row[2],'date':iso(row[5]),'reason':strip(row[4]),'rules':notice_rules(row[4]), 'close':number(row[6]),'pe':number(row[7])}
 
+def parse_twse_candidates(rows, is_common):
+    """Normalize the official TWSE OpenAPI cumulative-candidate roster."""
+    if not isinstance(rows,list): raise ValueError('TWSE cumulative-candidate roster is not a list')
+    result={}
+    for row in rows:
+        if isinstance(row,dict):
+            code=str(row.get('Code','')).strip()
+            reason=strip(row.get('RecentlyMetAttentionSecuritiesCriteria',''))
+        elif isinstance(row,(list,tuple)) and len(row)>3:
+            code=str(row[1]).strip()
+            reason=strip(row[3])
+        else:
+            continue
+        if code and reason and is_common(code): result[code]=reason
+    return result
+
 def tpex_notice(row):
     reason=strip(row.get('TradingInformation',''))
     return {'code':str(row.get('SecuritiesCompanyCode','')),'name':row.get('CompanyName',''),'date':iso(row.get('Date')),'reason':reason,'rules':notice_rules(reason),'close':number(row.get('ClosePrice')),'pe':number(row.get('PriceEarningRatio'))}
@@ -456,7 +472,7 @@ def main():
     if as_of!=latest_quote_date: raise ValueError('The quote endpoints only expose recent snapshots; historical collection is not supported.')
     day=dt.date.fromisoformat(as_of); compact=as_of.replace('-',''); start=(day-dt.timedelta(days=105)).strftime('%Y%m%d')
     notices=get(f'https://www.twse.com.tw/announcement/notice?response=json&startDate={start}&endDate={compact}')
-    cand=get(f'https://www.twse.com.tw/announcement/notetrans?response=json&date={compact}')
+    cand=get('https://openapi.twse.com.tw/v1/announcement/notetrans')
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
     firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv')
@@ -522,7 +538,7 @@ def main():
     is_common=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',code)) and (code in company if company else True)
     all_notices=[twse_notice(r) for r in notices.get('data',[]) if is_common(str(r[1]))]
     all_notices=[x for x in all_notices if x['date'] and x['date']<=as_of]
-    candidates={str(r[1]):strip(r[3]) for r in cand.get('data',[]) if is_common(str(r[1]))}
+    candidates=parse_twse_candidates(cand,is_common)
     is_tpex_common=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',code))
     tpex_notices=[tpex_notice(r) for r in tpex_notices_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode','')))]
     tpex_notices=[x for x in tpex_notices if x['date']==as_of]
