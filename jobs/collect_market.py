@@ -47,6 +47,16 @@ def select_history_batch(slots: list[int], taipei_now: dt.datetime, override: st
     current_slot = taipei_now.hour + taipei_now.minute / 60
     return min(range(len(slots)), key=lambda index: abs(current_slot - slots[index]))
 
+def select_incomplete_warrant_history(codes: set[str], market_codes: set[str], old_bars: dict[str, list[dict]], market: str, limit: int = 100) -> set[str]:
+    """Backfill missing 30-session price histories for warrant underlyings first."""
+    pending = []
+    for code in codes & market_codes:
+        bars = old_bars.get(f'{market}:{code}', [])
+        valid = [bar for bar in bars if bar.get('close') is not None and str(bar.get('close')).strip() not in ('', '0')]
+        if len(valid) < 31:
+            pending.append(code)
+    return set(sorted(pending)[:max(0, limit)])
+
 def get(url: str, required=True, retries=3, timeout=25):
     cache = RAW / (hashlib.sha256(url.encode()).hexdigest() + '.json')
     if cache.exists() and time.time() - cache.stat().st_mtime < 3600:
@@ -517,8 +527,10 @@ def main():
         old_snapshot={}
         old_bars={}
     history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
-    refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}
-    refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}
+    warrant_history_twse=select_incomplete_warrant_history(warrant_codes,twse_symbols,old_bars,'TWSE') if warrants_available else set()
+    warrant_history_tpex=select_incomplete_warrant_history(warrant_codes,tpex_symbols,old_bars,'TPEX') if warrants_available else set()
+    refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}|warrant_history_twse
+    refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}|warrant_history_tpex
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')

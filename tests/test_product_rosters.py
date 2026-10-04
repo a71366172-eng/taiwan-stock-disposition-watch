@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import parse_isin_convertibles, select_history_batch
+from jobs.collect_market import parse_isin_convertibles, select_history_batch, select_incomplete_warrant_history
 
 
 class ConvertibleBondRosterTests(unittest.TestCase):
@@ -38,6 +38,21 @@ class HistoryBatchSelectionTests(unittest.TestCase):
     def test_scheduled_runs_continue_to_select_by_time_slot(self):
         slots = [8, 12, 14, 18, 23]
         self.assertEqual(select_history_batch(slots, dt.datetime(2026, 10, 4, 17, 45)), 3)
+
+    def test_warrant_underlyings_with_incomplete_history_are_prioritized(self):
+        old_bars = {
+            'TWSE:1101': [{'close': 10}] * 30,
+            'TWSE:1102': [{'close': 10}] * 31,
+            'TWSE:1103': [{'close': 10}] * 3,
+        }
+        selected = select_incomplete_warrant_history({'1101', '1102', '1103', '8069'}, {'1101', '1102', '1103'}, old_bars, 'TWSE')
+        self.assertEqual(selected, {'1101', '1103'})
+
+    def test_warrant_history_backfill_obeys_per_run_limit(self):
+        codes = {str(code) for code in range(1000, 1200)}
+        selected = select_incomplete_warrant_history(codes, codes, {}, 'TWSE', limit=75)
+        self.assertEqual(len(selected), 75)
+        self.assertEqual(selected, set(sorted(codes)[:75]))
 
 
 if __name__ == '__main__':
