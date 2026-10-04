@@ -7,7 +7,6 @@ import {SiteShell} from './site-shell';
 type ActiveItem={disposition:Disposition;stock?:Stock;metrics:ReturnType<typeof dispositionMetrics>};
 type Sort='end'|'end-late'|'code-asc'|'code-desc'|'return-high'|'return-low'|'five-day-high'|'five-day-low'|'ten-day-high'|'ten-day-low'|'institutional-buy'|'institutional-sell'|'ma20-high'|'ma20-low';
 type Direction='all'|'positive'|'negative';
-type ProductFilter='ALL'|'YES'|'NO';
 const compareNullable=(a:number|null|undefined,b:number|null|undefined,descending:boolean)=>a==null?(b==null?0:1):b==null?-1:descending?b-a:a-b;
 const directionMatches=(value:number|null|undefined,direction:Direction)=>direction==='all'||(value!=null&&(direction==='positive'?value>0:value<0));
 const todayTaipei=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -18,9 +17,8 @@ const percent=(value:number|null)=>value===null?'—':`${value>0?'+':''}${value.
 const percentTone=(value:number|null)=>value===null?'muted':value>0?'up':value<0?'down':'';
 
 export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
- const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[stockFutures,setStockFutures]=useState<ProductFilter>('ALL'),[warrants,setWarrants]=useState<ProductFilter>('ALL'),[convertibleBonds,setConvertibleBonds]=useState<ProductFilter>('ALL'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
+ const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
  const toggleSort=(first:Sort,second:Sort)=>setSort(current=>current===first?second:first);
- const productCoverage=snapshot.productCoverage||{};
  const sortHeader=(label:string,first:Sort,second:Sort,firstAscending:boolean)=><button type="button" className={`disposition-header-button ${sort===first||sort===second?'active':''}`} onClick={()=>toggleSort(first,second)} aria-label={`${label}，${sort===first?`目前${firstAscending?'升冪':'降冪'}，點擊切換`:sort===second?`目前${firstAscending?'降冪':'升冪'}，點擊切換`:'點擊排序'}`} aria-pressed={sort===first||sort===second}>{label}<span aria-hidden="true">{sort===first?(firstAscending?'↑':'↓'):sort===second?(firstAscending?'↓':'↑'):'↕'}</span></button>;
  const [endWithin,setEndWithin]=useState('all'),[returnDirection,setReturnDirection]=useState<Direction>('all'),[institutionalDirection,setInstitutionalDirection]=useState<Direction>('all'),[ma20Direction,setMa20Direction]=useState<Direction>('all'),[fiveDayDirection,setFiveDayDirection]=useState<Direction>('all'),[tenDayDirection,setTenDayDirection]=useState<Direction>('all');
  const referenceDate=[snapshot.asOf,todayTaipei()].sort().at(-1)!;
@@ -36,9 +34,8 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
   const repeat=/第二次|再次處置|曾發布處置交易資訊/.test(`${disposition.measure} ${disposition.content}`);
   const matchesTier=tier==='all'||(tier==='repeat')===repeat;
   const matchesMarket=market==='ALL'||stock?.market===market;
-  const matchesProduct=(value:boolean|null|undefined,filter:ProductFilter)=>filter==='ALL'||(filter==='YES'?value===true:value===false);
   const matchesSearch=!search||`${disposition.code}${stock?.name||disposition.name}`.toLowerCase().includes(search.toLowerCase());
-  return matchesTier&&matchesMarket&&matchesSearch&&(productCoverage.stockFutures!==true||matchesProduct(stock?.hasStockFutures,stockFutures))&&(productCoverage.warrants!==true||matchesProduct(stock?.hasWarrants,warrants))&&(productCoverage.convertibleBonds!==true||matchesProduct(stock?.hasConvertibleBonds,convertibleBonds))&&(endWithin==='all'||metrics.calendarDaysUntilEnd<=Number(endWithin))
+  return matchesTier&&matchesMarket&&matchesSearch&&(endWithin==='all'||metrics.calendarDaysUntilEnd<=Number(endWithin))
    &&directionMatches(metrics.periodChangePercent,returnDirection)
    &&directionMatches(metrics.fiveDayChangePercent,fiveDayDirection)
    &&directionMatches(metrics.tenDayChangePercent,tenDayDirection)
@@ -63,7 +60,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
   return result||a.disposition.end!.localeCompare(b.disposition.end!)||a.disposition.code.localeCompare(b.disposition.code);
  });
  const institutionalCount=items.filter(({stock})=>stock?.institutionalNet5Shares!=null).length;
-  return <SiteShell active="dispositions">
+ return <SiteShell active="dispositions">
   <div className="page-heading"><div><div className="eyebrow">OFFICIAL DISPOSITION NOTICES</div><h1>處置股<span className="heading-dot">.</span></h1><p>依證交所與櫃買中心公告，列出目前仍在處置期間的股票。</p></div><div className="date-stamp"><CalendarDays size={18}/><div>行情資料日<strong>{snapshot.asOf.replaceAll('-','.')}</strong></div></div></div>
   <div className="summary-grid disposition-summary"><div className="summary-card featured"><div className="summary-label">目前處置股</div><div className="summary-number">{items.length}<span>檔</span></div><p>截至 {date(referenceDate)} 仍在處置期間</p></div><div className="summary-card"><div className="summary-label">報酬計算基準</div><div className="status-value">處置起始日</div><p>起始日收盤價至最新可用收盤價；不含股利及交易成本。</p></div><div className="summary-card"><div className="summary-label">三大法人 5 日資料</div><div className="status-value">{institutionalCount} / {items.length} 檔</div><p>最近 5 個交易日買賣超合計；與券商分點主力不同。</p></div></div>
   {items.length===0?<section className="panel"><div className="empty-state"><ShieldAlert size={32}/><h2>目前沒有處置中的股票</h2><p>已依公告處置區間核對至 {referenceDate}，正式資料仍以交易所公告為準。</p></div></section>:<section className="panel disposition-panel">
@@ -71,9 +68,6 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
    <div className="disposition-tools">
     <div className="segmented-control" aria-label="處置次數">{(['all','first','repeat'] as const).map(value=><button key={value} className={tier===value?'active':''} onClick={()=>setTier(value)}>{value==='all'?'全部':value==='first'?'首次處置':'再次處置'}</button>)}</div>
     <div className="segmented-control" aria-label="市場">{(['ALL','TWSE','TPEX'] as const).map(value=><button key={value} className={market===value?'active':''} onClick={()=>setMarket(value)}>{value==='ALL'?'全部':value==='TWSE'?'上市':'上櫃'}</button>)}</div>
-    <label className="disposition-sort">股期<select aria-label="股票期貨篩選" disabled={productCoverage.stockFutures!==true} value={stockFutures} onChange={event=>setStockFutures(event.target.value as ProductFilter)}><option value="ALL">{productCoverage.stockFutures===true?'不限':'待資料'}</option><option value="YES">有</option><option value="NO">無</option></select></label>
-    <label className="disposition-sort">權證<select aria-label="權證篩選" disabled={productCoverage.warrants!==true} value={warrants} onChange={event=>setWarrants(event.target.value as ProductFilter)}><option value="ALL">{productCoverage.warrants===true?'不限':'待資料'}</option><option value="YES">有</option><option value="NO">無</option></select></label>
-    <label className="disposition-sort">CB<select aria-label="可轉債篩選" disabled={productCoverage.convertibleBonds!==true} value={convertibleBonds} onChange={event=>setConvertibleBonds(event.target.value as ProductFilter)}><option value="ALL">{productCoverage.convertibleBonds===true?'不限':'待資料'}</option><option value="YES">有</option><option value="NO">無</option></select></label>
     <input className="disposition-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="搜尋股票代號或名稱" aria-label="搜尋處置股"/>
     <label className="disposition-sort">出關<select value={endWithin} onChange={event=>setEndWithin(event.target.value)}><option value="all">全部日期</option><option value="0">今天</option><option value="3">3 天內</option><option value="7">7 天內</option></select></label>
     <label className="disposition-sort">期間漲跌<select value={returnDirection} onChange={event=>setReturnDirection(event.target.value as Direction)}><option value="all">全部</option><option value="positive">上漲</option><option value="negative">下跌</option></select></label>
@@ -112,7 +106,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
     </div>
     <div className="disposition-reason"><strong>本次公告原因</strong><p>{d.condition||d.content||'請查看交易所原始公告。'}</p>{d.content&&d.content!==d.condition&&<details><summary>查看公告補充內容</summary><p>{d.content}</p></details>}</div>
    </article>;
-   })}{visibleItems.length===0&&<div className="empty-state"><ShieldAlert size={28}/><h2>沒有符合篩選條件的股票</h2><p>請調整商品類型、出關日、漲跌幅、20MA 乖離、法人買賣超或搜尋文字。</p></div>}</div><div className="panel-note"><Info size={16}/><p>期間漲跌幅＝最新可用收盤價 ÷ 處置開始日收盤價 − 1。5 日／10 日漲幅＝最新可用收盤價 ÷ 5／10 個交易日前收盤價 − 1，均不含股利；不足 6／11 筆有效收盤價時顯示缺值。20MA 乖離率＝（最新可用收盤價 ÷ 最近 20 個交易日收盤價平均 − 1）× 100%；正值表示股價在均線之上，並非保證後續上漲。三大法人 5 日買賣超是外資、投信、自營商官方每日淨買賣股數合計，單位換算為張；它與券商分點主力不同。股期、權證及 CB 篩選只依最新批次成功取得的官方商品名單判斷，資料源未更新時不把未知當成無；缺資料的指標不納入相關篩選，排序時列在最後。</p></div></section>}
+   })}{visibleItems.length===0&&<div className="empty-state"><ShieldAlert size={28}/><h2>沒有符合篩選條件的股票</h2><p>請調整出關日、漲跌幅、20MA 乖離、法人買賣超或搜尋文字。</p></div>}</div><div className="panel-note"><Info size={16}/><p>期間漲跌幅＝最新可用收盤價 ÷ 處置開始日收盤價 − 1。5 日／10 日漲幅＝最新可用收盤價 ÷ 5／10 個交易日前收盤價 − 1，均不含股利；不足 6／11 筆有效收盤價時顯示缺值。20MA 乖離率＝（最新可用收盤價 ÷ 最近 20 個交易日收盤價平均 − 1）× 100%；正值表示股價在均線之上，並非保證後續上漲。三大法人 5 日買賣超是外資、投信、自營商官方每日淨買賣股數合計，單位換算為張；它與券商分點主力不同。缺資料的股票不納入相關篩選，排序時列在最後。</p></div></section>}
   <section className="panel repeat-rules"><div className="panel-heading"><div><h2>什麼情況可能再次進入處置？</h2><p>是否處置由交易所依公告與監視程序認定，不代表股票會自動進入下一次處置。</p></div></div><div className="repeat-rules-body"><p>處置結束後，若再次達到處置發布標準，交易所可能再次公告處置。主要累計門檻包括：</p><ul><li>連續 3 個營業日，依規定發布第一款注意交易資訊；或</li><li>連續 5 個營業日，或最近 10 個營業日有 6 日，或最近 30 個營業日有 12 日，依規定發布第一至第八款注意交易資訊。</li></ul><p>若最近 30 個營業日內第二次（含）以上依上述標準發布處置，交易所可能採較嚴格措施，例如更嚴格的預收款券範圍。實際措施與期間請以個別公告為準。</p><div className="official-links"><a href="https://twse-regulation.twse.com.tw/tw/law/DOC01.aspx?FLCODE=FL007225&FLNO=6" target="_blank" rel="noreferrer">證交所處置作業要點第六條 <ExternalLink size={14}/></a><a href="https://www.tpex.org.tw/zh-tw/announcement/mainboard/warning.html" target="_blank" rel="noreferrer">櫃買中心累計門檻說明 <ExternalLink size={14}/></a></div></div></section>
  </SiteShell>;
 }
