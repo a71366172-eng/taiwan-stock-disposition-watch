@@ -528,7 +528,7 @@ def main():
         tpex_firms=tpex_company_rows_from_quotes(tpex_quotes,previous_stocks)
     # Link active official derivatives/structured-product rosters back to
     # their underlying common stocks. A failed feed stays unknown (None).
-    futures_raw=None
+    futures_raw=get('https://openapi.taifex.com.tw/v1/SSFLists',False)
     listed_warrants=None
     # TPEx OpenAPI publishes the current underlying-stock code directly.
     tpex_warrants=None

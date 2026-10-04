@@ -17,7 +17,7 @@ const percent=(value:number|null)=>value===null?'—':`${value>0?'+':''}${value.
 const percentTone=(value:number|null)=>value===null?'muted':value>0?'up':value<0?'down':'';
 
 export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
- const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
+ const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[futures,setFutures]=useState<'all'|'yes'|'no'>('all'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
  const toggleSort=(first:Sort,second:Sort)=>setSort(current=>current===first?second:first);
  const sortHeader=(label:string,first:Sort,second:Sort,firstAscending:boolean)=><button type="button" className={`disposition-header-button ${sort===first||sort===second?'active':''}`} onClick={()=>toggleSort(first,second)} aria-label={`${label}，${sort===first?`目前${firstAscending?'升冪':'降冪'}，點擊切換`:sort===second?`目前${firstAscending?'降冪':'升冪'}，點擊切換`:'點擊排序'}`} aria-pressed={sort===first||sort===second}>{label}<span aria-hidden="true">{sort===first?(firstAscending?'↑':'↓'):sort===second?(firstAscending?'↓':'↑'):'↕'}</span></button>;
  const [endWithin,setEndWithin]=useState('all'),[returnDirection,setReturnDirection]=useState<Direction>('all'),[institutionalDirection,setInstitutionalDirection]=useState<Direction>('all'),[ma20Direction,setMa20Direction]=useState<Direction>('all'),[fiveDayDirection,setFiveDayDirection]=useState<Direction>('all'),[tenDayDirection,setTenDayDirection]=useState<Direction>('all');
@@ -35,7 +35,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
   const matchesTier=tier==='all'||(tier==='repeat')===repeat;
   const matchesMarket=market==='ALL'||stock?.market===market;
   const matchesSearch=!search||`${disposition.code}${stock?.name||disposition.name}`.toLowerCase().includes(search.toLowerCase());
-  return matchesTier&&matchesMarket&&matchesSearch&&(endWithin==='all'||metrics.calendarDaysUntilEnd<=Number(endWithin))
+  return matchesTier&&matchesMarket&&matchesSearch&&(futures==='all'||snapshot.productCoverage?.stockFutures===true&&stock?.hasStockFutures===(futures==='yes'))&&(endWithin==='all'||metrics.calendarDaysUntilEnd<=Number(endWithin))
    &&directionMatches(metrics.periodChangePercent,returnDirection)
    &&directionMatches(metrics.fiveDayChangePercent,fiveDayDirection)
    &&directionMatches(metrics.tenDayChangePercent,tenDayDirection)
@@ -68,6 +68,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
    <div className="disposition-tools">
     <div className="segmented-control" aria-label="處置次數">{(['all','first','repeat'] as const).map(value=><button key={value} className={tier===value?'active':''} onClick={()=>setTier(value)}>{value==='all'?'全部':value==='first'?'首次處置':'再次處置'}</button>)}</div>
     <div className="segmented-control" aria-label="市場">{(['ALL','TWSE','TPEX'] as const).map(value=><button key={value} className={market===value?'active':''} onClick={()=>setMarket(value)}>{value==='ALL'?'全部':value==='TWSE'?'上市':'上櫃'}</button>)}</div>
+    <label className="disposition-sort">股票期貨<select aria-label="股票期貨" value={futures} onChange={event=>setFutures(event.target.value as 'all'|'yes'|'no')} disabled={snapshot.productCoverage?.stockFutures!==true}><option value="all">全部</option><option value="yes">有股票期貨</option><option value="no">沒有股票期貨</option></select></label>
     <input className="disposition-search" value={search} onChange={event=>setSearch(event.target.value)} placeholder="搜尋股票代號或名稱" aria-label="搜尋處置股"/>
     <label className="disposition-sort">出關<select value={endWithin} onChange={event=>setEndWithin(event.target.value)}><option value="all">全部日期</option><option value="0">今天</option><option value="3">3 天內</option><option value="7">7 天內</option></select></label>
     <label className="disposition-sort">期間漲跌<select value={returnDirection} onChange={event=>setReturnDirection(event.target.value as Direction)}><option value="all">全部</option><option value="positive">上漲</option><option value="negative">下跌</option></select></label>
