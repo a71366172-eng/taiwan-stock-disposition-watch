@@ -695,7 +695,7 @@ def main():
         stock['hasStockFutures']=(code in futures_codes) if futures_available else None
         stock['hasWarrants']=(code in warrant_codes) if warrants_available else None
         stock['hasConvertibleBonds']=(code in cb_codes) if cb_available else None
-    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'industry':stock.get('industry',''),'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'hasStockFutures':stock.get('hasStockFutures'),'hasWarrants':stock.get('hasWarrants'),'hasConvertibleBonds':stock.get('hasConvertibleBonds'),'bars':[{'date':bar['date'],'close':bar['close']} for bar in stock['bars'][-31:]]} for stock in stocks]
+    screener_stocks=[{'code':stock['code'],'name':stock['name'],'market':stock['market'],'industry':stock.get('industry',''),'quoteDate':stock['quoteDate'],'close':stock['close'],'change':stock['change'],'changePercent':stock['changePercent'],'volume':stock['volume'],'issuedShares':stock['issuedShares'],'hasStockFutures':stock.get('hasStockFutures'),'hasWarrants':stock.get('hasWarrants'),'hasConvertibleBonds':stock.get('hasConvertibleBonds'),'bars':[{'date':bar['date'],'open':bar['open'],'high':bar['high'],'low':bar['low'],'close':bar['close'],'volume':bar['volume']} for bar in stock['bars'][-31:]]} for stock in stocks]
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
     for stock in stocks: stock['bars']=stock['bars'][-31:]
     for stock in stocks:
