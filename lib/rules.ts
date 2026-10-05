@@ -39,6 +39,23 @@ export function cumulativeReturn(bars:Stock['bars']):number|null{
   if(!bars.length||bars.some(b=>!positive(b.close)||!positive(b.reference)))return null;
   return cumulativeQ(bars).num();
 }
+/** Price-only necessary condition shared by clauses 3–5; it does not test volume, turnover or broker concentration. */
+export function sixDayTwentyFivePercentFloor(stock:Stock,asOf:string):{price:number;limit:number;reachable:boolean;maximumReturn:number}|null{
+  if(!positive(stock.close))return null;
+  const bars=stock.bars.filter(b=>b.date<=asOf).slice(-5);
+  if(bars.length!==5||bars.some(b=>!positive(b.close)||!positive(b.reference)||!!b.note))return null;
+  const legal=legalPrices(stock.close),limit=legal.at(-1)!;
+  const at=(price:number)=>cumulativeReturn([...bars,{date:'forecast',open:null,high:null,low:null,close:price,reference:stock.close!,volume:null,note:''}])!;
+  const maximumReturn=at(limit);
+  // Search legal tick prices beyond tomorrow's limit solely to explain an unreachable floor.
+  let cents=Math.round(stock.close*100);
+  for(let i=0;i<100000;i++){
+    const tick=tickCents(cents);
+    if(cents%tick===0&&at(cents/100)>25)return {price:cents/100,limit,reachable:cents/100<=limit,maximumReturn};
+    cents+=tick-cents%tick;
+  }
+  return null;
+}
 // Daily percentage truncation reconciles all 24 eligible official announcements in the initial batch.
 // This is an empirically validated convention, not a claim of a fully verified exchange implementation.
 function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b.close!).div(money(b.reference!)).sub(q(1)).mul(q(100)).trunc2()),q(0));}

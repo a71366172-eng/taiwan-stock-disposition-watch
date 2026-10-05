@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
@@ -33,6 +33,13 @@ test('sixth-clause volume combines the 3,000-lot floor with 5% of issued shares'
  assert.equal(sixthClauseMinimumShares(100_000_000),5_000_000);
  assert.equal(sixthClauseMinimumShares(10_000_000),3_000_000);
  assert.equal(sixthClauseMinimumShares(null),null);
+});
+test('six-day price floor distinguishes a reachable threshold from one above tomorrow limit',()=>{
+ const below=sixDayTwentyFivePercentFloor(base,context.asOf)!;
+ assert.equal(below.price,125.5);assert.equal(below.reachable,false);
+ const near={...base,bars:base.bars.map((bar,i)=>i>=85?{...bar,close:104,reference:100}:bar)};
+ const reachable=sixDayTwentyFivePercentFloor(near,context.asOf)!;
+ assert.equal(reachable.reachable,true);
 });
 test('missing valuation does not become zero/no-risk',()=>assert.equal(simulate({...base,pb:null},context).rules.find(x=>x.rule===6)?.status,'missing'));
 test('cumulative return is daily sum using reference, not end-to-end compounding',()=>assert.equal(cumulativeReturn([{...base.bars[0],close:110,reference:100},{...base.bars[0],close:99,reference:110}]),0));
