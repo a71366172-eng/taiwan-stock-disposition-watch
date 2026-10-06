@@ -6,6 +6,8 @@ on:
     # GitHub Actions cron uses UTC. Taiwan (UTC+8): every four hours
     # at 00:00, 04:00, 08:00, 12:00, 16:00, and 20:00.
     - cron: '0 */4 * * *'
+    # Taiwan 14:30 through 19:30, once per hour (UTC 06:30–11:30).
+    - cron: '30 6-11 * * *'
   push:
     branches: [main]
     paths-ignore:
