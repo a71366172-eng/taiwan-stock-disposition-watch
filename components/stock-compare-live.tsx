@@ -2,12 +2,12 @@ import {useEffect,useMemo,useState} from 'react';
 import {CartesianGrid,Legend,Line,LineChart,ReferenceLine,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 import type {MarketSnapshot} from '../lib/market-types';
 import {compareStocks,type ComparisonStock} from '../lib/stock-comparison';
-import {comparisonCodeFromInput,eligibleComparisonCode,isEtfCategory} from '../lib/comparison-symbols';
+import {comparisonCodeFromInput,recentComparisonSymbols,type ComparisonSymbol} from '../lib/comparison-symbols';
 import {PositionRatioCalculator} from './position-ratio-calculator';
 import {PersonalGroupPicker} from './personal-group-picker';
 import {SiteShell} from './site-shell';
 
-type SymbolInfo={code:string;name:string;market:'TWSE'|'TPEX';isEtf:boolean};
+type SymbolInfo=ComparisonSymbol;
 type FinMindRow={date:string;stock_id:string;close:number};
 const API='https://api.finmindtrade.com/api/v4/data';
 const COMPARISON_SESSIONS=120;
@@ -55,18 +55,9 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
  useEffect(()=>{
   let active=true;
   void finMind('TaiwanStockInfo').then(rows=>{
-   const records=rows as {stock_id?:string;stock_name?:string;type?:string;date?:string;industry_category?:string}[];
-   const latest=records.map(row=>row.date||'').filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1);
-   const unique=new Map<string,SymbolInfo>();
-   for(const row of records){
-    if(row.date!==latest||!row.stock_id||!row.stock_name)continue;
-    if(row.type!=='twse'&&row.type!=='tpex')continue;
-    const isEtf=isEtfCategory(row.industry_category);
-    if(!eligibleComparisonCode(row.stock_id,row.industry_category))continue;
-    unique.set(row.stock_id,{code:row.stock_id,name:row.stock_name,market:row.type==='twse'?'TWSE':'TPEX',isEtf});
-   }
-   if(unique.size<1000)throw new Error('完整股票名單暫時無法取得');
-   if(active)setSymbols([...unique.values()].sort((a,b)=>a.code.localeCompare(b.code,'zh-TW',{numeric:true})));
+   const available=recentComparisonSymbols(rows as {stock_id?:string;stock_name?:string;type?:string;date?:string;industry_category?:string}[]);
+   if(available.length<1000)throw new Error('完整股票名單暫時無法取得');
+   if(active)setSymbols(available);
   }).catch(reason=>{if(active)setSymbolsError(reason instanceof Error?reason.message:'股票名單載入失敗')});
   return()=>{active=false};
  },[]);
