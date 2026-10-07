@@ -20,7 +20,7 @@ export function PositionRatioCalculator({pair,date}:{pair:[ComparisonStock,Compa
  const [secondFuturesPrice,setSecondFuturesPrice]=useState('');
  const [commission,setCommission]=useState('0.1425');
  const [sellTax,setSellTax]=useState('0.3');
- const [futuresFee,setFuturesFee]=useState('0');
+ const [futuresFee,setFuturesFee]=useState('18');
  const [futuresTax,setFuturesTax]=useState('0.002');
  const [otherFees,setOtherFees]=useState('0');
  if(!date)return null;
