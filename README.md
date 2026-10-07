@@ -6,6 +6,10 @@
 
 > 正式處置以證交所或櫃買中心公告為準。股價與條件試算可能受除權息、交易狀態及公告規則影響；使用前請核對官方資訊。
 
+### 更新自訂細產業分類
+
+本機覆蓋 `D:\AI\trading\STOCK\觀察名單_概念股.csv` 後，執行 `powershell -ExecutionPolicy Bypass -File D:\AI\trading\site\scripts\publish_personal_groups.ps1`。腳本只擷取「矽光子」至 `6757.TW`（台灣虎航）的分類，驗證後推送 `data/personal-groups-source.txt`；GitHub Actions 產生 `public/data/personal-groups.json`、建置並部署。GitHub Actions 無法直接讀取本機 `D:`，因此覆蓋 CSV 後仍須執行上傳指令。分類資料來自使用者自行整理的觀察名單，不等同官方產業分類。
+
 ## 網站功能
 
 - **注意股觀測**：依官方注意公告與可能達到處置條件的先後順序查看上市、上櫃股票，可搜尋、排序及管理本機自選股。

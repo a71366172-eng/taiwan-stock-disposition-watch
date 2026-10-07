@@ -11,7 +11,10 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'data/**'
+      - 'data/market.json'
+      - 'data/verification.json'
+      - 'data/futures-margins.json'
+      - 'data/screener.json'
       - 'public/data/**'
 
 permissions:
@@ -36,6 +39,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Build personal industry groups
+        run: python scripts/build_personal_groups.py
       - name: Collect official TWSE and TPEx data
         if: github.event_name != 'push' # Code-only releases reuse the latest verified snapshot; scheduled/manual runs refresh official data.
         env:
@@ -64,6 +69,7 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add data/market.json public/data/market.json data/verification.json data/futures-margins.json public/data/futures-margins.json
+          git add public/data/personal-groups.json
           if [ -f data/screener.json ] && [ -f public/data/screener.json ]; then
             git add data/screener.json public/data/screener.json
           fi
