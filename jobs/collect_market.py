@@ -93,7 +93,8 @@ def merge_history_bars(old_bars: list[dict], new_bars: list[dict], as_of: str) -
 def validate_publication(snapshot: dict, previous: dict):
     """Never publish a failed fetch or replace known complete history with gaps."""
     if snapshot.get('ingestionErrors'):
-        raise ValueError(f"Snapshot withheld: {len(snapshot['ingestionErrors'])} source errors; previous snapshot retained")
+        details='; '.join(str(error) for error in snapshot['ingestionErrors'][:5])
+        raise ValueError(f"Snapshot withheld: {len(snapshot['ingestionErrors'])} source errors; previous snapshot retained. {details}")
     stocks=snapshot.get('stocks',[])
     if not stocks:
         raise ValueError('Snapshot withheld: empty risk stock roster')
@@ -380,6 +381,8 @@ def day_trade_shares(as_of, market):
             rows=table.get('data') or []
             if rows:
                 return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
+            print(f'Source pending: {public_source_url(url)} has no per-stock day-trading rows')
+            return None
         errors.append(f'{public_source_url(url)}: missing per-stock day-trading table')
         return None
     roc=dt.date.fromisoformat(as_of).year-1911
@@ -396,6 +399,8 @@ def day_trade_shares(as_of, market):
         rows=table.get('data') or []
         if rows:
             return {str(row[code_index]).strip():number(row[shares_index]) for row in rows if len(row)>shares_index and re.fullmatch(r'[1-9]\d{3}',str(row[code_index]).strip())}
+        print(f'Source pending: {public_source_url(url)} has no per-stock day-trading rows')
+        return None
     errors.append(f'{public_source_url(url)}: missing per-stock day-trading table')
     return None
 
