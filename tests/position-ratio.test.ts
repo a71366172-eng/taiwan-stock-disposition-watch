@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateEntryCosts,calculatePositionRatio} from '../lib/position-ratio.ts';
+import {calculateEntryCosts,calculateMixedEntryCosts,calculateMixedPosition,calculatePositionRatio} from '../lib/position-ratio.ts';
 
 test('rounds B quantity to whole 100-share units and reports actual capital ratio',()=>{
  const result=calculatePositionRatio(250,75,3)!;
@@ -35,4 +35,27 @@ test('entry costs include buy and short-sale commissions, sale tax and custom fe
  assert.deepEqual(costs,{firstCommission:107,secondCommission:107,firstTax:0,secondTax:225,otherFees:100,totalFees:539,firstCashFlow:-75107,secondCashFlow:74668,entryCashFlow:-539,grossExposureWithFees:150539});
  assert.equal(calculateEntryCosts(75000,75000,'long','long',.1425,.3,0)?.secondTax,0);
  assert.equal(calculateEntryCosts(75000,75000,'long','short',-1,.3,0),null);
+});
+
+test('stock and standard futures target ratio uses stock outlay versus original margin',()=>{
+ const position=calculateMixedPosition(100,100,20,1,'stock','standard',null,13.5,'long','short')!;
+ assert.equal(position.firstCapital,200000);
+ assert.equal(position.secondUnits,7);
+ assert.equal(position.secondCapital,189000);
+ assert.equal(position.secondNotional,1400000);
+ assert.equal(position.netExposure,-1200000);
+ const costs=calculateMixedEntryCosts(position,'stock','standard','long','short',.1425,.3,30,.002,0)!;
+ assert.equal(costs.first.fee,285);
+ assert.equal(costs.second.fee,210);
+ assert.equal(costs.second.tax,28);
+ assert.equal(costs.totalCapital,389523);
+});
+
+test('mini futures use 100 shares per contract and original margin on both sides',()=>{
+ const position=calculateMixedPosition(200,100,10,1,'mini','mini',13.5,16.2,'long','long')!;
+ assert.equal(position.firstCapital,27000);
+ assert.equal(position.secondUnits,17);
+ assert.equal(position.secondCapital,27540);
+ assert.equal(position.secondShares,1700);
+ assert.equal(calculateMixedPosition(200,100,10,1,'mini','mini',null,16.2,'long','long'),null);
 });
