@@ -8,7 +8,9 @@
 
 ### 更新自訂細產業分類
 
-本機覆蓋 `D:\AI\trading\STOCK\觀察名單_概念股.csv` 後，執行 `powershell -ExecutionPolicy Bypass -File D:\AI\trading\site\scripts\publish_personal_groups.ps1`。腳本只擷取「矽光子」至 `6757.TW`（台灣虎航）的分類，驗證後推送 `data/personal-groups-source.txt`；GitHub Actions 產生 `public/data/personal-groups.json`、建置並部署。GitHub Actions 無法直接讀取本機 `D:`，因此覆蓋 CSV 後仍須執行上傳指令。分類資料來自使用者自行整理的觀察名單，不等同官方產業分類。
+本機覆蓋 `D:\AI\trading\STOCK\觀察名單_概念股.csv` 後，可執行 `powershell -ExecutionPolicy Bypass -File D:\AI\trading\site\scripts\publish_personal_groups.ps1` 立即更新，或等待每日 20:00 的本機排程。腳本只擷取「矽光子」至 `6757.TW`（台灣虎航）的分類，驗證後推送 `data/personal-groups-source.txt`；GitHub Actions 產生 `public/data/personal-groups.json`、建置並部署。GitHub Actions 無法直接讀取本機 `D:`。分類資料來自使用者自行整理的觀察名單，不等同官方產業分類。
+
+此電腦也可執行 `scripts/install_personal_groups_daily.ps1` 建立 Windows 工作排程，每天本機時間 20:00 自動執行上傳腳本；內容未變時不提交。排程需要電腦可用、使用者已登入且能連線 GitHub；錯過執行時間會在下次可執行時補跑。執行結果記錄於 `D:\AI\trading\STOCK\personal-groups-update.log`。
 
 ## 網站功能
 
