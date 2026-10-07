@@ -19,6 +19,19 @@ test('quarter window compares 60 shared returns and 60 price ratios',()=>{
   assert.equal(result.priceRatioPoints[0].date,first.bars[5].date);
 });
 
+test('120-session comparison uses 121 aligned closes and 118 smoothed return points',()=>{
+  const dates=Array.from({length:125},(_,index)=>new Date(Date.UTC(2025,0,index+1)).toISOString().slice(0,10));
+  const first:ComparisonStock={code:'1111',name:'A',market:'TWSE',bars:dates.map((date,index)=>({date,close:100+index}))};
+  const second:ComparisonStock={code:'2222',name:'B',market:'TWSE',bars:dates.map((date,index)=>({date,close:(100+index)*2}))};
+  const result=compareStocks(first,second,120);
+  assert.equal(result.sessionCount,120);
+  assert.equal(result.points.length,121);
+  assert.equal(result.priceRatioPoints.length,120);
+  assert.equal(result.smoothedSessionCount,118);
+  assert.equal(result.averagePriceRatio,.5);
+  assert.equal(result.priceRatioPoints[0].date,dates[5]);
+});
+
 test('price ratio averages the latest 30 daily A/B ratios, excluding return baseline',()=>{
   const a=stock('1111',[999,...Array.from({length:30},(_,i)=>i%2?9:2)]);
   const b=stock('2222',[1,...Array.from({length:30},(_,i)=>i%2?3:1)]);
