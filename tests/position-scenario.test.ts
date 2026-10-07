@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calculateMixedEntryCosts,calculateMixedPosition} from '../lib/position-ratio.ts';
-import {calculatePositionScenario,percentForLegProfit,scenarioReturns} from '../lib/position-scenario.ts';
+import {calculatePositionScenario,percentForLegProfit,scenarioReturns,type ScenarioLeg} from '../lib/position-scenario.ts';
 
 const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
 const entry=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,18,.002,0)!;
-const legs=[{instrument:'stock' as const,side:'long' as const,isEtf:false},{instrument:'stock' as const,side:'short' as const,isEtf:false}];
+const legs:[ScenarioLeg,ScenarioLeg]=[{instrument:'stock',side:'long',isEtf:false},{instrument:'stock',side:'short',isEtf:false}];
 const rates={commissionPercent:.1425,stockSellTaxPercent:.3,etfSellTaxPercent:.1,futuresFee:18,futuresTaxPercent:.002,otherFees:0};
 
 test('synchronized rise applies both price returns but respects opposite position directions',()=>{

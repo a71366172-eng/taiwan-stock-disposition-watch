@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateMixedEntryCosts,calculateMixedPosition,firstUnitsForTarget,ratioStrategySides} from '../lib/position-ratio.ts';
+import {calculateMixedEntryCosts,calculateMixedPosition,firstUnitsForTarget,positionLeverage,ratioStrategySides} from '../lib/position-ratio.ts';
 
 test('ratio convergence and divergence presets switch A/B directions around the average',()=>{
  assert.deepEqual(ratioStrategySides(1.2,1,'convergence'),['short','long']);
@@ -38,6 +38,16 @@ test('direct B quantity overrides rounding and reports the actual capital ratio'
  assert.equal(position.capitalRatio,250000/375000);
  assert.equal(calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short',undefined,0),null);
  assert.equal(calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short',undefined,1.5),null);
+});
+
+test('capital leverage preserves the sign of directional exposure',()=>{
+ const long=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','long')!;
+ const short=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'short','short')!;
+ const hedged=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
+ assert.equal(positionLeverage(long)?.net,1);
+ assert.equal(positionLeverage(short)?.net,-1);
+ assert.equal(positionLeverage(hedged)?.net,0);
+ assert.equal(positionLeverage(hedged)?.gross,1);
 });
 
 test('changing a target ratio can adjust both whole-lot quantities',()=>{

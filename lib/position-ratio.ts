@@ -48,6 +48,12 @@ export function firstUnitsForTarget(targetRatio:number,startingUnits:number,calc
  return bestUnits;
 }
 
+export function positionLeverage(position:NonNullable<ReturnType<typeof calculateMixedPosition>>){
+ const capital=position.firstCapital+position.secondCapital;
+ if(capital<=0)return null;
+ return {net:position.netExposure/capital,gross:(position.firstNotional+position.secondNotional)/capital};
+}
+
 export function calculateMixedEntryCosts(position:NonNullable<ReturnType<typeof calculateMixedPosition>>,firstInstrument:PositionInstrument,secondInstrument:PositionInstrument,firstSide:PositionSide,secondSide:PositionSide,stockCommissionPercent:number,stockSellTaxPercent:number,futuresFeePerContract:number,futuresTaxPercent:number,otherFees:number,firstIsEtf=false,secondIsEtf=false,etfSellTaxPercent=.1){
  if([stockCommissionPercent,stockSellTaxPercent,futuresFeePerContract,futuresTaxPercent,otherFees,etfSellTaxPercent].some(value=>!Number.isFinite(value)||value<0)||stockCommissionPercent>100||stockSellTaxPercent>100||futuresTaxPercent>100||etfSellTaxPercent>100)return null;
  const leg=(notional:number,units:number,instrument:PositionInstrument,side:PositionSide,isEtf:boolean)=>{
