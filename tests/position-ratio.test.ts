@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateMixedEntryCosts,calculateMixedPosition} from '../lib/position-ratio.ts';
+import {calculateMixedEntryCosts,calculateMixedPosition,ratioStrategySides} from '../lib/position-ratio.ts';
+
+test('ratio convergence and divergence presets switch A/B directions around the average',()=>{
+ assert.deepEqual(ratioStrategySides(1.2,1,'convergence'),['short','long']);
+ assert.deepEqual(ratioStrategySides(.8,1,'convergence'),['long','short']);
+ assert.deepEqual(ratioStrategySides(1.2,1,'divergence'),['long','short']);
+ assert.deepEqual(ratioStrategySides(.8,1,'divergence'),['short','long']);
+ assert.equal(ratioStrategySides(1,1,'convergence'),null);
+ assert.equal(ratioStrategySides(null,1,'divergence'),null);
+});
 
 test('stock units are whole 1,000-share lots and B is rounded to whole lots',()=>{
  const result=calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short')!;

@@ -1,5 +1,12 @@
 export type PositionSide='long'|'short';
 export type PositionInstrument='stock'|'standard'|'mini';
+export type RatioStrategy='convergence'|'divergence';
+
+export function ratioStrategySides(currentRatio:number|null,averageRatio:number|null,strategy:RatioStrategy):[PositionSide,PositionSide]|null{
+ if(currentRatio===null||averageRatio===null||!Number.isFinite(currentRatio)||!Number.isFinite(averageRatio)||currentRatio<=0||averageRatio<=0||Math.abs(currentRatio-averageRatio)<1e-9)return null;
+ const firstLong=strategy==='convergence'?currentRatio<averageRatio:currentRatio>averageRatio;
+ return firstLong?['long','short']:['short','long'];
+}
 
 const contractShares=(instrument:PositionInstrument)=>instrument==='standard'?2000:instrument==='stock'?1000:100;
 
