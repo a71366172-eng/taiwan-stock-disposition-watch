@@ -31,6 +31,23 @@ export function calculateMixedPosition(firstPrice:number,secondPrice:number,firs
  return {firstUnits,secondUnits,firstShares:firstUnits*firstContractShares,secondShares:secondUnits*secondContractShares,firstNotional,secondNotional,firstCapital,secondCapital,capitalRatio:firstCapital/secondCapital,netExposure,netExposurePercent:netExposure/(firstNotional+secondNotional)*100};
 }
 
+export function firstUnitsForTarget(targetRatio:number,startingUnits:number,calculate:(firstUnits:number)=>ReturnType<typeof calculateMixedPosition>){
+ if(!Number.isFinite(targetRatio)||targetRatio<=0||!Number.isSafeInteger(startingUnits)||startingUnits<1)return startingUnits;
+ let best=calculate(startingUnits);
+ if(!best)return startingUnits;
+ let bestError=Math.abs(best.capitalRatio/targetRatio-1);
+ if(bestError<=.01)return startingUnits;
+ let bestUnits=startingUnits;
+ for(let units=startingUnits+1;units<=Math.min(1000000,startingUnits+100);units++){
+  const candidate=calculate(units);
+  if(!candidate)break;
+  const error=Math.abs(candidate.capitalRatio/targetRatio-1);
+  if(error<bestError){best=candidate;bestError=error;bestUnits=units;}
+  if(bestError<=.01)break;
+ }
+ return bestUnits;
+}
+
 export function calculateMixedEntryCosts(position:NonNullable<ReturnType<typeof calculateMixedPosition>>,firstInstrument:PositionInstrument,secondInstrument:PositionInstrument,firstSide:PositionSide,secondSide:PositionSide,stockCommissionPercent:number,stockSellTaxPercent:number,futuresFeePerContract:number,futuresTaxPercent:number,otherFees:number,firstIsEtf=false,secondIsEtf=false,etfSellTaxPercent=.1){
  if([stockCommissionPercent,stockSellTaxPercent,futuresFeePerContract,futuresTaxPercent,otherFees,etfSellTaxPercent].some(value=>!Number.isFinite(value)||value<0)||stockCommissionPercent>100||stockSellTaxPercent>100||futuresTaxPercent>100||etfSellTaxPercent>100)return null;
  const leg=(notional:number,units:number,instrument:PositionInstrument,side:PositionSide,isEtf:boolean)=>{
