@@ -365,33 +365,101 @@
   ],
   "candidates": [
     {
-      "code": "3094",
-      "officialReason": "115年9月21日至115年10月5日等九個營業日已有五次",
+      "code": "1709",
+      "officialReason": "115年9月22日至115年10月6日等九個營業日已有五次",
       "reconstructed": {
         "official": true,
         "paths": [
           "十日內六日"
         ],
-        "firstStreak": 0,
+        "firstStreak": 1,
         "anyStreak": 3,
         "nineCount": 5,
+        "twentyNineCount": 5
+      }
+    },
+    {
+      "code": "2340",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 3,
+        "nineCount": 3,
+        "twentyNineCount": 3
+      }
+    },
+    {
+      "code": "2466",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 3,
+        "nineCount": 3,
+        "twentyNineCount": 4
+      }
+    },
+    {
+      "code": "3701",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 3,
+        "nineCount": 3,
+        "twentyNineCount": 3
+      }
+    },
+    {
+      "code": "6213",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "nineCount": 3,
+        "twentyNineCount": 3
+      }
+    },
+    {
+      "code": "6225",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 3,
+        "nineCount": 3,
         "twentyNineCount": 6
       }
     },
     {
-      "code": "3518",
-      "officialReason": "115年10月2日至115年10月5日連續二次115年9月30日至115年10月5日連續四次",
+      "code": "6957",
+      "officialReason": "115年10月5日至115年10月6日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [
-          "第一款連續三日",
-          "連續五日",
-          "十日內六日"
+          "第一款連續三日"
         ],
-        "firstStreak": 3,
-        "anyStreak": 5,
-        "nineCount": 5,
-        "twentyNineCount": 5
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "nineCount": 4,
+        "twentyNineCount": 4
       }
     },
     {
