@@ -1,44 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateEntryCosts,calculateMixedEntryCosts,calculateMixedPosition,calculatePositionRatio} from '../lib/position-ratio.ts';
+import {calculateMixedEntryCosts,calculateMixedPosition} from '../lib/position-ratio.ts';
 
-test('rounds B quantity to whole 100-share units and reports actual capital ratio',()=>{
- const result=calculatePositionRatio(250,75,3)!;
- assert.equal(result.firstShares,300);
- assert.equal(result.secondShares,1000);
- assert.equal(result.firstAmount,75000);
- assert.equal(result.secondAmount,75000);
- assert.equal(result.capitalRatio,1);
- assert.equal(result.netExposure,0);
+test('stock units are whole 1,000-share lots and B is rounded to whole lots',()=>{
+ const result=calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short')!;
+ assert.equal(result.firstShares,1000);
+ assert.equal(result.secondUnits,3);
+ assert.equal(result.secondShares,3000);
+ assert.equal(result.firstCapital,250000);
+ assert.equal(result.secondCapital,225000);
+ assert.equal(result.capitalRatio,250000/225000);
+ assert.equal(result.netExposure,25000);
 });
 
-test('keeps a minimum one-unit B position and rejects invalid inputs',()=>{
- const result=calculatePositionRatio(10,1000,1)!;
- assert.equal(result.secondShares,100);
- assert.equal(result.netExposure,-99000);
- assert.equal(calculatePositionRatio(10,1000,1.5),null);
- assert.equal(calculatePositionRatio(0,1000,1),null);
- assert.equal(calculatePositionRatio(10,1000,1,0),null);
+test('target ratios and independent directions use the actual rounded position size',()=>{
+ const bothLong=calculateMixedPosition(250,75,1,1.5,'stock','stock',null,null,'long','long')!;
+ assert.equal(bothLong.secondUnits,2);
+ assert.equal(bothLong.netExposure,400000);
+ const bothShort=calculateMixedPosition(250,75,1,1.5,'stock','stock',null,null,'short','short')!;
+ assert.equal(bothShort.netExposure,-400000);
+ assert.equal(calculateMixedPosition(250,75,1.5,1,'stock','stock',null,null,'long','short'),null);
+ assert.equal(calculateMixedPosition(250,75,1,0,'stock','stock',null,null,'long','short'),null);
 });
 
-test('custom long-to-short capital target rounds the short leg and exposes actual ratio',()=>{
- const result=calculatePositionRatio(250,75,3,1.5)!;
- assert.equal(result.secondShares,700);
- assert.equal(result.capitalRatio,75000/52500);
- assert.equal(result.netExposure,22500);
- assert.equal(calculatePositionRatio(250,75,3,1.5,'long','long')?.netExposure,127500);
- assert.equal(calculatePositionRatio(250,75,3,1.5,'short','short')?.netExposure,-127500);
-});
-
-test('entry costs include buy and short-sale commissions, sale tax and custom fees',()=>{
- const costs=calculateEntryCosts(75000,75000,'long','short',.1425,.3,100)!;
- assert.deepEqual(costs,{firstCommission:107,secondCommission:107,firstTax:0,secondTax:225,otherFees:100,totalFees:539,firstCashFlow:-75107,secondCashFlow:74668,entryCashFlow:-539,grossExposureWithFees:150539});
- assert.equal(calculateEntryCosts(75000,75000,'long','long',.1425,.3,0)?.secondTax,0);
- assert.equal(calculateEntryCosts(75000,75000,'long','short',-1,.3,0),null);
-});
-
-test('stock and standard futures target ratio uses stock outlay versus original margin',()=>{
- const position=calculateMixedPosition(100,100,20,1,'stock','standard',null,13.5,'long','short')!;
+test('stock and standard futures target ratio uses one stock lot versus original margin',()=>{
+ const position=calculateMixedPosition(100,100,2,1,'stock','standard',null,13.5,'long','short')!;
+ assert.equal(position.firstShares,2000);
  assert.equal(position.firstCapital,200000);
  assert.equal(position.secondUnits,7);
  assert.equal(position.secondCapital,189000);
@@ -58,4 +45,14 @@ test('mini futures use 100 shares per contract and original margin on both sides
  assert.equal(position.secondCapital,27540);
  assert.equal(position.secondShares,1700);
  assert.equal(calculateMixedPosition(200,100,10,1,'mini','mini',null,16.2,'long','long'),null);
+});
+
+test('stock short sale tax applies only to the short side',()=>{
+ const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
+ const costs=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,0,.002,100)!;
+ assert.equal(costs.first.fee,143);
+ assert.equal(costs.first.tax,0);
+ assert.equal(costs.second.tax,300);
+ assert.equal(costs.totalFees,686);
+ assert.equal(calculateMixedEntryCosts(position,'stock','stock','long','long',.1425,.3,0,.002,0)?.second.tax,0);
 });
