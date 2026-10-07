@@ -10,8 +10,9 @@ export function ratioStrategySides(currentRatio:number|null,averageRatio:number|
 
 const contractShares=(instrument:PositionInstrument)=>instrument==='standard'?2000:instrument==='stock'?1000:100;
 
-export function calculateMixedPosition(firstPrice:number,secondPrice:number,firstUnits:number,targetCapitalRatio:number,firstInstrument:PositionInstrument,secondInstrument:PositionInstrument,firstMarginPercent:number|null,secondMarginPercent:number|null,firstSide:PositionSide,secondSide:PositionSide,contracts?:{firstShares?:number;secondShares?:number;firstFixedMargin?:number;secondFixedMargin?:number}){
- if([firstPrice,secondPrice,targetCapitalRatio].some(value=>!Number.isFinite(value)||value<=0)||!Number.isSafeInteger(firstUnits)||firstUnits<1||firstUnits>1000000||targetCapitalRatio>100)return null;
+export function calculateMixedPosition(firstPrice:number,secondPrice:number,firstUnits:number,targetCapitalRatio:number,firstInstrument:PositionInstrument,secondInstrument:PositionInstrument,firstMarginPercent:number|null,secondMarginPercent:number|null,firstSide:PositionSide,secondSide:PositionSide,contracts?:{firstShares?:number;secondShares?:number;firstFixedMargin?:number;secondFixedMargin?:number},secondUnitsOverride?:number){
+ if([firstPrice,secondPrice,targetCapitalRatio].some(value=>!Number.isFinite(value)||value<=0)||!Number.isSafeInteger(firstUnits)||firstUnits<1||firstUnits>1000000||targetCapitalRatio>1000000)return null;
+ if(secondUnitsOverride!==undefined&&(!Number.isSafeInteger(secondUnitsOverride)||secondUnitsOverride<1||secondUnitsOverride>1000000))return null;
  if((firstInstrument!=='stock'&&(!firstMarginPercent||firstMarginPercent<=0)&&(!contracts?.firstFixedMargin||contracts.firstFixedMargin<=0))||(secondInstrument!=='stock'&&(!secondMarginPercent||secondMarginPercent<=0)&&(!contracts?.secondFixedMargin||contracts.secondFixedMargin<=0)))return null;
  const firstContractShares=contracts?.firstShares??contractShares(firstInstrument);
  const secondContractShares=contracts?.secondShares??contractShares(secondInstrument);
@@ -21,7 +22,7 @@ export function calculateMixedPosition(firstPrice:number,secondPrice:number,firs
  const firstUnitCapital=firstInstrument==='stock'?firstUnitNotional:contracts?.firstFixedMargin??Math.round(firstUnitNotional*firstMarginPercent!/100);
  const secondUnitCapital=secondInstrument==='stock'?secondUnitNotional:contracts?.secondFixedMargin??Math.round(secondUnitNotional*secondMarginPercent!/100);
  if(firstUnitCapital<=0||secondUnitCapital<=0)return null;
- const secondUnits=Math.max(1,Math.round(firstUnits*firstUnitCapital/(targetCapitalRatio*secondUnitCapital)));
+ const secondUnits=secondUnitsOverride??Math.max(1,Math.round(firstUnits*firstUnitCapital/(targetCapitalRatio*secondUnitCapital)));
  const firstNotional=firstUnits*firstUnitNotional;
  const secondNotional=secondUnits*secondUnitNotional;
  const firstCapital=firstUnits*firstUnitCapital;

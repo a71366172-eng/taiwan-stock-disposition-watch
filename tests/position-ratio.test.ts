@@ -32,6 +32,14 @@ test('target ratios and independent directions use the actual rounded position s
  assert.equal(calculateMixedPosition(250,75,1,0,'stock','stock',null,null,'long','short'),null);
 });
 
+test('direct B quantity overrides rounding and reports the actual capital ratio',()=>{
+ const position=calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short',undefined,5)!;
+ assert.equal(position.secondUnits,5);
+ assert.equal(position.capitalRatio,250000/375000);
+ assert.equal(calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short',undefined,0),null);
+ assert.equal(calculateMixedPosition(250,75,1,1,'stock','stock',null,null,'long','short',undefined,1.5),null);
+});
+
 test('stock and standard futures target ratio uses one stock lot versus original margin',()=>{
  const position=calculateMixedPosition(100,100,2,1,'stock','standard',null,13.5,'long','short')!;
  assert.equal(position.firstShares,2000);
