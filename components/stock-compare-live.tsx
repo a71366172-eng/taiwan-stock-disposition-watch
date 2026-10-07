@@ -2,10 +2,11 @@ import {useEffect,useMemo,useState} from 'react';
 import {CartesianGrid,Legend,Line,LineChart,ReferenceLine,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 import type {MarketSnapshot} from '../lib/market-types';
 import {compareStocks,type ComparisonStock} from '../lib/stock-comparison';
+import {comparisonCodeFromInput,eligibleComparisonCode,isEtfCategory} from '../lib/comparison-symbols';
 import {PositionRatioCalculator} from './position-ratio-calculator';
 import {SiteShell} from './site-shell';
 
-type SymbolInfo={code:string;name:string;market:'TWSE'|'TPEX'};
+type SymbolInfo={code:string;name:string;market:'TWSE'|'TPEX';isEtf:boolean};
 type FinMindRow={date:string;stock_id:string;close:number};
 const API='https://api.finmindtrade.com/api/v4/data';
 const COMPARISON_SESSIONS=120;
@@ -14,7 +15,7 @@ const percent=(value:number|null)=>value===null?'—':`${value>0?'+':''}${value.
 const coefficient=(value:number|null)=>value===null?'—':value.toFixed(2);
 const priceRatio=(value:number|null)=>value===null?'—':`${value.toFixed(4)} 倍`;
 const volatility=(value:number|null)=>value===null?'—':`${(value*100).toFixed(2)}%`;
-const codeFromInput=(value:string)=>value.match(/^\s*([1-9]\d{3})/)?.[1]||'';
+const codeFromInput=comparisonCodeFromInput;
 const direction=(value:number|null)=>value===null?'':value>0?'up':value<0?'down':'';
 
 async function finMind(dataset:string,params:Record<string,string>={}){
@@ -52,26 +53,28 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
  useEffect(()=>{
   let active=true;
   void finMind('TaiwanStockInfo').then(rows=>{
-   const records=rows as {stock_id?:string;stock_name?:string;type?:string;date?:string}[];
+   const records=rows as {stock_id?:string;stock_name?:string;type?:string;date?:string;industry_category?:string}[];
    const latest=records.map(row=>row.date||'').filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).sort().at(-1);
    const unique=new Map<string,SymbolInfo>();
    for(const row of records){
-    if(row.date!==latest||!row.stock_id||!row.stock_name||!(/^[1-9]\d{3}$/.test(row.stock_id)))continue;
+    if(row.date!==latest||!row.stock_id||!row.stock_name)continue;
     if(row.type!=='twse'&&row.type!=='tpex')continue;
-    unique.set(row.stock_id,{code:row.stock_id,name:row.stock_name,market:row.type==='twse'?'TWSE':'TPEX'});
+    const isEtf=isEtfCategory(row.industry_category);
+    if(!eligibleComparisonCode(row.stock_id,row.industry_category))continue;
+    unique.set(row.stock_id,{code:row.stock_id,name:row.stock_name,market:row.type==='twse'?'TWSE':'TPEX',isEtf});
    }
    if(unique.size<1000)throw new Error('完整股票名單暫時無法取得');
    if(active)setSymbols([...unique.values()].sort((a,b)=>a.code.localeCompare(b.code,'zh-TW',{numeric:true})));
   }).catch(reason=>{if(active)setSymbolsError(reason instanceof Error?reason.message:'股票名單載入失敗')});
   return()=>{active=false};
  },[]);
- const available=useMemo(()=>symbols.length?symbols:snapshot.stocks.filter(stock=>stock.market==='TWSE'||stock.market==='TPEX').map(stock=>({code:stock.code,name:stock.name,market:stock.market as 'TWSE'|'TPEX'})),[symbols,snapshot]);
+ const available=useMemo(()=>symbols.length?symbols:snapshot.stocks.filter(stock=>stock.market==='TWSE'||stock.market==='TPEX').map(stock=>({code:stock.code,name:stock.name,market:stock.market as 'TWSE'|'TPEX',isEtf:false})),[symbols,snapshot]);
  const result=pair?compareStocks(...pair,COMPARISON_SESSIONS):null;
  const sufficient=result!==null&&result.sessionCount>=COMPARISON_SESSIONS;
  async function compare(){
   const first=available.find(stock=>stock.code===codeFromInput(firstInput));
   const second=available.find(stock=>stock.code===codeFromInput(secondInput));
-  if(!first||!second){setError('請輸入股票名單中的兩個代號。');setPair(null);return}
+  if(!first||!second){setError('請輸入股票或 ETF 名單中的兩個代號。');setPair(null);return}
   if(first.code===second.code){setError('請選擇兩檔不同股票。');setPair(null);return}
   setLoading(true);setError('');setPair(null);
   try{setPair(await Promise.all([loadStock(first,snapshot.asOf),loadStock(second,snapshot.asOf)]) as [ComparisonStock,ComparisonStock])}
@@ -85,9 +88,9 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
   setPair(current=>current&&codeFromInput(firstInput)===current[0].code&&codeFromInput(secondInput)===current[1].code?[current[1],current[0]]:null);
  }
  return <SiteShell active="compare">
-  <div className="page-heading"><div><div className="eyebrow">STOCK PAIR COMPARISON</div><h1>股票對比<span className="heading-dot">.</span></h1><p>比較兩檔上市或上櫃股票最近 120 個共同交易日的漲跌與同步程度。</p></div></div>
-  <section className="panel compare-panel"><div className="panel-heading"><div><h2>選擇兩檔股票</h2><p>輸入代號或從建議清單選擇；查詢至 {snapshot.asOf} 的盤後資料。</p></div><span className="badge blue">{symbols.length?`${symbols.length} 檔可選`:'讀取股票名單中'}</span></div>
-   <div className="compare-inputs"><label>股票 A<input list="comparison-stocks" value={firstInput} onChange={event=>setFirstInput(event.target.value)} placeholder="例：2330 台積電"/></label><button type="button" className="compare-swap" onClick={swapStocks} disabled={loading} aria-label="交換股票 A 與 B" title="交換股票 A 與 B">⇄</button><label>股票 B<input list="comparison-stocks" value={secondInput} onChange={event=>setSecondInput(event.target.value)} placeholder="例：8299 群聯"/></label><datalist id="comparison-stocks">{available.map(stock=><option key={`${stock.market}-${stock.code}`} value={`${stock.code} ${stock.name}`}>{stock.market==='TWSE'?'上市':'上櫃'}</option>)}</datalist><button type="button" className="compare-button" onClick={()=>void compare()} disabled={loading||!symbols.length}>{loading?'查詢中…':'比較近期走勢'}</button></div>
+  <div className="page-heading"><div><div className="eyebrow">STOCK PAIR COMPARISON</div><h1>股票對比<span className="heading-dot">.</span></h1><p>比較兩檔上市／上櫃股票或 ETF 最近 120 個共同交易日的漲跌與同步程度。</p></div></div>
+  <section className="panel compare-panel"><div className="panel-heading"><div><h2>選擇兩檔股票</h2><p>輸入股票或 ETF 代號，或從建議清單選擇；查詢至 {snapshot.asOf} 的盤後資料。</p></div><span className="badge blue">{symbols.length?`${symbols.length} 檔可選`:'讀取股票名單中'}</span></div>
+   <div className="compare-inputs"><label>股票 A<input list="comparison-stocks" value={firstInput} onChange={event=>setFirstInput(event.target.value)} placeholder="例：2330 台積電"/></label><button type="button" className="compare-swap" onClick={swapStocks} disabled={loading} aria-label="交換股票 A 與 B" title="交換股票 A 與 B">⇄</button><label>股票 B<input list="comparison-stocks" value={secondInput} onChange={event=>setSecondInput(event.target.value)} placeholder="例：8299 群聯"/></label><datalist id="comparison-stocks">{available.map(stock=><option key={`${stock.market}-${stock.code}`} value={`${stock.code} ${stock.name}`}>{stock.market==='TWSE'?'上市':'上櫃'}{stock.isEtf?' ETF':' 股票'}</option>)}</datalist><button type="button" className="compare-button" onClick={()=>void compare()} disabled={loading||!symbols.length}>{loading?'查詢中…':'比較近期走勢'}</button></div>
    {symbolsError&&<p className="compare-note">股票名單暫時無法載入：{symbolsError}。請稍後重試。</p>}
    {error&&<p className="compare-note" role="alert">{error}</p>}
    {result&&pair&&<><div className="compare-summary"><div><small>A 股票 · {pair[0].code} {pair[0].name}</small><strong className={direction(result.firstChange)}>{sufficient?percent(result.firstChange):'—'}</strong></div><div><small>B 股票 · {pair[1].code} {pair[1].name}</small><strong className={direction(result.secondChange)}>{sufficient?percent(result.secondChange):'—'}</strong></div><div className="compare-sync-rate"><small>相關係數</small><strong>{sufficient&&result.synchronizationRate!==null?`${result.synchronizationRate}%`:'—'}</strong><span>{sufficient?`以 ${result.smoothedSessionCount} 個平滑報酬點加權計算`:`共同交易日僅 ${result.sessionCount} 日`}</span></div><div><small>A 相對 B 強弱差</small><strong className={direction(result.spread)}>{sufficient?percent(result.spread):'—'}</strong></div></div>

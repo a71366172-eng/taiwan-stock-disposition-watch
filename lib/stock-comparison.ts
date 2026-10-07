@@ -1,5 +1,5 @@
 export type ComparisonBar={date:string;close:number};
-export type ComparisonStock={code:string;name:string;market:'TWSE'|'TPEX';bars:ComparisonBar[]};
+export type ComparisonStock={code:string;name:string;market:'TWSE'|'TPEX';isEtf?:boolean;bars:ComparisonBar[]};
 export type ComparisonSnapshot={schemaVersion:number;asOf:string;generatedAt:string;windowSessions:number;collectedDates:Record<string,string[]>;stocks:ComparisonStock[]};
 
 function pearson(first:number[],second:number[],minimum=15):number|null{

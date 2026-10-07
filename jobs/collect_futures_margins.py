@@ -22,21 +22,36 @@ def parse_margin_rates(page: bytes) -> dict[str, float]:
     return rates
 
 
+def parse_etf_margins(page: bytes) -> dict[str, dict]:
+    etfs: dict[str, dict] = {}
+    for row in re.findall(rb'<tr\b[^>]*>(.*?)</tr>', page, re.I | re.S):
+        code = re.search(rb'headers="commodity_stock_id_b"[^>]*>\s*(\d{4,6}[A-Z]?)', row, re.I)
+        initial = re.search(rb'headers="bond_rate3_b"[^>]*>\s*([\d,]+)', row, re.I)
+        name = re.search(rb'headers="bond_ch_name1_b"[^>]*>(.*?)</td>', row, re.I | re.S)
+        if code and initial and name:
+            key = code.group(1).decode('ascii')
+            mini = '小型' in re.sub(rb'<[^>]+>', b'', name.group(1)).decode('utf-8', 'replace')
+            variant = 'mini' if mini else 'standard'
+            etfs.setdefault(key, {})[variant] = {'initialMargin': int(initial.group(1).replace(b',', b'')), 'shares': 1000 if mini else 10000}
+    return etfs
+
+
 def build_snapshot(page: bytes, contracts: list[dict]) -> dict:
     rates = parse_margin_rates(page)
+    etfs = parse_etf_margins(page)
     by_code: dict[str, set[str]] = {}
     for contract in contracts:
         code = str(contract.get('StockCode', '')).strip()
         symbol = str(contract.get('Contract', '')).strip()
         if re.fullmatch(r'[1-9]\d{3}', code) and symbol:
             by_code.setdefault(code, set()).add(symbol)
-    if len(rates) < 100 or len(by_code) < 100:
+    if len(rates) < 100 or len(by_code) < 100 or len(etfs) < 5:
         raise ValueError('Official stock-futures margin or contract roster is incomplete')
     stocks = {code: {'initialMarginPercent': rate, 'standard': True, 'mini': len(by_code[code]) > 1}
               for code, rate in sorted(rates.items()) if code in by_code}
     if len(stocks) < 100:
         raise ValueError('Official futures sources do not overlap sufficiently')
-    return {'asOf': dt.datetime.now(dt.timezone.utc).isoformat(), 'stocks': stocks}
+    return {'asOf': dt.datetime.now(dt.timezone.utc).isoformat(), 'stocks': stocks, 'etfs': etfs}
 
 
 def main() -> None:

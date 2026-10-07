@@ -56,6 +56,15 @@ test('mini futures use 100 shares per contract and original margin on both sides
  assert.equal(calculateMixedPosition(200,100,10,1,'mini','mini',null,16.2,'long','long'),null);
 });
 
+test('ETF futures use published fixed original margin and 10,000/1,000-unit contract sizes',()=>{
+ const position=calculateMixedPosition(50,50,1,1,'standard','mini',null,null,'long','short',{firstShares:10000,secondShares:1000,firstFixedMargin:87000,secondFixedMargin:8700})!;
+ assert.equal(position.firstShares,10000);
+ assert.equal(position.secondUnits,10);
+ assert.equal(position.secondShares,10000);
+ assert.equal(position.firstCapital,87000);
+ assert.equal(position.secondCapital,87000);
+});
+
 test('stock short sale tax applies only to the short side',()=>{
  const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
  const costs=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,0,.002,100)!;
@@ -64,4 +73,12 @@ test('stock short sale tax applies only to the short side',()=>{
  assert.equal(costs.second.tax,300);
  assert.equal(costs.totalFees,686);
  assert.equal(calculateMixedEntryCosts(position,'stock','stock','long','long',.1425,.3,0,.002,0)?.second.tax,0);
+});
+
+test('ETF sale uses its own tax rate and can be set to zero for an exempt fund',()=>{
+ const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
+ const etf=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,0,.002,0,false,true,.1)!;
+ assert.equal(etf.second.tax,100);
+ const exempt=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,0,.002,0,false,true,0)!;
+ assert.equal(exempt.second.tax,0);
 });
