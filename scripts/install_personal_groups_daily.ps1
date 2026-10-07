@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $taskName = 'TaiwanStockPersonalGroupsDaily'
 $runner = Join-Path $PSScriptRoot 'run_personal_groups_daily.ps1'
 $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source

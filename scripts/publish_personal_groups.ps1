@@ -1,8 +1,10 @@
-param(
+﻿param(
     [string]$InputPath = 'D:\AI\trading\STOCK\觀察名單_概念股.csv',
     [switch]$ValidateOnly
 )
-$ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 treats native Git stderr notices as terminating errors
+# when this is Stop. Git exit codes are checked explicitly below.
+$ErrorActionPreference = 'Continue'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $sourcePath = Join-Path $repo 'data\personal-groups-source.txt'
 if (-not (Test-Path -LiteralPath $InputPath)) { throw "找不到匯出檔：$InputPath" }
