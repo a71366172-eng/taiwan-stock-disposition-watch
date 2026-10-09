@@ -20,7 +20,6 @@ function gateProgress(stock:Stock,calendar:string[],asOf:string){
  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10日',value:dates.slice(-10).filter(any).length,limit:6},{label:'30日',value:dates.slice(-30).filter(any).length,limit:12}];
 }
 function hasRecentClauseNotice(stock:Stock,calendar:string[],asOf:string){
- if(stock.noticeHistoryComplete!==true)return false;
  const window=new Set(calendar.filter(date=>date<=asOf).slice(-30));
  return stock.notices.some(notice=>window.has(notice.date)&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
@@ -35,11 +34,7 @@ export function Dashboard({initial,storage,servedAt}:{initial:MarketSnapshot;sto
  const toggle=(code:string)=>{if(!toggleFavorite(code))setMessage('此瀏覽器無法保存自選股，目前僅在頁面保留。');};
  useEffect(()=>{const timer=setInterval(()=>setClock(Date.now()),60000);return()=>clearInterval(timer);},[]);
  const activeDisposition=snapshot.dispositions.filter(d=>d.end&&d.end>=snapshot.asOf);
- // The compiler cannot preserve this Map memo; keep expensive rational calculations independent of search keystrokes.
- // eslint-disable-next-line react-hooks/preserve-manual-memoization
  const results=useMemo(()=>buildResults(snapshot),[snapshot]);
- // The risk map performs rolling-window projections and should only rerun for a new snapshot.
- // eslint-disable-next-line react-hooks/preserve-manual-memoization
  const risks=useMemo(()=>new Map(snapshot.stocks.map(s=>[s.code,forecastDispositionRisk(s,snapshot)])),[snapshot]);
  const recentAttentionCodes=useMemo(()=>new Set(snapshot.stocks.filter(stock=>hasRecentClauseNotice(stock,snapshot.calendar,snapshot.asOf)).map(stock=>stock.code)),[snapshot]);
  const count={risk:snapshot.stocks.filter(stock=>Boolean(risks.get(stock.code))||recentAttentionCodes.has(stock.code)).length,attention:new Set(snapshot.todayNotices.map(n=>n.code)).size,disposed:new Set(activeDisposition.map(d=>d.code)).size,watchlist:favorites.length};
@@ -107,7 +102,7 @@ function StockRow({stock:s,result:r,risk,saved,toggle,mode,asOf,tier,calendar}:{
  const guaranteed=risk?.days===1&&isGuaranteedDispositionNextSession(s,r);
  const gates=r?gateProgress(s,calendar,asOf):[];
  const historyReady=s.noticeHistoryComplete===true;
- const progress=<div className="gate-progress">{gates.map(gate=><div className="gate-progress-item" key={gate.label} aria-label={`${gate.label} ${historyReady?`${gate.value}/${gate.limit}`:'資料待補'}`}><span>{gate.label}</span><div><i style={{width:historyReady?`${Math.min(100,gate.value/gate.limit*100)}%`:'0%'}}/></div><b>{historyReady?`${gate.value}/${gate.limit}`:'—'}</b></div>)}</div>;
+ const progress=<div className="gate-progress">{gates.map(gate=><div className="gate-progress-item" key={gate.label} aria-label={`${gate.label} ${historyReady?`${gate.value}/${gate.limit}`:gate.value?`至少已知 ${gate.value}/${gate.limit}，歷史補抓中`:'資料待補'}`}><span>{gate.label}</span><div><i style={{width:historyReady||gate.value?`${Math.min(100,gate.value/gate.limit*100)}%`:'0%'}}/></div><b>{historyReady?`${gate.value}/${gate.limit}`:gate.value?`≥${gate.value}/${gate.limit}`:'—'}</b></div>)}</div>;
  const turnoverPct=s.volume!==null&&s.issuedShares!=null&&s.issuedShares>0?s.volume/s.issuedShares*100:null;
  const dayTradePct=s.volume!==null&&s.volume>0&&s.dayTradeShares!=null?s.dayTradeShares/s.volume*100:null;
  const metrics=<div className="stock-metrics-grid"><div><small>成交量</small><strong>{s.volume===null?'—':`${fmt(s.volume/1000,0)} 張`}</strong></div><div><small>股本</small><strong>{s.paidInCapital==null?'—':`${fmt(s.paidInCapital/100000000,2)} 億`}</strong></div><div><small>週轉率</small><strong>{turnoverPct===null?'—':`${fmt(turnoverPct,2)}%`}</strong></div><div><small>當沖率</small><strong>{dayTradePct===null?'—':`${fmt(dayTradePct,2)}%`}</strong></div></div>;
