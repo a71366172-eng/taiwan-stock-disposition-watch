@@ -34,8 +34,8 @@ export function PositionRatioCalculator({pair,date,currentRatio,averageRatio}:{p
  const [futuresFee,setFuturesFee]=useState('18');
  const [futuresTax,setFuturesTax]=useState('0.002');
  const [otherFees,setOtherFees]=useState('0');
- const [firstWarrant,setFirstWarrant]=useState({price:'',delta:'',exerciseRatio:'',strike:'',expiry:'',riskFreeRate:'',impliedVolatility:''});
- const [secondWarrant,setSecondWarrant]=useState({price:'',delta:'',exerciseRatio:'',strike:'',expiry:'',riskFreeRate:'',impliedVolatility:''});
+ const [firstWarrant,setFirstWarrant]=useState({price:'',delta:'',exerciseRatio:'',strike:'',expiry:'',riskFreeRate:'1.75',impliedVolatility:''});
+ const [secondWarrant,setSecondWarrant]=useState({price:'',delta:'',exerciseRatio:'',strike:'',expiry:'',riskFreeRate:'1.75',impliedVolatility:''});
  if(!date)return null;
  const firstClose=pair[0].bars.find(bar=>bar.date===date)?.close;
  const secondClose=pair[1].bars.find(bar=>bar.date===date)?.close;
@@ -86,7 +86,7 @@ export function PositionRatioCalculator({pair,date,currentRatio,averageRatio}:{p
   <small className="position-warrant-formula">權證張數＝掛鉤股票張數 ÷（|Delta| × 行使比例）；權證張數按整數張取整</small>
   <label>履約價（元）<input type="number" min="0.01" step="any" value={value.strike} onChange={event=>setValue({...value,strike:event.target.value})}/></label>
   <label>到期日<input type="date" min={date} value={value.expiry} onChange={event=>setValue({...value,expiry:event.target.value})}/></label>
-  <label>無風險利率（%）<input type="number" step="any" value={value.riskFreeRate} onChange={event=>setValue({...value,riskFreeRate:event.target.value})}/></label>
+  <label>無風險利率（%）<input type="number" step="any" value={value.riskFreeRate} onChange={event=>setValue({...value,riskFreeRate:event.target.value})}/><small>預設台銀長天期定存利率 1.75%，可自行調整。</small></label>
   <label>隱含波動率（%）<input type="number" min="0.01" step="any" value={value.impliedVolatility} onChange={event=>setValue({...value,impliedVolatility:event.target.value})}/></label>
   <small className="position-warrant-formula">標的現價（自動）：{Number.isFinite(spot)&&spot>0?spot.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:4}):'—'} 元；看漲／看跌依 Delta 正負判定。</small>
   <div className="position-warrant-metrics" aria-live="polite">{([['Theta（元／日）',measures?.thetaPerDay],['Gamma',measures?.gamma],['Vega（元／IV 百分點）',measures?.vegaPerIvPoint],['Rho（元／利率百分點）',measures?.rhoPerRatePoint],['成本槓桿',measures?.costLeverage],['有效槓桿',measures?.effectiveLeverage],['理論價格（元）',measures?.theoreticalPrice],['內含價值（元）',measures?.intrinsicValue],['時間價值（元）',measures?.timeValue]] as [string,number|undefined][]).map(([name,result])=><div key={name}><small>{name}</small><strong>{result===undefined||!Number.isFinite(result)?'—':result.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong></div>)}</div>
