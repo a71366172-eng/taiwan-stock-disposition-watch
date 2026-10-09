@@ -147,3 +147,14 @@ test('warrant directional exposure follows both position side and signed call/pu
   assert.equal(positionLeverage(position)?.gross,105000/120000);
  }
 });
+
+test('position-size ratio targets delta-adjusted notional independently from invested capital',()=>{
+ const calculate=(units:number)=>calculateMixedPosition(100,100,units,1,'stock','standard',null,13.5,'long','short',undefined,undefined,undefined,'position');
+ const position=calculate(2)!;
+ assert.equal(position.secondUnits,1);
+ assert.equal(position.positionSizeRatio,1);
+ assert.equal(position.capitalRatio,200000/27000);
+ const firstUnits=firstUnitsForTarget(1,1,calculate,'position');
+ assert.equal(firstUnits,2);
+ assert.equal(calculateMixedPosition(100,100,2,1,'stock','standard',null,13.5,'long','short')?.secondUnits,7);
+});
