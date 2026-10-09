@@ -36,8 +36,10 @@ export function calculateMixedPosition(firstPrice:number,secondPrice:number,firs
  const secondNotional=secondUnits*secondUnitNotional;
  const firstCapital=firstUnits*firstUnitCapital;
  const secondCapital=secondUnits*secondUnitCapital;
- const netExposure=(firstSide==='long'?1:-1)*firstNotional*(firstWarrant?Math.sign(firstWarrant.delta):1)+(secondSide==='long'?1:-1)*secondNotional*(secondWarrant?Math.sign(secondWarrant.delta):1);
- return {firstUnits,secondUnits,firstShares:firstUnits*firstContractShares*(firstWarrant?Math.abs(firstWarrant.delta*firstWarrant.exerciseRatio):1),secondShares:secondUnits*secondContractShares*(secondWarrant?Math.abs(secondWarrant.delta*secondWarrant.exerciseRatio):1),firstNotional,secondNotional,firstCapital,secondCapital,capitalRatio:firstCapital/secondCapital,netExposure,netExposurePercent:netExposure/(firstNotional+secondNotional)*100};
+ const firstDirectionalExposure=(firstSide==='long'?1:-1)*firstNotional*(firstWarrant?Math.sign(firstWarrant.delta):1);
+ const secondDirectionalExposure=(secondSide==='long'?1:-1)*secondNotional*(secondWarrant?Math.sign(secondWarrant.delta):1);
+ const netExposure=firstDirectionalExposure+secondDirectionalExposure;
+ return {firstUnits,secondUnits,firstShares:firstUnits*firstContractShares*(firstWarrant?Math.abs(firstWarrant.delta*firstWarrant.exerciseRatio):1),secondShares:secondUnits*secondContractShares*(secondWarrant?Math.abs(secondWarrant.delta*secondWarrant.exerciseRatio):1),firstNotional,secondNotional,firstCapital,secondCapital,capitalRatio:firstCapital/secondCapital,firstDirectionalExposure,secondDirectionalExposure,grossExposure:firstNotional+secondNotional,netExposure,netExposurePercent:netExposure/(firstNotional+secondNotional)*100};
 }
 
 export function firstUnitsForTarget(targetRatio:number,startingUnits:number,calculate:(firstUnits:number)=>ReturnType<typeof calculateMixedPosition>){
@@ -60,7 +62,7 @@ export function firstUnitsForTarget(targetRatio:number,startingUnits:number,calc
 export function positionLeverage(position:NonNullable<ReturnType<typeof calculateMixedPosition>>){
  const capital=position.firstCapital+position.secondCapital;
  if(capital<=0)return null;
- return {net:position.netExposure/capital,gross:(position.firstNotional+position.secondNotional)/capital};
+ return {net:position.netExposure/capital,gross:position.grossExposure/capital};
 }
 
 export function calculateMixedEntryCosts(position:NonNullable<ReturnType<typeof calculateMixedPosition>>,firstInstrument:PositionInstrument,secondInstrument:PositionInstrument,firstSide:PositionSide,secondSide:PositionSide,stockCommissionPercent:number,stockSellTaxPercent:number,futuresFeePerContract:number,futuresTaxPercent:number,otherFees:number,firstIsEtf=false,secondIsEtf=false,etfSellTaxPercent=.1,warrants?:{first?:WarrantTerms;second?:WarrantTerms},warrantSellTaxPercent=.1){

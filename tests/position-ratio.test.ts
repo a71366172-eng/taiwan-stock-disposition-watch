@@ -128,3 +128,22 @@ test('warrant delta converts one warrant lot to equivalent shares while capital 
  assert.equal(warrantLotsForLinkedStockLots(2,-.5,.1),40);
  assert.equal(warrantLotsForLinkedStockLots(1,0,.1),null);
 });
+
+test('warrant directional exposure follows both position side and signed call/put delta',()=>{
+ const cases=[
+  {side:'long' as const,delta:.5,exposure:5000,net:-95000},
+  {side:'short' as const,delta:.5,exposure:-5000,net:-105000},
+  {side:'long' as const,delta:-.5,exposure:-5000,net:-105000},
+  {side:'short' as const,delta:-.5,exposure:5000,net:-95000},
+ ];
+ for(const scenario of cases){
+  const position=calculateMixedPosition(100,100,1,1,'warrant','stock',null,null,scenario.side,'short',undefined,1,{first:{price:20,delta:scenario.delta,exerciseRatio:.1}})!;
+  assert.equal(position.firstDirectionalExposure,scenario.exposure);
+  assert.equal(position.secondDirectionalExposure,-100000);
+  assert.equal(position.netExposure,scenario.net);
+  assert.equal(position.grossExposure,105000);
+  assert.equal(position.netExposurePercent,scenario.net/105000*100);
+  assert.equal(positionLeverage(position)?.net,scenario.net/120000);
+  assert.equal(positionLeverage(position)?.gross,105000/120000);
+ }
+});
