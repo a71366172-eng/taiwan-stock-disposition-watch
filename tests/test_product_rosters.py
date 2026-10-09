@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, parse_twse_candidates, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes
+from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, parse_twse_candidates, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes, tpex_valuation_rows, twse_valuation_rows
 
 
 class TwseCandidateRosterTests(unittest.TestCase):
@@ -32,15 +32,15 @@ class ConvertibleBondRosterTests(unittest.TestCase):
 
 
 class HistoryBatchSelectionTests(unittest.TestCase):
-    def test_complete_history_refresh_only_fetches_current_month(self):
-        months = ['20261001', '20260901', '20260801', '20260701']
-        old_bars = [{'date': f'2026-09-{day:02d}', 'close': 10} for day in range(1, 32)]
+    def test_complete_90_return_history_refreshes_only_current_month(self):
+        months = ['20261001', '20260901', '20260801', '20260701', '20260601']
+        old_bars = [{'date': (dt.date(2026, 10, 8) - dt.timedelta(days=day)).isoformat(), 'close': 10} for day in range(91)]
         self.assertEqual(history_months_to_fetch(old_bars, months, True), ['20261001'])
 
-    def test_incomplete_history_backfills_three_months(self):
-        months = ['20261001', '20260901', '20260801', '20260701']
-        old_bars = [{'date': f'2026-09-{day:02d}', 'close': 10} for day in range(1, 20)]
-        self.assertEqual(history_months_to_fetch(old_bars, months, True), months[:3])
+    def test_incomplete_90_return_history_backfills_five_months(self):
+        months = ['20261001', '20260901', '20260801', '20260701', '20260601']
+        old_bars = [{'date': (dt.date(2026, 10, 8) - dt.timedelta(days=day)).isoformat(), 'close': 10} for day in range(90)]
+        self.assertEqual(history_months_to_fetch(old_bars, months, True), months[:5])
 
     def test_history_merge_preserves_old_rows_and_prefers_fresh_corrections(self):
         old = [{'date': '2026-09-01', 'close': 10}, {'date': '2026-09-02', 'close': 11}]
@@ -70,8 +70,8 @@ class HistoryBatchSelectionTests(unittest.TestCase):
 
     def test_warrant_underlyings_with_incomplete_history_are_prioritized(self):
         old_bars = {
-            'TWSE:1101': [{'close': 10}] * 30,
-            'TWSE:1102': [{'close': 10}] * 31,
+            'TWSE:1101': [{'close': 10}] * 90,
+            'TWSE:1102': [{'close': 10}] * 91,
             'TWSE:1103': [{'close': 10}] * 3,
         }
         selected = select_incomplete_warrant_history({'1101', '1102', '1103', '8069'}, {'1101', '1102', '1103'}, old_bars, 'TWSE')
@@ -103,6 +103,16 @@ class HistoryBatchSelectionTests(unittest.TestCase):
             '公司代號': '8069', '公司簡稱': '元太', '產業別': '其他',
             '已發行普通股數或TDR原股發行股數': 12345,
         }])
+
+
+class ValuationDataTests(unittest.TestCase):
+    def test_twse_daily_valuation_table_maps_fields(self):
+        rows=twse_valuation_rows({'fields':['證券代號','證券名稱','本益比','股價淨值比'],'data':[['2330','台積電','25.4','6.2']]},'2026-10-08')
+        self.assertEqual(rows,[{'Date':'2026-10-08','Code':'2330','Name':'台積電','PEratio':'25.4','PBratio':'6.2'}])
+
+    def test_tpex_daily_valuation_array_keeps_query_date_and_values(self):
+        rows=tpex_valuation_rows({'iTotalRecords':1,'aaData':[['8069','元太','20.1','2.0','114','1.3','4.5']]},'2026-10-08')
+        self.assertEqual(rows,[{'Date':'2026-10-08','SecuritiesCompanyCode':'8069','CompanyName':'元太','PriceEarningRatio':'20.1','PriceBookRatio':'4.5'}])
 
 
 if __name__ == '__main__':

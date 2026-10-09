@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RAW = ROOT / 'work' / 'raw'
 RAW.mkdir(parents=True, exist_ok=True)
+HISTORY_SESSIONS = 91  # 90 return observations need 91 closes.
 errors: list[str] = []
 sources: list[dict] = []
 _request_lock=threading.Lock()
@@ -68,21 +69,21 @@ def select_history_batch(slots: list[int], taipei_now: dt.datetime, override: st
     return min(range(len(slots)), key=lambda index: abs(current_slot - slots[index]))
 
 def select_incomplete_warrant_history(codes: set[str], market_codes: set[str], old_bars: dict[str, list[dict]], market: str, limit: int = 100) -> set[str]:
-    """Backfill missing 30-session price histories for warrant underlyings first."""
+    """Prioritize warrant underlyings whose 90-session history is incomplete."""
     pending = []
     for code in codes & market_codes:
         bars = old_bars.get(f'{market}:{code}', [])
         valid = [bar for bar in bars if bar.get('close') is not None and str(bar.get('close')).strip() not in ('', '0')]
-        if len(valid) < 31:
+        if len(valid) < HISTORY_SESSIONS:
             pending.append(code)
     return set(sorted(pending)[:max(0, limit)])
 
 def history_months_to_fetch(old_bars: list[dict], months: list[str], enabled: bool) -> list[str]:
-    """Refresh one current month for complete histories; backfill up to 31 sessions when incomplete."""
+    """Refresh one current month for complete 90-session histories; otherwise backfill five months."""
     if not enabled or not months:
         return []
     valid_dates={bar.get('date') for bar in old_bars if bar.get('date') and bar.get('close') is not None and str(bar.get('close')).strip() not in ('','0')}
-    return months[:1] if len(valid_dates)>=31 else months[:3]
+    return months[:1] if len(valid_dates)>=HISTORY_SESSIONS else months[:5]
 
 def merge_history_bars(old_bars: list[dict], new_bars: list[dict], as_of: str) -> list[dict]:
     """Keep prior sessions and let freshly fetched official rows replace corrections."""
@@ -110,7 +111,7 @@ def validate_publication(snapshot: dict, previous: dict):
             continue
         old_dates={b['date'] for b in old.get('bars',[]) if b.get('close') is not None}
         new_dates={b['date'] for b in new.get('bars',[]) if b.get('close') is not None}
-        if len(new_dates)<min(31,len(old_dates)):
+        if len(new_dates)<min(HISTORY_SESSIONS,len(old_dates)):
             raise ValueError(f"Snapshot withheld: price history shrank for {old['code']}")
         if previous.get('asOf')==snapshot['asOf']:
             old_notices={n['date'] for n in old.get('notices',[])}
@@ -326,6 +327,40 @@ def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
     except (ValueError, TypeError): return None
 
+def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
+    """Normalize TPEx's official date-query JSON, keeping source date semantics."""
+    if isinstance(payload, list):
+        return payload
+    if not isinstance(payload, dict):
+        return []
+    rows=payload.get('aaData')
+    if not isinstance(rows,list):
+        return []
+    result=[]
+    for row in rows:
+        if isinstance(row,dict):
+            get_value=lambda *keys: next((row[key] for key in keys if key in row),None)
+            result.append({'Date':as_of,'SecuritiesCompanyCode':get_value('SecuritiesCompanyCode','證券代號','股票代號'),'CompanyName':get_value('CompanyName','證券名稱','名稱'),'PriceEarningRatio':get_value('PriceEarningRatio','PEratio','本益比'),'PriceBookRatio':get_value('PriceBookRatio','PBratio','股價淨值比')})
+        elif isinstance(row,(list,tuple)) and len(row)>=7:
+            result.append({'Date':as_of,'SecuritiesCompanyCode':str(row[0]).strip(),'CompanyName':str(row[1]).strip(),'PriceEarningRatio':row[2],'PriceBookRatio':row[6]})
+    return result
+
+def twse_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
+    """Normalize the official TWSE daily PE/PB report's list or table response."""
+    if isinstance(payload,dict) and isinstance(payload.get('fields'),list) and isinstance(payload.get('data'),list):
+        rows=[dict(zip(payload['fields'],row)) for row in payload['data'] if isinstance(row,(list,tuple))]
+    elif isinstance(payload,list):
+        rows=payload
+    else:
+        return []
+    result=[]
+    for row in rows:
+        if not isinstance(row,dict):
+            continue
+        get_value=lambda *keys: next((row[key] for key in keys if key in row),None)
+        result.append({'Date':iso(get_value('Date','資料日期')) or as_of,'Code':str(get_value('Code','證券代號','股票代號') or '').strip(),'Name':get_value('Name','證券名稱','名稱'),'PEratio':get_value('PEratio','本益比'),'PBratio':get_value('PBratio','股價淨值比')})
+    return result
+
 INDUSTRY_NAMES={'01':'水泥工業','02':'食品工業','03':'塑膠工業','04':'紡織纖維','05':'電機機械','06':'電器電纜','08':'玻璃陶瓷','09':'造紙工業','10':'鋼鐵工業','11':'橡膠工業','12':'汽車工業','14':'建材營造','15':'航運業','16':'觀光餐旅','17':'金融保險','18':'貿易百貨','19':'綜合','20':'其他','21':'化學工業','22':'生技醫療業','23':'油電燃氣業','24':'半導體業','25':'電腦及週邊設備業','26':'光電業','27':'通信網路業','28':'電子零組件業','29':'電子通路業','30':'資訊服務業','31':'其他電子業','32':'文化創意業','33':'農業科技業','34':'電子商務業','35':'綠能環保','36':'數位雲端','37':'運動休閒','38':'居家生活','91':'外國企業（未列產業）'}
 def industry_name(value):
     normalized=str(value or '').strip()
@@ -523,6 +558,10 @@ def main():
     cand=get('https://openapi.twse.com.tw/v1/announcement/notetrans')
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
+    twse_valuation_url=f'https://www.twse.com.tw/exchangeReport/BWIBBU_d?date={compact}&selectType=ALL&response=json'
+    twse_daily_valuations=twse_valuation_rows(get(twse_valuation_url,False),as_of)
+    if twse_daily_valuations:
+        fundamentals=twse_daily_valuations
     firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv')
     tpex_firms=get_csv('https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv',False)
     if not tpex_firms:
@@ -547,6 +586,11 @@ def main():
     tpex_candidates_raw=get('https://www.tpex.org.tw/openapi/v1/tpex_trading_warning_note')
     tpex_punish_raw=get('https://www.tpex.org.tw/openapi/v1/tpex_disposal_information')
     tpex_fundamentals=get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis',False) or []
+    tpex_roc_date=roc_date(as_of)
+    tpex_daily_url='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date,'c':'','s':'0,asc'})
+    tpex_daily_valuations=tpex_valuation_rows(get(tpex_daily_url,False),as_of)
+    if tpex_daily_valuations:
+        tpex_fundamentals=tpex_daily_valuations
     # Company master restricts this build to common shares, not ETFs or warrants.
     company={str(x.get('公司代號','')):x for x in firms}
     tpex_company={str(x.get('公司代號','')):x for x in tpex_firms}
@@ -708,7 +752,9 @@ def main():
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradeVolume')) if q else None
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        valuation_date=iso(f.get('Date'))
+        if valuation_date is None and latest.get('date')==as_of and latest.get('pe') is not None: valuation_date=as_of
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
@@ -744,7 +790,9 @@ def main():
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradingShares')) if q else None
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(tpex_company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':as_of if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        valuation_date=iso(f.get('Date'))
+        if valuation_date is None and latest.get('date')==as_of and latest.get('pe') is not None: valuation_date=as_of
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(tpex_company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))
@@ -754,7 +802,7 @@ def main():
         stock['hasWarrants']=(code in warrant_codes) if warrants_available else None
         stock['hasConvertibleBonds']=(code in cb_codes) if cb_available else None
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
-    for stock in stocks: stock['bars']=stock['bars'][-31:]
+    for stock in stocks: stock['bars']=stock['bars'][-HISTORY_SESSIONS:]
     for stock in stocks:
         company_row=(company if stock['market']=='TWSE' else tpex_company).get(stock['code'],{})
         stock['paidInCapital']=number(company_row.get('實收資本額'))
@@ -785,8 +833,8 @@ def main():
         if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
     product_coverage={'stockFutures':futures_available,'warrants':warrants_available,'convertibleBonds':cb_available}
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 30-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
-    result['coverage']={market:'attention, official candidates and active dispositions only; complete-history publication guard' for market in ('TWSE','TPEX')}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result['coverage']={market:'attention, official candidates and active dispositions only; 90-session history publication guard' for market in ('TWSE','TPEX')}
     validate_publication(result,old_snapshot)
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
