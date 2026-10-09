@@ -68,9 +68,12 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
   const first=available.find(stock=>stock.code===codeFromInput(firstInput));
   const second=available.find(stock=>stock.code===codeFromInput(secondInput));
   if(!first||!second){setError('請輸入股票或 ETF 名單中的兩個代號。');setPair(null);return}
-  if(first.code===second.code){setError('請選擇兩檔不同股票。');setPair(null);return}
   setLoading(true);setError('');setPair(null);
-  try{setPair(await Promise.all([loadStock(first,snapshot.asOf),loadStock(second,snapshot.asOf)]) as [ComparisonStock,ComparisonStock])}
+  try{
+   const firstLoaded=await loadStock(first,snapshot.asOf);
+   const secondLoaded=first.code===second.code?firstLoaded:await loadStock(second,snapshot.asOf);
+   setPair([firstLoaded,secondLoaded]);
+  }
   catch(reason){setError(reason instanceof Error?reason.message:'歷史價格查詢失敗')}
   finally{setLoading(false)}
  }

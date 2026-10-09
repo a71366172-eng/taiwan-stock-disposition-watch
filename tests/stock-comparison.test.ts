@@ -19,6 +19,18 @@ test('quarter window compares 60 shared returns and 60 price ratios',()=>{
   assert.equal(result.priceRatioPoints[0].date,first.bars[5].date);
 });
 
+test('a stock can be compared with itself and produces identity metrics',()=>{
+  const dates=Array.from({length:121},(_,index)=>new Date(Date.UTC(2026,0,index+1)).toISOString().slice(0,10));
+  const same:ComparisonStock={code:'2330',name:'2330',market:'TWSE',bars:dates.map((date,index)=>({date,close:100+index}))};
+  const result=compareStocks(same,same,120);
+  assert.equal(result.sessionCount,120);
+  assert.equal(result.synchronizationRate,100);
+  assert.equal(result.sameDirection,100);
+  assert.equal(result.currentPriceRatio,1);
+  assert.equal(result.averagePriceRatio,1);
+  assert.equal(result.spread,0);
+});
+
 test('120-session comparison uses 121 aligned closes and 118 smoothed return points',()=>{
   const dates=Array.from({length:125},(_,index)=>new Date(Date.UTC(2025,0,index+1)).toISOString().slice(0,10));
   const first:ComparisonStock={code:'1111',name:'A',market:'TWSE',bars:dates.map((date,index)=>({date,close:100+index}))};
