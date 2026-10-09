@@ -142,6 +142,12 @@ class MarginDataTests(unittest.TestCase):
         rows=tpex_margin_rows(payload)
         self.assertEqual(rows['8069'],{'marginFinanceLots':13873,'marginFinanceChangeLots':-1,'marginShortLots':29,'marginShortChangeLots':17})
 
+    def test_tpex_margin_accepts_official_field_array(self):
+        fields=['代號','名稱','前資餘額(張)','資買','資賣','現償','資餘額','資屬證金','資使用率(%)','資限額','前券餘額(張)','券賣','券買','券償','券餘額','券屬證金','券使用率(%)','券限額','資券相抵(張)','備註']
+        payload={'tables':[{'fields':fields,'data':[['8069','元太','13,874','168','169','0','13,873','210','5.06','273,750','12','18','1','0','29','1','0.01','273,750','1','']] }]}
+        rows=tpex_margin_rows(payload)
+        self.assertEqual(rows['8069'],{'marginFinanceLots':13873,'marginFinanceChangeLots':-1,'marginShortLots':29,'marginShortChangeLots':17})
+
 
 if __name__ == '__main__':
     unittest.main()

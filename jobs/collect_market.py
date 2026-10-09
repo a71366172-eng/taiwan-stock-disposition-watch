@@ -356,8 +356,8 @@ def tpex_margin_rows(payload: dict | list) -> dict[str, dict]:
     table=tables[0] if tables and isinstance(tables[0],dict) else {}
     fields=table.get('fields','')
     rows=table.get('data',[])
-    if not isinstance(fields,str) or not isinstance(rows,list): return {}
-    headers=fields.split()
+    if not isinstance(fields,(str,list)) or not isinstance(rows,list): return {}
+    headers=fields.split() if isinstance(fields,str) else [str(field).strip() for field in fields]
     try:
         code_i=headers.index('代號'); finance_prev_i=headers.index('前資餘額(張)'); finance_i=headers.index('資餘額'); short_prev_i=headers.index('前券餘額(張)'); short_i=headers.index('券餘額')
     except ValueError: return {}
