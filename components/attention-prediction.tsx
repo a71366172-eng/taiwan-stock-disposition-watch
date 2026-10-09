@@ -18,8 +18,9 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
     const state=row.checks?attentionOverallState(row.checks):row.status==='outside'?'safe':row.status==='partial'?'near':'unknown';
     const detailGroups=row.checks?[{title:'標準一',checks:row.checks.slice(0,2)},{title:'標準二',checks:row.checks.slice(2)}].filter(item=>item.checks.length>0):[];
     const priceState=detailState(row.status);
-    return <details className={`attention-row attention-${row.status} attention-state-${state}${row.checks?' attention-has-checks':''}`} key={row.rule}>
-     <summary><strong>第 {row.rule} 款 <span>{row.name}</span></strong><span className="attention-threshold">{row.summary}</span><span className={`badge attention-state-${state}`}>{row.checks?row.summary:labels[row.status]}</span></summary>
+    const rowBadge=row.checks?row.summary:state==='triggered'?'必觸發':state==='near'?'可能觸發':state==='safe'?'無風險':labels[row.status];
+    return <details className={`attention-row attention-${row.status}`} key={row.rule}>
+     <summary><strong>第 {row.rule} 款 <span>{row.name}</span></strong><span className="attention-threshold">{row.summary}</span><span className={`badge attention-state-${state}`}>{rowBadge}</span></summary>
      <div className="attention-explanation">
       {detailGroups.length>0&&<div className="attention-check-groups">{detailGroups.map(item=>{
        const groupRisk=attentionCheckState(item.checks);
