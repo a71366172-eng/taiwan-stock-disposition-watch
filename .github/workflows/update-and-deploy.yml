@@ -42,7 +42,6 @@ jobs:
       - name: Build personal industry groups
         run: python scripts/build_personal_groups.py
       - name: Collect official TWSE and TPEx data
-        if: github.event_name != 'push' || contains(toJSON(github.event.commits.*.modified), 'jobs/collect_market.py') # Collector changes trigger one verified backfill on push; ordinary code-only releases reuse the latest snapshot.
         env:
           HISTORY_BATCH_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && 'next' || '' }}
         run: python jobs/collect_market.py
