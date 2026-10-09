@@ -123,6 +123,14 @@ class ValuationDataTests(unittest.TestCase):
         self.assertEqual(rows[0]['PriceEarningRatio'],'N/A')
         self.assertTrue(rows[0]['PENonPositive'])
 
+    def test_tpex_current_tables_payload_maps_pe_and_pb(self):
+        payload={'tables':[{'fields':'股票代號 公司名稱 本益比 每股股利 股利年度 殖利率(%) 股價淨值比 財報年/季','data':[['6127','九豪','N/A','0.0','114','0.00','6.06','115Q2']]}]}
+        rows=tpex_valuation_rows(payload,'2026-10-08')
+        self.assertEqual(rows[0]['SecuritiesCompanyCode'],'6127')
+        self.assertEqual(rows[0]['PriceEarningRatio'],'N/A')
+        self.assertTrue(rows[0]['PENonPositive'])
+        self.assertEqual(rows[0]['PriceBookRatio'],'6.06')
+
 
 if __name__ == '__main__':
     unittest.main()

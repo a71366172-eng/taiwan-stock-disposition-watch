@@ -343,6 +343,14 @@ def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
         return []
     rows=payload.get('aaData')
     if not isinstance(rows,list):
+        tables=payload.get('tables')
+        table=tables[0] if isinstance(tables,list) and tables else None
+        fields=table.get('fields') if isinstance(table,dict) else None
+        data=table.get('data') if isinstance(table,dict) else None
+        if isinstance(fields,str) and isinstance(data,list):
+            headers=fields.split()
+            rows=[dict(zip(headers,row)) for row in data if isinstance(row,(list,tuple))]
+    if not isinstance(rows,list):
         return []
     result=[]
     for row in rows:
