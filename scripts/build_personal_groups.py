@@ -1,4 +1,4 @@
-"""Build the public stock-comparison indexes from the user's two group lists."""
+"""Build the public stock-comparison indexes from the user's group lists."""
 
 from __future__ import annotations
 
@@ -87,6 +87,41 @@ def build_fine_industries(source: str) -> list[dict]:
     return groups
 
 
+def build_industries(source: str) -> list[dict]:
+    rows = csv.DictReader(source.splitlines())
+    required = {"代碼", "產業"}
+    if not rows.fieldnames or not required.issubset(rows.fieldnames):
+        raise ValueError("產業細類別 CSV 缺少代碼或產業欄位")
+
+    codes_by_name: dict[str, list[str]] = {}
+    seen_by_name: dict[str, set[str]] = {}
+    seen_rows: set[str] = set()
+    for number, row in enumerate(rows, 2):
+        code = (row.get("代碼") or "").strip()
+        if not re.fullmatch(r"\d{4}", code):
+            raise ValueError(f"產業細類別 CSV 第 {number} 列股票代碼格式錯誤：{code}")
+        if code in seen_rows:
+            raise ValueError(f"產業細類別 CSV 股票代碼重複：{code}")
+        seen_rows.add(code)
+        name = (row.get("產業") or "").strip()
+        if not name:
+            continue
+        bucket = codes_by_name.setdefault(name, [])
+        seen = seen_by_name.setdefault(name, set())
+        if code not in seen:
+            bucket.append(code)
+            seen.add(code)
+
+    groups = [
+        {"id": f"sector_{index:03d}", "name": name, "codes": codes}
+        for index, (name, codes) in enumerate(codes_by_name.items(), 1)
+        if codes
+    ]
+    if not groups:
+        raise ValueError("產業欄位沒有可用的股票分類")
+    return groups
+
+
 def build(source: str, fine_source: str) -> dict:
     return {
         "sources": [
@@ -101,6 +136,12 @@ def build(source: str, fine_source: str) -> dict:
                 "label": "產業細類別",
                 "source": "使用者匯出的產業細類別 CSV",
                 "groups": build_fine_industries(fine_source),
+            },
+            {
+                "id": "industry",
+                "label": "產業別分類",
+                "source": "依使用者匯出的產業細類別 CSV「產業」欄位分組",
+                "groups": build_industries(fine_source),
             },
         ]
     }

@@ -8,7 +8,7 @@
 
 ### 更新自訂細產業分類
 
-本機更新 `D:\AI\trading\STOCK\觀察名單_概念股.csv` 或 `D:\AI\trading\STOCK\產業細類別.csv` 後，可執行 `powershell -ExecutionPolicy Bypass -File D:\AI\trading\site\scripts\publish_personal_groups.ps1` 立即同步，或等待每日 20:00 的本機排程。腳本會驗證兩個檔案並上傳來源；GitHub Actions 產生 `public/data/personal-groups.json`、建置並部署。GitHub Actions 無法直接讀取本機 `D:`。對比頁選股視窗提供原本概念分類、產業細類別及注意股／處置股三個清單。產業細類別來自使用者匯出的分類 CSV，不等同官方產業分類。
+本機更新 `D:\AI\trading\STOCK\觀察名單_概念股.csv` 或 `D:\AI\trading\STOCK\產業細類別.csv` 後，可執行 `powershell -ExecutionPolicy Bypass -File D:\AI\trading\site\scripts\publish_personal_groups.ps1` 立即同步，或等待每日 20:00 的本機排程。腳本會驗證兩個檔案並上傳來源；GitHub Actions 產生 `public/data/personal-groups.json`、建置並部署。GitHub Actions 無法直接讀取本機 `D:`。對比頁選股視窗提供原本概念分類、產業細類別、依 CSV「產業」欄位分組的產業別分類，以及注意股／處置股清單。產業資訊來自使用者匯出的分類 CSV，不等同官方產業分類。
 
 此電腦也可執行 `scripts/install_personal_groups_daily.ps1` 建立 Windows 工作排程，每天本機時間 20:00 自動執行上傳腳本；內容未變時不提交。排程需要電腦可用、使用者已登入且能連線 GitHub；錯過執行時間會在下次可執行時補跑。執行結果記錄於 `D:\AI\trading\STOCK\personal-groups-update.log`。
 

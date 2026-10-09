@@ -16,9 +16,8 @@ class PersonalGroupBuilderTests(unittest.TestCase):
 
     def test_exports_both_user_group_sources(self):
         sources = self.result["sources"]
-        self.assertEqual([source["id"] for source in sources], ["original", "fine_industry"])
-        self.assertTrue(sources[0]["groups"])
-        self.assertTrue(sources[1]["groups"])
+        self.assertEqual([source["id"] for source in sources], ["original", "fine_industry", "industry"])
+        self.assertTrue(all(source["groups"] for source in sources))
 
     def test_original_export_keeps_its_expected_boundaries(self):
         groups = self.result["sources"][0]["groups"]
@@ -39,6 +38,18 @@ class PersonalGroupBuilderTests(unittest.TestCase):
         self.assertIn("PCB材料", groups)
         self.assertIn("2330", groups.get("晶圓代工", []))
         self.assertGreater(len(groups), 500)
+
+    def test_industry_column_creates_exchange_industry_groups(self):
+        groups = {group["name"]: group["codes"] for group in self.result["sources"][2]["groups"]}
+        self.assertIn("上市半導體", groups)
+        self.assertIn("2330", groups["上市半導體"])
+        self.assertIn("上櫃半導體", groups)
+
+    def test_industry_column_rejects_duplicate_stock_codes(self):
+        with self.assertRaisesRegex(ValueError, "股票代碼重複"):
+            build_personal_groups.build_industries(
+                "代碼,商品,產業,所有細產業\n2330,台積電,上市半導體,晶圓代工\n2330,台積電,上市半導體,IC設計\n"
+            )
 
     def test_rejects_duplicate_stock_codes(self):
         with self.assertRaisesRegex(ValueError, "股票代碼重複"):
