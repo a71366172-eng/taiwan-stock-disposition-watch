@@ -52,6 +52,7 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState('');
  const [groupPickerOpen,setGroupPickerOpen]=useState(false);
+ const [stockPreview,setStockPreview]=useState<{code:string;name:string;href:string}|null>(null);
  useEffect(()=>{
   let active=true;
   void finMind('TaiwanStockInfo').then(rows=>{
@@ -61,10 +62,22 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
   }).catch(reason=>{if(active)setSymbolsError(reason instanceof Error?reason.message:'股票名單載入失敗')});
   return()=>{active=false};
  },[]);
+ useEffect(()=>{
+  if(!stockPreview)return;
+  const closeOnEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')setStockPreview(null)};
+  window.addEventListener('keydown',closeOnEscape);
+  return()=>window.removeEventListener('keydown',closeOnEscape);
+ },[stockPreview]);
  const available=useMemo(()=>symbols.length?symbols:snapshot.stocks.filter(stock=>stock.market==='TWSE'||stock.market==='TPEX').map(stock=>({code:stock.code,name:stock.name,market:stock.market as 'TWSE'|'TPEX',isEtf:false})),[symbols,snapshot]);
  const individualPageHref=(value:string)=>{
   const code=codeFromInput(value);
   return code&&available.some(stock=>stock.code===code)?`#/stocks/${code}`:null;
+ };
+ const openStockPreview=(value:string)=>{
+  const code=codeFromInput(value);
+  const stock=available.find(item=>item.code===code);
+  const href=individualPageHref(value);
+  if(stock&&href)setStockPreview({code:stock.code,name:stock.name,href});
  };
  const watchGroups=useMemo(()=>{
   const cutoff=new Date(`${snapshot.asOf}T00:00:00Z`);
@@ -101,8 +114,9 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
  return <SiteShell active="compare">
   <div className="page-heading"><div><div className="eyebrow">STOCK PAIR COMPARISON</div><h1>股票對比<span className="heading-dot">.</span></h1><p>比較兩檔上市／上櫃股票或 ETF 最近 120 個共同交易日的漲跌與同步程度。</p></div></div>
   <section className="panel compare-panel"><div className="panel-heading"><div><h2>選擇兩檔股票</h2><p>輸入股票或 ETF 代號，或從建議清單選擇；查詢至 {snapshot.asOf} 的盤後資料。</p></div><span className="badge blue">{symbols.length?`${symbols.length} 檔可選`:'讀取股票名單中'}</span></div>
-   <div className="compare-inputs"><div className="compare-input-field"><label htmlFor="compare-stock-a">股票 A</label><input id="compare-stock-a" list="comparison-stocks" value={firstInput} onChange={event=>setFirstInput(event.target.value)} placeholder="例：2330 台積電"/>{individualPageHref(firstInput)&&<a className="compare-stock-link" href={individualPageHref(firstInput)!}>查看 A 個股頁面 ↗</a>}</div><button type="button" className="compare-swap" onClick={swapStocks} disabled={loading} aria-label="交換股票 A 與 B" title="交換股票 A 與 B">⇄</button><div className="compare-input-field"><label htmlFor="compare-stock-b">股票 B</label><input id="compare-stock-b" list="comparison-stocks" value={secondInput} onChange={event=>setSecondInput(event.target.value)} placeholder="例：8299 群聯"/>{individualPageHref(secondInput)&&<a className="compare-stock-link" href={individualPageHref(secondInput)!}>查看 B 個股頁面 ↗</a>}</div><button type="button" className="compare-group-button" onClick={()=>setGroupPickerOpen(true)}>細產業選股</button><datalist id="comparison-stocks">{available.map(stock=><option key={`${stock.market}-${stock.code}`} value={`${stock.code} ${stock.name}`}>{stock.market==='TWSE'?'上市':'上櫃'}{stock.isEtf?' ETF':' 股票'}</option>)}</datalist><button type="button" className="compare-button" onClick={()=>void compare()} disabled={loading||!symbols.length}>{loading?'查詢中…':'比較近期走勢'}</button></div>
+   <div className="compare-inputs"><div className="compare-input-field"><label htmlFor="compare-stock-a">股票 A</label><input id="compare-stock-a" list="comparison-stocks" value={firstInput} onChange={event=>setFirstInput(event.target.value)} placeholder="例：2330 台積電"/>{individualPageHref(firstInput)&&<button type="button" className="compare-stock-link" onClick={()=>openStockPreview(firstInput)}>查看 A 個股頁面 ↗</button>}</div><button type="button" className="compare-swap" onClick={swapStocks} disabled={loading} aria-label="交換股票 A 與 B" title="交換股票 A 與 B">⇄</button><div className="compare-input-field"><label htmlFor="compare-stock-b">股票 B</label><input id="compare-stock-b" list="comparison-stocks" value={secondInput} onChange={event=>setSecondInput(event.target.value)} placeholder="例：8299 群聯"/>{individualPageHref(secondInput)&&<button type="button" className="compare-stock-link" onClick={()=>openStockPreview(secondInput)}>查看 B 個股頁面 ↗</button>}</div><button type="button" className="compare-group-button" onClick={()=>setGroupPickerOpen(true)}>細產業選股</button><datalist id="comparison-stocks">{available.map(stock=><option key={`${stock.market}-${stock.code}`} value={`${stock.code} ${stock.name}`}>{stock.market==='TWSE'?'上市':'上櫃'}{stock.isEtf?' ETF':' 股票'}</option>)}</datalist><button type="button" className="compare-button" onClick={()=>void compare()} disabled={loading||!symbols.length}>{loading?'查詢中…':'比較近期走勢'}</button></div>
    {groupPickerOpen&&<PersonalGroupPicker stocks={available} watchGroups={watchGroups} onClose={()=>setGroupPickerOpen(false)} onApply={(first,second)=>{setFirstInput(`${first.code} ${first.name}`);setSecondInput(`${second.code} ${second.name}`);setPair(null);setError('');setGroupPickerOpen(false)}}/>}
+   {stockPreview&&<div className="stock-preview-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setStockPreview(null)}}><section className="stock-preview-dialog" role="dialog" aria-modal="true" aria-label={`${stockPreview.code} ${stockPreview.name} 個股頁面`}><header><div><h2>{stockPreview.code} {stockPreview.name}</h2><p>個股頁面預覽</p></div><div><a href={stockPreview.href} target="_blank" rel="noopener noreferrer">另開新分頁 ↗</a><button type="button" className="stock-preview-close" onClick={()=>setStockPreview(null)} aria-label="關閉個股頁面">×</button></div></header><iframe title={`${stockPreview.code} ${stockPreview.name} 個股頁面`} src={stockPreview.href}/></section></div>}
    {symbolsError&&<p className="compare-note">股票名單暫時無法載入：{symbolsError}。請稍後重試。</p>}
    {error&&<p className="compare-note" role="alert">{error}</p>}
    {result&&pair&&<><div className="compare-summary"><div><small>A 股票 · {pair[0].code} {pair[0].name}</small><strong className={direction(result.firstChange)}>{sufficient?percent(result.firstChange):'—'}</strong></div><div><small>B 股票 · {pair[1].code} {pair[1].name}</small><strong className={direction(result.secondChange)}>{sufficient?percent(result.secondChange):'—'}</strong></div><div className="compare-sync-rate"><small>相關係數</small><strong>{sufficient&&result.synchronizationRate!==null?`${result.synchronizationRate}%`:'—'}</strong><span>{sufficient?`以 ${result.smoothedSessionCount} 個平滑報酬點加權計算`:`共同交易日僅 ${result.sessionCount} 日`}</span></div><div><small>A 相對 B 強弱差</small><strong className={direction(result.spread)}>{sufficient?percent(result.spread):'—'}</strong></div></div>
