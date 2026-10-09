@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calculateMixedEntryCosts,calculateMixedPosition,firstUnitsForTarget,positionLeverage,ratioStrategySides} from '../lib/position-ratio.ts';
+import {calculateMixedEntryCosts,calculateMixedPosition,firstUnitsForTarget,positionLeverage,ratioStrategySides,warrantLotsForLinkedStockLots} from '../lib/position-ratio.ts';
 
 test('ratio convergence and divergence presets switch A/B directions around the average',()=>{
  assert.deepEqual(ratioStrategySides(1.2,1,'convergence'),['short','long']);
@@ -111,4 +111,20 @@ test('ETF sale uses its own tax rate and can be set to zero for an exempt fund',
  assert.equal(etf.second.tax,100);
  const exempt=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,0,.002,0,false,true,0)!;
  assert.equal(exempt.second.tax,0);
+});
+
+test('warrant delta converts one warrant lot to equivalent shares while capital uses premium paid',()=>{
+ const terms={price:20,delta:.5,exerciseRatio:.1};
+ const position=calculateMixedPosition(100,100,1,1,'warrant','stock',null,null,'long','short',undefined,1,{first:terms})!;
+ assert.equal(position.firstShares,50);
+ assert.equal(position.firstNotional,5000);
+ assert.equal(position.firstCapital,20000);
+ const costs=calculateMixedEntryCosts(position,'warrant','stock','long','short',.1425,.3,18,.002,0,false,false,.1,{first:terms})!;
+ assert.equal(costs.first.fee,29);
+ assert.equal(costs.first.tax,0);
+ const shortCosts=calculateMixedEntryCosts(position,'warrant','stock','short','short',.1425,.3,18,.002,0,false,false,.1,{first:terms})!;
+ assert.equal(shortCosts.first.tax,20);
+ assert.equal(warrantLotsForLinkedStockLots(1,.5,.1),20);
+ assert.equal(warrantLotsForLinkedStockLots(2,-.5,.1),40);
+ assert.equal(warrantLotsForLinkedStockLots(1,0,.1),null);
 });

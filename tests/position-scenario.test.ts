@@ -33,3 +33,12 @@ test('editing A or B net profit solves the shared scenario percentage',()=>{
   assert.ok(Math.abs(evaluate(solved)![leg].netProfit-target[leg].netProfit)<1);
  }
 });
+
+test('warrant scenario applies Delta, Gamma, Theta and Vega to option premium',()=>{
+ const terms={price:20,delta:.5,exerciseRatio:.1,gamma:.02,theta:-.1,vega:.3,impliedVolatility:35};
+ const warrantPosition=calculateMixedPosition(100,100,1,1,'warrant','stock',null,null,'long','short',undefined,1,{first:terms})!;
+ const warrantEntry=calculateMixedEntryCosts(warrantPosition,'warrant','stock','long','short',0,.3,18,.002,0,false,false,.1,{first:terms})!;
+ const warrantLegs:[ScenarioLeg,ScenarioLeg]=[{instrument:'warrant',side:'long',isEtf:false,warrant:terms,underlyingPrice:100},legs[1]];
+ const result=calculatePositionScenario(warrantPosition,warrantEntry,warrantLegs,{...rates,commissionPercent:0,holdingDays:2,ivChangePoints:5},'sync-up',10,1.2,1)!;
+ assert.equal(result.first.netProfit,709);
+});
