@@ -1,6 +1,7 @@
 .compare-panel{margin-bottom:24px}
 .compare-inputs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto auto;align-items:end;gap:14px;padding:18px 22px}
 .compare-inputs label{display:grid;gap:7px;color:#aebbc4;font-size:12px}
+.compare-stock-link{justify-self:start;color:#79bbff;font-size:12px;text-decoration:none}.compare-stock-link:hover{text-decoration:underline}
 .compare-inputs input{width:100%;min-width:0;padding:11px 12px;background:#252a2e;border:1px solid #475058;border-radius:6px;color:#e8edf0;font-size:14px}
 .compare-inputs input:focus{outline:2px solid #348cff;outline-offset:2px}
 .compare-swap{width:42px;height:42px;border:1px solid #5b7184;border-radius:6px;background:#252f37;color:#9dccff;font-size:25px;line-height:1;cursor:pointer}.compare-swap:hover{background:#314250}.compare-swap:focus-visible{outline:2px solid #79bbff;outline-offset:2px}.compare-swap:disabled{opacity:.5;cursor:wait}
