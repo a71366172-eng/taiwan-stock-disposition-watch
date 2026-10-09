@@ -1,9 +1,10 @@
 import type {MarketSnapshot,Simulation,Stock} from '../lib/market-types';
-import {attentionCheckState,attentionOverallState,attentionPrediction} from '../lib/attention-prediction';
+import {attentionCheckState,attentionOverallState,attentionPrediction,attentionQuickSummary} from '../lib/attention-prediction';
 import {fmt} from '../lib/format';
 
 export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapshot:MarketSnapshot;result:Simulation}){
  const rows=attentionPrediction(stock,snapshot,result);
+ const quickSummary=attentionQuickSummary(rows);
  const labels={partial:'條件式預測',outside:'價格未達',missing:'待補資料',exempt:'不適用／除外',manual:'公告認定'};
  const checkLabel={safe:'無風險',near:'可能觸發',triggered:'已達條件',unknown:'待補資料'};
  const groupLabel={safe:'無風險',near:'可能觸發',triggered:'必觸發',unknown:'待補資料'};
@@ -12,6 +13,7 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
  return <section className="panel attention-prediction">
   <div className="panel-heading"><div><h2>下個交易日注意預測 <small>{result.targetDate}</small></h2></div></div>
   <div className="attention-overview"><span>參考價 <strong>{fmt(result.reference)}</strong></span><span>漲停 {fmt(result.limits.high)}</span><span>跌停 {fmt(result.limits.low)}</span></div>
+  <div className="attention-quick-summary" aria-label="主要注意條件速覽">{quickSummary.map(line=><div className="attention-quick-line" key={line.label}><strong>{line.label}</strong><div className="attention-quick-content"><span className={`badge attention-state-${line.state}`}>{line.badge}</span><span>{line.summary}</span></div></div>)}</div>
   {groups.map(group=><details className="attention-group" key={group.start}>
    <summary>{group.title}</summary>
    <div>{rows.slice(group.start,group.end).map(row=>{

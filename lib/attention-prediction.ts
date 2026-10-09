@@ -3,6 +3,7 @@ import {cumulativeReturn,legalPrices,sixthClauseMinimumShares} from './rules.ts'
 
 export type AttentionCheck={label:string;value:string;progress:number|null;state:'safe'|'near'|'triggered'|'unknown'};
 export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[]};
+export type AttentionQuickLine={label:string;state:AttentionCheck['state'];badge:string;summary:string};
 export function attentionCheckState(checks:AttentionCheck[]):AttentionCheck['state']{
  if(!checks.length||checks.some(check=>check.progress===null))return 'unknown';
  const progress=Math.min(...checks.map(check=>check.progress??0));
@@ -11,6 +12,17 @@ export function attentionCheckState(checks:AttentionCheck[]):AttentionCheck['sta
 export function attentionOverallState(checks:AttentionCheck[]):AttentionCheck['state']{
  const states=[attentionCheckState(checks.slice(0,2)),attentionCheckState(checks.slice(2))];
  return states.includes('triggered')?'triggered':states.includes('near')?'near':states.includes('unknown')?'unknown':'safe';
+}
+export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
+ const first=rows.find(row=>row.rule===1);
+ const firstState=first?.checks?attentionOverallState(first.checks):first?.status==='outside'||first?.status==='exempt'?'safe':first?.status==='partial'?'near':'unknown';
+ const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
+ const secondState=candidates.length?'near':rows.some(row=>row.rule>=2&&row.rule<=8&&row.status==='missing')?'unknown':'safe';
+ const secondSummary=candidates.length?candidates.map(row=>`第${row.rule}款 ${row.summary}`).join('；'):secondState==='unknown'?'第2–8款條件資料不足':'目前沒有可計算的價格觸發條件';
+ return [
+  {label:'第1款',state:firstState,badge:firstState==='safe'?'無風險':firstState==='near'?'可能觸發':firstState==='triggered'?'必觸發':'資料不足',summary:firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':firstState==='triggered'?'已達條件':'資料不足'},
+  {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無風險':secondState==='near'?'可能觸發':'資料不足',summary:secondSummary}
+ ];
 }
 const names=['累積漲跌幅異常','中長期漲跌異常','漲跌異常＋量能放大','漲跌異常＋高週轉','漲跌異常＋券商集中','本益比／股價淨值比異常','漲跌異常＋券資比','存託憑證溢折價','成交量放大','累積週轉率','起迄價差','借券賣出','當沖異常','其他交易異常'];
 const fmt=(n:number)=>n.toLocaleString('zh-TW',{maximumFractionDigits:3});
@@ -54,7 +66,7 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  }
  const longValues=new Set<number>();let longReady=0;
  for(const [n,threshold] of [[30,100],[60,otc?140:130],[90,160]]){const b=tail(n-1);if(!b?.every(x=>x.close!==null&&x.close>0))continue;longReady++;for(const p of prices){const limit=otc&&p<5?({30:120,60:180,90:240}[n]??threshold):threshold;if(Math.abs((p/b[0].close!-1)*100)>limit&&p>simulation.reference)longValues.add(p);}}
- priceRule(2,prices.filter(p=>longValues.has(p)),longReady===3,'',['計算 30／60／90 日起迄價差的基本價格門檻；市場及同類差幅仍須達標。','近 30 日第一款注意、近 60 日僅第二款處置與企業行動的除外條件尚待完整驗證，因此不作確定觸發判定。']);
+ priceRule(2,prices.filter(p=>longValues.has(p)),longReady===3,'',['計算 30／60／90 日起迄價差的基本價格門檻；市場及同類差幅仍須達標。','近 30 個營業日第一款注意、近 60 個營業日僅第二款處置與企業行動的除外條件尚待完整驗證，因此不作確定觸發判定。']);
  const volume59=tail(59),sum59=volume59?.every(b=>b.volume!==null)?volume59.reduce((a,b)=>a+b.volume!,0):null;
  // V >= 5 * (sum59 + V) / 60, not five times yesterday's average.
  const min3=sum59!==null&&shares?Math.ceil(Math.max(5*sum59/55,small?0:(otc?300_000:500_000),shares*(otc?.01:.001))):null;

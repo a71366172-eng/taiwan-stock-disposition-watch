@@ -10,7 +10,7 @@ import {tradingViewUrl} from '../lib/tradingview-url';
 
 export function StockDetail({stock:s,snapshot,initial}:{stock:Stock;snapshot:MarketSnapshot;initial:Simulation}){
  const result=initial;
- const g=result.gate,hasCompleteNoticeHistory=s.noticeHistoryComplete===true,counts=[['第一款連續注意',g.firstStreak,3],['第 1–8 款連續注意',g.anyStreak,5],['近 10 日累計注意',g.nineCount,6],['近 30 日累計注意',g.twentyNineCount,12]] as const;
+ const g=result.gate,hasCompleteNoticeHistory=s.noticeHistoryComplete===true,counts=[['第一款連續注意',g.firstStreak,3],['第 1–8 款連續注意',g.anyStreak,5],['近 10 營業日累計注意',g.nineCount,6],['近 30 營業日累計注意',g.twentyNineCount,12]] as const;
  const chart=s.bars.slice(-30).map(b=>({date:shortDate(b.date),close:b.close}));
  const tier=dispositionTier(s,snapshot.calendar,snapshot.asOf);
  const turnover=s.volume!=null&&s.issuedShares!=null&&s.issuedShares>0?s.volume/s.issuedShares*100:null;

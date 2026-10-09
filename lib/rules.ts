@@ -67,7 +67,7 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
   const streak=(fn:(d:string)=>boolean)=>{let n=0;for(const d of [...dates].reverse()){if(!fn(d))break;n++;}return n;};
   const firstStreak=streak(first),anyStreak=streak(any),nineCount=dates.slice(-9).filter(any).length,twentyNineCount=dates.slice(-29).filter(any).length;
   const paths:string[]=[];
-  if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十日內十二日');
+  if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十個營業日內十二日');
   return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
 }
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
@@ -86,7 +86,7 @@ export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot
     if(base.firstStreak>0&&base.firstStreak+days>=3)paths.push('第一款連續三日');
     if(base.anyStreak>0&&base.anyStreak+days>=5)paths.push('第 1–8 款連續五日');
     if(sessions.slice(-10).filter(isCountable).length>=6)paths.push('十日內六日');
-    if(sessions.slice(-30).filter(isCountable).length>=12)paths.push('三十日內十二日');
+    if(sessions.slice(-30).filter(isCountable).length>=12)paths.push('三十個營業日內十二日');
     if(paths.length)return {days,date:future[index],paths,official:false};
   }
   return null;
