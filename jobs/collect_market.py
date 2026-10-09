@@ -612,6 +612,7 @@ def main():
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
     twse_margin=twse_margin_rows(get('https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN',False) or [])
+    print(f'TWSE margin balances normalized: {len(twse_margin)} stocks')
     twse_valuation_url=f'https://www.twse.com.tw/exchangeReport/BWIBBU_d?date={compact}&selectType=ALL&response=json'
     twse_daily_valuations=twse_valuation_rows(get(twse_valuation_url,False),as_of)
     if twse_daily_valuations:
@@ -643,6 +644,7 @@ def main():
     tpex_roc_date=roc_date(as_of)
     tpex_margin_url='https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date})
     tpex_margin=tpex_margin_rows(get(tpex_margin_url,False) or {})
+    print(f'TPEx margin balances normalized for {tpex_roc_date}: {len(tpex_margin)} stocks')
     tpex_daily_url='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date,'c':'','s':'0,asc'})
     tpex_daily_valuations=tpex_valuation_rows(get(tpex_daily_url,False),as_of)
     if tpex_daily_valuations:
@@ -861,6 +863,8 @@ def main():
         if margin:
             stock.update(margin)
             stock['marginTradingDate']=as_of
+    margin_coverage={market:sum(1 for stock in stocks if stock['market']==market and stock.get('marginFinanceLots') is not None) for market in ('TWSE','TPEX')}
+    print(f'Margin balances matched to published risk stocks: TWSE={margin_coverage["TWSE"]}, TPEx={margin_coverage["TPEX"]}')
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
     for stock in stocks: stock['bars']=stock['bars'][-HISTORY_SESSIONS:]
     for stock in stocks:
