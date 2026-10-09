@@ -42,7 +42,9 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  priceRule(4,shared,sum!==null,`；且量 ≥ ${min4===null?'待補股數':fmt(min4/1000)} 張（基本門檻）`,[...diff,`週轉率${otc?' > 5%':' ≥ 10%'}，且比市場平均高至少 ${otc?3:5} 個百分點。`]);
  priceRule(5,shared,sum!==null,`；且券商集中 > ${otc?20:25}%`,[...diff,`券商成交買進或賣出須逾 ${otc?300:500} 張；每分支機構增加 1 個百分點，上限 ${otc?30:35}%。`,'券商集中度為下個交易日成交後資料，價格僅為必要條件。']);
  priceRule(7,shared,sum!==null,'；券資條件待資料',[...diff,`前一交易日券資比 ≥ ${otc?10:20}%，融資使用率 ≥ ${otc?20:25}%，融券使用率 ≥ ${otc?10:15}%。`,'券資比較近六日最低值放大至少四倍，且不得低於再前一交易日；不能用未來融資券增量替代此既定資料。']);
- set(8,'exempt','僅適用臺灣存託憑證；本頁為普通股',[]);
+ const tdr=/-DR$/i.test(stock.name)||stock.code.startsWith('91');
+ set(8,tdr?'missing':'exempt',tdr?'待補存託憑證溢折價資料':'僅適用臺灣存託憑證；本檔不適用',[]);
+ if(tdr)set(6,'exempt','第六款僅適用普通股',[]);
  const sum5=five?.every(b=>b.volume!==null)?five.reduce((a,b)=>a+b.volume!,0):null;
  const min9=sum59!==null&&sum5!==null&&shares?Math.ceil(Math.max(5*sum59/55,sum59-2*sum5,Math.floor(shares*(otc?.01:.001))+1,(otc?300_000:500_000)+1)):null;
  set(9,recent(3)?'exempt':min9===null?'missing':'partial',recent(3)?'近五日已公告第三款，適用除外':min9===null?'缺少 59 日量／股數':`成交量 ≥ ${fmt(min9/1000)} 張（基本門檻）`,['當日量及六日均量相對 60 日均量皆 ≥ 5 倍，且均較市場倍數高至少 4 倍。',`成交金額須 > ${otc?2000:3000} 萬元；當沖調整及再次公告除外條件須另檢查。`]);
