@@ -46,7 +46,7 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
         notices = tpex_historical_notices(payload)
         self.assertEqual([notice["code"] for notice in notices], ["6538", "3455"])
 
-    def test_near_threshold_scan_counts_unique_days_for_only_clauses_one_to_eight(self):
+    def test_30_session_scan_includes_any_unique_day_for_only_clauses_one_to_eight(self):
         sessions = [f"2026-09-{day:02d}" for day in range(1, 31)]
         notices = [
             {"code": "1303", "date": date, "rules": [1, 6]}
@@ -57,7 +57,7 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
             for date in sessions[:20]
         ])
         notices.append({"code": "8888", "date": sessions[0], "rules": [2]})
-        self.assertEqual(near_disposition_notice_codes(notices, sessions), {"1303"})
+        self.assertEqual(near_disposition_notice_codes(notices, sessions), {"1303", "8888"})
 
     def test_clause_parser_handles_full_width_digits_and_spacing(self):
         self.assertEqual(notice_rules("最近注意交易資訊（第 ６ 款及第 1 款）"), [1, 6])

@@ -584,8 +584,8 @@ def fetch_tpex_all_historical_notices(start_date, end_date):
     if payload is None: return None
     return tpex_historical_notices(payload)
 
-def near_disposition_notice_codes(notices, sessions, minimum=9):
-    """Include stocks within three future sessions of the 30-session/12-day gate."""
+def near_disposition_notice_codes(notices, sessions, minimum=1):
+    """Include stocks with any qualifying clause 1–8 notice in the 30-session window."""
     window=set(sessions[-30:])
     counts={}
     for notice in notices:
@@ -718,13 +718,13 @@ def main():
     tpex_candidates={str(r.get('SecuritiesCompanyCode','')):strip(r.get('AccumulationSituation','')) for r in tpex_candidates_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode',''))) and iso(r.get('Date'))==as_of}
     history_start=(day-dt.timedelta(days=105)).isoformat()
     # Official candidate feeds only list stocks which have already crossed the
-    # exchange's threshold. Add stocks whose recorded 1st–8th clause notices
-    # put them within three sessions of the 30-session/12-day gate.
+    # exchange's threshold. Also include every stock with at least one recorded
+    # 1st–8th clause notice in the rolling 30-session window.
     recent_sessions=[date for date in old_snapshot.get('calendar',[]) if date<=as_of][-30:]
     if len(recent_sessions)==30:
         near_twse=near_disposition_notice_codes(all_notices,recent_sessions)
         risk_twse_near=near_twse
-        print(f'TWSE near 30-session/12-day candidates: {len(risk_twse_near)}')
+        print(f'TWSE stocks with 30-session clause 1-8 notices: {len(risk_twse_near)}')
         tpex_bulk_history=fetch_tpex_all_historical_notices(history_start,as_of)
         if tpex_bulk_history is None:
             risk_tpex_near=set()
@@ -732,7 +732,7 @@ def main():
         else:
             tpex_bulk_history=[n for n in tpex_bulk_history if is_tpex_common(n['code']) and n['date']<=as_of]
             risk_tpex_near=near_disposition_notice_codes(tpex_bulk_history,recent_sessions)
-            print(f'TPEx near 30-session/12-day candidates: {len(risk_tpex_near)} (bulk history rows={len(tpex_bulk_history)})')
+            print(f'TPEx stocks with 30-session clause 1-8 notices: {len(risk_tpex_near)} (bulk history rows={len(tpex_bulk_history)})')
     else:
         risk_twse_near=set()
         risk_tpex_near=set()
