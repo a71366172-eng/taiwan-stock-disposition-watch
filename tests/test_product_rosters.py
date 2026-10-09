@@ -118,6 +118,11 @@ class ValuationDataTests(unittest.TestCase):
         rows=tpex_valuation_rows({'iTotalRecords':1,'aaData':[['8069','元太','20.1','2.0','114','1.3','4.5']]},'2026-10-08')
         self.assertEqual(rows,[{'Date':'2026-10-08','SecuritiesCompanyCode':'8069','CompanyName':'元太','PriceEarningRatio':'20.1','PENonPositive':False,'PriceBookRatio':'4.5'}])
 
+    def test_tpex_na_pe_is_preserved_as_nonpositive_earnings_status(self):
+        rows=tpex_valuation_rows({'iTotalRecords':1,'aaData':[['6127','九豪','N/A','2.0','114','1.3','1.2']]},'2026-10-08')
+        self.assertEqual(rows[0]['PriceEarningRatio'],'N/A')
+        self.assertTrue(rows[0]['PENonPositive'])
+
 
 if __name__ == '__main__':
     unittest.main()

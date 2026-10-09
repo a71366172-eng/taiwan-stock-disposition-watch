@@ -332,7 +332,8 @@ def pe_is_nonpositive(raw) -> bool:
     value=number(raw)
     if value is not None:
         return value<=0
-    return str(raw or '').strip() in {'-','--','—','–','－'}
+    # Official TPEx output uses N/A for PE that cannot be calculated (e.g. EPS <= 0).
+    return str(raw or '').strip().upper() in {'-','--','—','–','－','N/A','NA','N.A.'}
 
 def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
     """Normalize TPEx's official date-query JSON, keeping source date semantics."""
