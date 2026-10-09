@@ -6,3 +6,6 @@
 @media(max-width:760px){.beta{display:none}.stock-tabs{gap:14px;overflow-y:hidden;scrollbar-width:none;justify-content:space-between}.stock-tabs::-webkit-scrollbar{display:none}.stock-tabs [role=tab] span{display:none}.stock-tabs [role=tab]{padding:15px 0}.summary-card p,.gate-card p,.gate-note{font-size:12px}.scenario-note,.rule-result details,.rule-result summary{font-size:13px}.notice-history p,.prose-card p,.prose-card li{font-size:14px}}
 .filter-controls select{font-size:13px}
 @media(max-width:760px){.filter-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.filter-controls label,.filter-controls select{min-width:0;width:100%;max-width:none}.sort-select svg{display:none}}
+.risk-checkbox-filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.risk-checkbox-filters label{display:inline-flex;align-items:center;gap:5px;color:#9caab3;font-size:11px;white-space:nowrap;cursor:pointer}.risk-checkbox-filters input{accent-color:#147cff}
+@media(max-width:1100px){.table-controls{flex-wrap:wrap}.risk-checkbox-filters{order:3;flex-basis:100%}.filter-controls{margin-left:auto}}
+@media(max-width:760px){.risk-checkbox-filters{order:0;flex:1 1 100%;padding:0 2px}.risk-checkbox-filters label{font-size:10px}.table-controls .filter-controls{flex-wrap:wrap;margin-left:0}}
