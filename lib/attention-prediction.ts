@@ -2,7 +2,7 @@ import type {MarketSnapshot,Simulation,Stock} from './market-types';
 import {cumulativeReturn,legalPrices,sixthClauseMinimumShares} from './rules.ts';
 
 export type AttentionCheck={label:string;value:string;progress:number|null;state:'safe'|'near'|'triggered'|'unknown'};
-export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[];ease?:number};
+export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[];ease?:number;conditionSummary?:string};
 export type AttentionQuickLine={label:string;state:AttentionCheck['state'];badge:string;summary:string};
 export function attentionCheckState(checks:AttentionCheck[]):AttentionCheck['state']{
  if(!checks.length||checks.some(check=>check.progress===null))return 'unknown';
@@ -16,13 +16,15 @@ export function attentionOverallState(checks:AttentionCheck[]):AttentionCheck['s
 export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const first=rows.find(row=>row.rule===1);
  const firstState=first?.checks?attentionOverallState(first.checks):first?.status==='outside'||first?.status==='exempt'?'safe':first?.status==='partial'?'near':'unknown';
+ const firstTrigger=first?.checks?.find(check=>check.state==='triggered');
+ const firstSummary=firstState==='triggered'?(first?.conditionSummary&&firstTrigger?`${first.conditionSummary}（${firstTrigger.value.replace(' / ',' > ')}）`:firstTrigger?`${firstTrigger.label} ${firstTrigger.value.replace(' / ',' > ')}`:'觸發門檻已達，價格條件待補'):firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':'資料不足';
  const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
  const measurable=candidates.filter(row=>row.ease!==undefined&&Number.isFinite(row.ease));
  const easiest=(measurable.length?measurable:candidates).slice().sort((a,b)=>(a.ease??Infinity)-(b.ease??Infinity)||a.rule-b.rule)[0];
  const secondState=candidates.length?'near':rows.some(row=>row.rule>=2&&row.rule<=8&&row.status==='missing')?'unknown':'safe';
  const secondSummary=easiest?easiest.summary.replace(/（基本門檻）/g,''):secondState==='unknown'?'條件資料不足':'目前沒有可計算的價格觸發條件';
  return [
-  {label:'第1款',state:firstState,badge:firstState==='safe'?'無風險':firstState==='near'?'可能觸發':firstState==='triggered'?'必觸發':'資料不足',summary:firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':firstState==='triggered'?'已達條件':'資料不足'},
+  {label:'第1款',state:firstState,badge:firstState==='safe'?'無風險':firstState==='near'?'可能觸發':firstState==='triggered'?'必觸發':'資料不足',summary:firstSummary},
   {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無風險':secondState==='near'?'可能觸發':'資料不足',summary:secondSummary}
  ];
 }
@@ -46,7 +48,7 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  const recent=(rule:number)=>stock.notices.some(n=>dates.slice(-5).includes(n.date)&&n.rules.includes(rule));
  const rows:AttentionRow[]=names.map((name,i)=>({rule:i+1,name,status:'missing',summary:'資料不足',details:[]}));
  const set=(rule:number,status:AttentionRow['status'],summary:string,details:string[])=>Object.assign(rows[rule-1],{status,summary,details});
- const priceRule=(rule:number,values:number[],ready:boolean,extra:string,details:string[],ease?:number)=>{set(rule,ready?(values.length?'partial':'outside'):'missing',ready?priceSummary(values,simulation.reference)+extra:'缺少連續有效行情'+extra,details);if(ease!==undefined)rows[rule-1].ease=ease;};
+ const priceRule=(rule:number,values:number[],ready:boolean,extra:string,details:string[],ease?:number)=>{set(rule,ready?(values.length?'partial':'outside'):'missing',ready?priceSummary(values,simulation.reference)+extra:'缺少連續有效行情'+extra,details);if(ease!==undefined)rows[rule-1].ease=ease;if(rule===1)rows[rule-1].conditionSummary=ready&&values.length?priceSummary(values,simulation.reference):undefined;};
  for(const id of [1,6]){
   const r=simulation.rules.find(r=>r.rule===id)!;
   const values=prices.filter(p=>r.intervals.some(v=>p>=v.from&&p<=v.to));
