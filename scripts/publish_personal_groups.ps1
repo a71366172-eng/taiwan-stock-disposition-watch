@@ -1,5 +1,6 @@
 ﻿param(
     [string]$InputPath = 'D:\AI\trading\STOCK\觀察名單_概念股.csv',
+    [string]$FineIndustryInputPath = 'D:\AI\trading\STOCK\產業細類別.csv',
     [switch]$ValidateOnly
 )
 # Windows PowerShell 5.1 treats native Git stderr notices as terminating errors
@@ -8,6 +9,7 @@ $ErrorActionPreference = 'Continue'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $sourcePath = Join-Path $repo 'data\personal-groups-source.txt'
 if (-not (Test-Path -LiteralPath $InputPath)) { throw "找不到匯出檔：$InputPath" }
+if (-not (Test-Path -LiteralPath $FineIndustryInputPath)) { throw "找不到細產業匯出檔：$FineIndustryInputPath" }
 
 $bytes = [System.IO.File]::ReadAllBytes($InputPath)
 try {
@@ -24,6 +26,25 @@ for ($index = 0; $index -lt $lines.Length; $index++) {
 }
 if ($start -lt 0 -or $end -le $start) { throw '找不到從矽光子至 6757.TW 台灣虎航的完整範圍。' }
 [System.IO.File]::WriteAllText($sourcePath, (($lines[$start..$end] -join "`n") + "`n"), [System.Text.UTF8Encoding]::new($false))
+$fineStream = [System.IO.File]::Open($FineIndustryInputPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+try {
+    $fineBytes = New-Object byte[] $fineStream.Length
+    $offset = 0
+    while ($offset -lt $fineBytes.Length) {
+        $read = $fineStream.Read($fineBytes, $offset, $fineBytes.Length - $offset)
+        if ($read -le 0) { break }
+        $offset += $read
+    }
+    if ($offset -ne $fineBytes.Length) { throw '細產業匯出檔未能完整讀取。' }
+} finally { $fineStream.Dispose() }
+try {
+    $fineContent = [System.Text.UTF8Encoding]::new($false, $true).GetString($fineBytes)
+} catch [System.Text.DecoderFallbackException] {
+    $fineContent = [System.Text.Encoding]::GetEncoding(950).GetString($fineBytes)
+}
+$fineContent = $fineContent.TrimStart([char]0xFEFF)
+$fineSourcePath = Join-Path $repo 'data\fine-industries.csv'
+[System.IO.File]::WriteAllText($fineSourcePath, $fineContent, [System.Text.UTF8Encoding]::new($false))
 
 $python = 'C:\Users\USER\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
 if (-not (Test-Path -LiteralPath $python)) { $python = 'python' }
@@ -37,7 +58,8 @@ try {
     $staged = @(git -c "safe.directory=$repo" diff --cached --name-only)
     if ($LASTEXITCODE -ne 0) { throw '無法檢查 Git 暫存區。' }
     if ($staged.Count -gt 0) { throw "請先處理其他已暫存檔案：$($staged -join ', ')" }
-    $modified = @(git -c "safe.directory=$repo" diff --name-only | Where-Object { $_ -ne 'data/personal-groups-source.txt' })
+    $inputFiles = @('data/personal-groups-source.txt', 'data/fine-industries.csv')
+    $modified = @(git -c "safe.directory=$repo" diff --name-only | Where-Object { $_ -notin $inputFiles })
     if ($LASTEXITCODE -ne 0 -or $modified.Count -gt 0) { throw "有其他尚未提交的檔案，已停止自動上傳：$($modified -join ', ')" }
     git -c "safe.directory=$repo" fetch origin main
     if ($LASTEXITCODE -ne 0) { throw '無法連上 GitHub，稍後會重試。' }
@@ -46,11 +68,11 @@ try {
     foreach ($commit in $ahead) {
         $subject = git -c "safe.directory=$repo" show -s --format=%s $commit
         $files = @(git -c "safe.directory=$repo" diff-tree --no-commit-id --name-only -r $commit)
-        if ($subject -ne 'data: update personal industry groups' -or @($files | Where-Object { $_ -ne 'data/personal-groups-source.txt' }).Count -gt 0) {
+        if ($subject -ne 'data: update personal industry groups' -or @($files | Where-Object { $_ -notin $inputFiles }).Count -gt 0) {
             throw '本機 main 含其他未上傳提交，已停止自動上傳。'
         }
     }
-    git -c "safe.directory=$repo" add -- data/personal-groups-source.txt
+    git -c "safe.directory=$repo" add -- data/personal-groups-source.txt data/fine-industries.csv
     if ($LASTEXITCODE -ne 0) { throw '無法暫存分類來源。' }
     git -c "safe.directory=$repo" diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
