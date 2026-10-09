@@ -2,7 +2,7 @@ import type {MarketSnapshot,Simulation,Stock} from './market-types';
 import {cumulativeReturn,legalPrices,sixthClauseMinimumShares} from './rules.ts';
 
 export type AttentionCheck={label:string;value:string;progress:number|null;state:'safe'|'near'|'triggered'|'unknown'};
-export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[]};
+export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[];ease?:number};
 export type AttentionQuickLine={label:string;state:AttentionCheck['state'];badge:string;summary:string};
 export function attentionCheckState(checks:AttentionCheck[]):AttentionCheck['state']{
  if(!checks.length||checks.some(check=>check.progress===null))return 'unknown';
@@ -17,8 +17,10 @@ export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const first=rows.find(row=>row.rule===1);
  const firstState=first?.checks?attentionOverallState(first.checks):first?.status==='outside'||first?.status==='exempt'?'safe':first?.status==='partial'?'near':'unknown';
  const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
+ const measurable=candidates.filter(row=>row.ease!==undefined&&Number.isFinite(row.ease));
+ const easiest=(measurable.length?measurable:candidates).slice().sort((a,b)=>(a.ease??Infinity)-(b.ease??Infinity)||a.rule-b.rule)[0];
  const secondState=candidates.length?'near':rows.some(row=>row.rule>=2&&row.rule<=8&&row.status==='missing')?'unknown':'safe';
- const secondSummary=candidates.length?candidates.map(row=>`第${row.rule}款 ${row.summary}`).join('；'):secondState==='unknown'?'第2–8款條件資料不足':'目前沒有可計算的價格觸發條件';
+ const secondSummary=easiest?easiest.summary.replace(/（基本門檻）/g,''):secondState==='unknown'?'條件資料不足':'目前沒有可計算的價格觸發條件';
  return [
   {label:'第1款',state:firstState,badge:firstState==='safe'?'無風險':firstState==='near'?'可能觸發':firstState==='triggered'?'必觸發':'資料不足',summary:firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':firstState==='triggered'?'已達條件':'資料不足'},
   {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無風險':secondState==='near'?'可能觸發':'資料不足',summary:secondSummary}
@@ -44,7 +46,7 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  const recent=(rule:number)=>stock.notices.some(n=>dates.slice(-5).includes(n.date)&&n.rules.includes(rule));
  const rows:AttentionRow[]=names.map((name,i)=>({rule:i+1,name,status:'missing',summary:'資料不足',details:[]}));
  const set=(rule:number,status:AttentionRow['status'],summary:string,details:string[])=>Object.assign(rows[rule-1],{status,summary,details});
- const priceRule=(rule:number,values:number[],ready:boolean,extra:string,details:string[])=>set(rule,ready?(values.length?'partial':'outside'):'missing',ready?priceSummary(values,simulation.reference)+extra:'缺少連續有效行情'+extra,details);
+ const priceRule=(rule:number,values:number[],ready:boolean,extra:string,details:string[],ease?:number)=>{set(rule,ready?(values.length?'partial':'outside'):'missing',ready?priceSummary(values,simulation.reference)+extra:'缺少連續有效行情'+extra,details);if(ease!==undefined)rows[rule-1].ease=ease;};
  for(const id of [1,6]){
   const r=simulation.rules.find(r=>r.rule===id)!;
   const values=prices.filter(p=>r.intervals.some(v=>p>=v.from&&p<=v.to));
@@ -71,9 +73,9 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  // V >= 5 * (sum59 + V) / 60, not five times yesterday's average.
  const min3=sum59!==null&&shares?Math.ceil(Math.max(5*sum59/55,small?0:(otc?300_000:500_000),shares*(otc?.01:.001))):null;
  const diff=['六日漲跌幅仍須與市場及同類平均相差至少 20 個百分點；適用法定除外情形。'];
- priceRule(3,shared,sum!==null,`；且量 ≥ ${min3===null?'待補 59 日量／股數':fmt(min3/1000)} 張（基本門檻）`,[...diff,'成交量／含預測日的 60 日均量 ≥ 5 倍，且比市場平均放大倍數至少高 4 倍；市場條件可能提高量門檻。']);
+ priceRule(3,shared,sum!==null,`；且量 ≥ ${min3===null?'待補 59 日量／股數':fmt(min3/1000)} 張（基本門檻）`,[...diff,'成交量／含預測日的 60 日均量 ≥ 5 倍，且比市場平均放大倍數至少高 4 倍；市場條件可能提高量門檻。'],min3!==null&&sum59!==null?min3/(sum59/59):undefined);
  const min4=shares?(otc?Math.floor(shares*.05)+1:Math.ceil(shares*.1)):null;
- priceRule(4,shared,sum!==null,`；且量 ≥ ${min4===null?'待補股數':fmt(min4/1000)} 張（基本門檻）`,[...diff,`週轉率${otc?' > 5%':' ≥ 10%'}，且比市場平均高至少 ${otc?3:5} 個百分點。`]);
+ priceRule(4,shared,sum!==null,`；且量 ≥ ${min4===null?'待補股數':fmt(min4/1000)} 張（基本門檻）`,[...diff,`週轉率${otc?' > 5%':' ≥ 10%'}，且比市場平均高至少 ${otc?3:5} 個百分點。`],min4!==null&&sum59!==null?min4/(sum59/59):undefined);
  priceRule(5,shared,sum!==null,`；且券商集中 > ${otc?20:25}%`,[...diff,`券商成交買進或賣出須逾 ${otc?300:500} 張；每分支機構增加 1 個百分點，上限 ${otc?30:35}%。`,'券商集中度為下個交易日成交後資料，價格僅為必要條件。']);
  priceRule(7,shared,sum!==null,'；券資條件待資料',[...diff,`前一交易日券資比 ≥ ${otc?10:20}%，融資使用率 ≥ ${otc?20:25}%，融券使用率 ≥ ${otc?10:15}%。`,'券資比較近六日最低值放大至少四倍，且不得低於再前一交易日；不能用未來融資券增量替代此既定資料。']);
  const tdr=/-DR$/i.test(stock.name)||stock.code.startsWith('91');
