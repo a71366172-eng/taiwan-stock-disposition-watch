@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from jobs import collect_market
-from jobs.collect_market import tpex_historical_notices
+from jobs.collect_market import near_disposition_notice_codes, notice_rules, tpex_historical_notices
 
 
 class TpexHistoricalNoticeTests(unittest.TestCase):
@@ -37,6 +37,30 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
 
     def test_empty_official_response_is_a_complete_empty_history(self):
         self.assertEqual(tpex_historical_notices({"tables": [{"fields": [], "data": []}]}, "6538"), [])
+
+    def test_bulk_parser_keeps_security_codes_for_all_market_history(self):
+        payload = {"tables": [{
+            "fields": ["公告日期", "證券代號", "證券名稱", "注意交易資訊"],
+            "data": [["115/10/01", "6538", "倉和", "第1款"], ["115/10/02", "3455", "由田", "第6款"]],
+        }]}
+        notices = tpex_historical_notices(payload)
+        self.assertEqual([notice["code"] for notice in notices], ["6538", "3455"])
+
+    def test_near_threshold_scan_counts_unique_days_for_only_clauses_one_to_eight(self):
+        sessions = [f"2026-09-{day:02d}" for day in range(1, 31)]
+        notices = [
+            {"code": "1303", "date": date, "rules": [1, 6]}
+            for date in sessions[:9]
+        ]
+        notices.extend([
+            {"code": "9999", "date": date, "rules": [13]}
+            for date in sessions[:20]
+        ])
+        notices.append({"code": "8888", "date": sessions[0], "rules": [2]})
+        self.assertEqual(near_disposition_notice_codes(notices, sessions), {"1303"})
+
+    def test_clause_parser_handles_full_width_digits_and_spacing(self):
+        self.assertEqual(notice_rules("最近注意交易資訊（第 ６ 款及第 1 款）"), [1, 6])
 
     def test_tpex_history_posts_roc_dates_to_official_query(self):
         payload = {

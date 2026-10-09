@@ -517,7 +517,8 @@ CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十
 def strip(v): return re.sub('<[^>]+>', '', str(v)).strip()
 def notice_rules(reason):
     rules=set()
-    for value in re.findall(r'第([0-9]{1,2}|[一二三四五六七八九十]+)款',str(reason)):
+    normalized=unicodedata.normalize('NFKC',str(reason))
+    for value in re.findall(r'第\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款',normalized):
         rule=int(value) if value.isdigit() else CN.get(value)
         if rule is not None: rules.add(rule)
     return sorted(rules)
@@ -544,7 +545,7 @@ def tpex_notice(row):
     reason=strip(row.get('TradingInformation',''))
     return {'code':str(row.get('SecuritiesCompanyCode','')),'name':row.get('CompanyName',''),'date':iso(row.get('Date')),'reason':reason,'rules':notice_rules(reason),'close':number(row.get('ClosePrice')),'pe':number(row.get('PriceEarningRatio'))}
 
-def tpex_historical_notices(payload, code):
+def tpex_historical_notices(payload, code=None):
     """Normalize the official TPEx historical attention query, tolerating its tabular response variants."""
     if not isinstance(payload, dict): return []
     result=[]
@@ -562,11 +563,11 @@ def tpex_historical_notices(payload, code):
                 for key,terms in {'date':('公告日期','日期'),'code':('證券代號','代號'),'name':('證券名稱','名稱'),'reason':('注意交易資訊','交易資訊','注意原因'),'close':('收盤價',),'pe':('本益比',)}.items():
                     index=next((i for i,field in enumerate(fields) if any(term in field for term in terms)),None)
                     values[key]=row[index] if index is not None and index<len(row) else None
-            row_code=str(values.get('code') or code).strip()
+            row_code=str(values.get('code') or code or '').strip()
             notice_date=iso(values.get('date'))
             reason=strip(values.get('reason') or '')
-            if row_code!=code or not notice_date or not reason: continue
-            result.append({'code':code,'name':strip(values.get('name') or ''),'date':notice_date,'reason':reason,'rules':notice_rules(reason),'close':number(values.get('close')),'pe':number(values.get('pe'))})
+            if (code and row_code!=code) or not row_code or not notice_date or not reason: continue
+            result.append({'code':row_code,'name':strip(values.get('name') or ''),'date':notice_date,'reason':reason,'rules':notice_rules(reason),'close':number(values.get('close')),'pe':number(values.get('pe'))})
     return result
 
 def fetch_tpex_historical_notices(code, start_date, end_date):
@@ -575,6 +576,23 @@ def fetch_tpex_historical_notices(code, start_date, end_date):
     payload=post_json(url,{'cate':'','code':code,'endDate':roc_date(end_date),'order':'date','response':'json','startDate':roc_date(start_date),'type':'code'},retries=2,timeout=20)
     if payload is None: return None
     return tpex_historical_notices(payload,code)
+
+def fetch_tpex_all_historical_notices(start_date, end_date):
+    """Fetch the official TPEx attention list for all securities in a date range."""
+    url='https://www.tpex.org.tw/www/zh-tw/bulletin/attention'
+    payload=post_json(url,{'cate':'','code':'','endDate':roc_date(end_date),'order':'date','response':'json','startDate':roc_date(start_date),'type':'code'},retries=2,timeout=30)
+    if payload is None: return None
+    return tpex_historical_notices(payload)
+
+def near_disposition_notice_codes(notices, sessions, minimum=9):
+    """Include stocks within three future sessions of the 30-session/12-day gate."""
+    window=set(sessions[-30:])
+    counts={}
+    for notice in notices:
+        if notice.get('date') not in window or not any(1<=rule<=8 for rule in notice.get('rules',[])):
+            continue
+        counts.setdefault(notice.get('code'),set()).add(notice['date'])
+    return {code for code,dates in counts.items() if code and len(dates)>=minimum}
 
 def fetch_twse_historical_notices(code, start_date, end_date):
     """Supplement the broad TWSE feed with an official per-security history query."""
@@ -698,6 +716,27 @@ def main():
     tpex_notices=[tpex_notice(r) for r in tpex_notices_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode','')))]
     tpex_notices=[x for x in tpex_notices if x['date']==as_of]
     tpex_candidates={str(r.get('SecuritiesCompanyCode','')):strip(r.get('AccumulationSituation','')) for r in tpex_candidates_raw if is_tpex_common(str(r.get('SecuritiesCompanyCode',''))) and iso(r.get('Date'))==as_of}
+    history_start=(day-dt.timedelta(days=105)).isoformat()
+    # Official candidate feeds only list stocks which have already crossed the
+    # exchange's threshold. Add stocks whose recorded 1st–8th clause notices
+    # put them within three sessions of the 30-session/12-day gate.
+    recent_sessions=[date for date in old_snapshot.get('calendar',[]) if date<=as_of][-30:]
+    if len(recent_sessions)==30:
+        near_twse=near_disposition_notice_codes(all_notices,recent_sessions)
+        risk_twse_near=near_twse
+        print(f'TWSE near 30-session/12-day candidates: {len(risk_twse_near)}')
+        tpex_bulk_history=fetch_tpex_all_historical_notices(history_start,as_of)
+        if tpex_bulk_history is None:
+            risk_tpex_near=set()
+            print('TPEx all-security history unavailable; retaining current official candidate coverage')
+        else:
+            tpex_bulk_history=[n for n in tpex_bulk_history if is_tpex_common(n['code']) and n['date']<=as_of]
+            risk_tpex_near=near_disposition_notice_codes(tpex_bulk_history,recent_sessions)
+            print(f'TPEx near 30-session/12-day candidates: {len(risk_tpex_near)} (bulk history rows={len(tpex_bulk_history)})')
+    else:
+        risk_twse_near=set()
+        risk_tpex_near=set()
+        print(f'Near-threshold scan skipped: only {len(recent_sessions)} prior official trading sessions available')
     today=[n for n in all_notices if n['date']==as_of]+[n for n in tpex_notices if n['date']==as_of]
     dispositions=[]
     for r in punish.get('data',[]):
@@ -725,12 +764,11 @@ def main():
     # Candidate feeds also overlap across markets. Require roster membership
     # before collecting them, otherwise a TWSE candidate appears again as a
     # price-less TPEx record (and vice versa).
-    risk_twse_symbols={code for code in candidates if code in twse_market_symbols}|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
-    risk_tpex_symbols={code for code in tpex_candidates if code in tpex_market_symbols}|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
+    risk_twse_symbols={code for code in candidates if code in twse_market_symbols}|(risk_twse_near & twse_market_symbols)|{n['code'] for n in today if n['code'] in twse_market_symbols}|{d['code'] for d in active if d['code'] in twse_market_symbols}
+    risk_tpex_symbols={code for code in tpex_candidates if code in tpex_market_symbols}|(risk_tpex_near & tpex_market_symbols)|{n['code'] for n in today if n['code'] in tpex_market_symbols}|{d['code'] for d in active if d['code'] in tpex_market_symbols}
     # Both exchanges publish official per-day historical attention notices.
     # Verify/fill recent announcement history for every risk stock directly
     # from both exchanges. TPEx OpenAPI above is current-day only.
-    history_start=(day-dt.timedelta(days=105)).isoformat()
     twse_history_complete=set()
     twse_history_codes=sorted(risk_twse_symbols)
     with ThreadPoolExecutor(max_workers=8) as history_pool:
