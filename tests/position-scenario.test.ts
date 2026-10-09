@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calculateMixedEntryCosts,calculateMixedPosition} from '../lib/position-ratio.ts';
-import {calculatePositionScenario,percentForLegProfit,scenarioReturns,type ScenarioLeg} from '../lib/position-scenario.ts';
+import {calculatePositionScenario,calculatePositionScenarioForReturns,percentForLegProfit,scenarioReturns,type ScenarioLeg} from '../lib/position-scenario.ts';
 
 const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
 const entry=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,18,.002,0)!;
@@ -22,6 +22,15 @@ test('convergence changes A/B ratio by the requested percentage',()=>{
  assert.ok(returns[0]<0&&returns[1]>0);
  assert.ok(Math.abs((1+returns[0])/(1+returns[1])-.97)<1e-12);
  assert.equal(scenarioReturns('convergence',3,null,1),null);
+});
+
+test('independent A/B slider returns calculate each leg profit passively',()=>{
+ const result=calculatePositionScenarioForReturns(position,entry,legs,rates,[-.025,.04])!;
+ assert.equal(result.first.returnPercent,-2.5);
+ assert.equal(result.second.returnPercent,4);
+ assert.ok(Number.isFinite(result.first.netProfit));
+ assert.ok(Number.isFinite(result.second.netProfit));
+ assert.equal(calculatePositionScenarioForReturns(position,entry,legs,rates,[-1,0.02]),null);
 });
 
 test('editing A or B net profit solves the shared scenario percentage',()=>{

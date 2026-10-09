@@ -22,7 +22,12 @@ export function scenarioReturns(mode:ScenarioMode,percent:number,currentRatio:nu
 
 export function calculatePositionScenario(position:Position,entry:EntryCosts,legs:[ScenarioLeg,ScenarioLeg],rates:ScenarioRates,mode:ScenarioMode,percent:number,currentRatio:number|null,averageRatio:number|null){
  const returns=scenarioReturns(mode,percent,currentRatio,averageRatio);
- if(!returns||[rates.commissionPercent,rates.stockSellTaxPercent,rates.etfSellTaxPercent,rates.futuresFee,rates.futuresTaxPercent,rates.otherFees,rates.warrantSellTaxPercent??.1,rates.holdingDays??0].some(value=>!Number.isFinite(value)||value<0)||!Number.isFinite(rates.ivChangePoints??0))return null;
+ return returns?calculatePositionScenarioForReturns(position,entry,legs,rates,returns):null;
+}
+
+export function calculatePositionScenarioForReturns(position:Position,entry:EntryCosts,legs:[ScenarioLeg,ScenarioLeg],rates:ScenarioRates,returns:[number,number]){
+ if(returns.some(value=>!Number.isFinite(value)||value<=-1||value>10))return null;
+ if([rates.commissionPercent,rates.stockSellTaxPercent,rates.etfSellTaxPercent,rates.futuresFee,rates.futuresTaxPercent,rates.otherFees,rates.warrantSellTaxPercent??.1,rates.holdingDays??0].some(value=>!Number.isFinite(value)||value<0)||!Number.isFinite(rates.ivChangePoints??0))return null;
  const calculateLeg=(notional:number,units:number,entryFee:number,entryTax:number,leg:ScenarioLeg,change:number)=>{
   const warrant=leg.warrant;
   const underlyingMove=(leg.underlyingPrice??0)*change;
