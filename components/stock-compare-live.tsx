@@ -3,6 +3,7 @@ import {CartesianGrid,Legend,Line,LineChart,ReferenceLine,ResponsiveContainer,To
 import type {MarketSnapshot} from '../lib/market-types';
 import {compareStocks,type ComparisonStock} from '../lib/stock-comparison';
 import {comparisonCodeFromInput,recentComparisonSymbols,type ComparisonSymbol} from '../lib/comparison-symbols';
+import {recentDispositionExits} from '../lib/disposition-exits';
 import {PositionRatioCalculator} from './position-ratio-calculator';
 import {PersonalGroupPicker} from './personal-group-picker';
 import {SiteShell} from './site-shell';
@@ -85,9 +86,11 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
   const cutoffDate=cutoff.toISOString().slice(0,10);
   const attentionCodes=snapshot.stocks.filter(stock=>stock.candidateReason||stock.notices.some(notice=>notice.date>=cutoffDate)).map(stock=>stock.code);
   const dispositionCodes=snapshot.stocks.filter(stock=>stock.dispositions.some(disposition=>disposition.start&&disposition.end&&disposition.start<=snapshot.asOf&&disposition.end>=snapshot.asOf)).map(stock=>stock.code);
+  const recentExitCodes=recentDispositionExits(snapshot.dispositions,snapshot.calendar,snapshot.asOf,snapshot.upcomingSessions||snapshot.forecastDates||[snapshot.targetDate,snapshot.effectiveDate]).flatMap(group=>group.items.map(item=>item.code));
   return [
    {id:'attention',name:'注意股',codes:[...new Set(attentionCodes)]},
    {id:'disposition',name:'處置股',codes:[...new Set(dispositionCodes)]},
+   {id:'recent_exit',name:'近期出關',codes:[...new Set(recentExitCodes)]},
   ];
  },[snapshot]);
  const result=pair?compareStocks(...pair,COMPARISON_SESSIONS):null;
