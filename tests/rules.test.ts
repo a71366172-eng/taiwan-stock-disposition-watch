@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {countGate,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {countGate,countableAttentionNotices,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
@@ -18,6 +18,13 @@ test('ninth+one window qualifies at five existing days, unrelated rule13 does no
  const notices=[9,8,7,6,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
  notices.push({...notices[0],date:calendar.at(-2)!,rules:[13]});
  assert.ok(countGate({...base,notices},calendar,context.asOf).paths.includes('十日內六日'));
+});
+test('a new disposition cycle clears pre-treatment and treatment notices from all accumulation counts',()=>{
+ const sessions=calendar.slice(-30),notices=sessions.slice(5,17).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
+ notices.push({code:'TEST',name:'test',date:sessions[17],reason:'',rules:[13],close:100,pe:60},{code:'TEST',name:'test',date:sessions[18],reason:'',rules:[10],close:100,pe:60});
+ const disposed={...base,notices,dispositions:[{code:'TEST',name:'test',announced:sessions[8],start:sessions[8],end:sessions[9],condition:'',measure:'',content:''}]};
+ const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,7);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
+ assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,undefined);
 });
 test('first-rule streak requires first clause specifically and consecutive sessions',()=>{
  const notices=[2,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));

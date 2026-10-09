@@ -61,7 +61,7 @@ export function sixDayTwentyFivePercentFloor(stock:Stock,asOf:string):{price:num
 function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b.close!).div(money(b.reference!)).sub(q(1)).mul(q(100)).trunc2()),q(0));}
 export function countGate(stock:Stock,calendar:string[],asOf:string){
   const dates=calendar.filter(d=>d<=asOf);const byDate=new Map<string,Set<number>>();
-  for(const n of stock.notices){const set=byDate.get(n.date)||new Set<number>();n.rules.forEach(r=>set.add(r));byDate.set(n.date,set);}
+  for(const n of countableAttentionNotices(stock,asOf)){const set=byDate.get(n.date)||new Set<number>();n.rules.forEach(r=>set.add(r));byDate.set(n.date,set);}
   const first=(d:string)=>byDate.get(d)?.has(1)||false;
   const any=(d:string)=>[...(byDate.get(d)||[])].some(r=>r>=1&&r<=8);
   const streak=(fn:(d:string)=>boolean)=>{let n=0;for(const d of [...dates].reverse()){if(!fn(d))break;n++;}return n;};
@@ -69,6 +69,15 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
   const paths:string[]=[];
   if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十個營業日內十二日');
   return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
+}
+/** Notices before and during the latest completed disposition cycle are excluded from a new disposition base. */
+export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notices']{
+  const latest=[...stock.dispositions].filter(item=>item.announced<=asOf).sort((a,b)=>(a.start||a.announced).localeCompare(b.start||b.announced)).at(-1);
+  let cutoff:string|undefined;
+  if(latest){
+    cutoff=latest.end&&latest.end<=asOf?latest.end:latest.end?asOf:latest.start&&latest.start<=asOf?asOf:latest.announced;
+  }
+  return stock.notices.filter(notice=>notice.date<=asOf&&(!cutoff||notice.date>cutoff)&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
   const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
@@ -78,7 +87,7 @@ export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot
   // not itself a declaration that a disposition will happen tomorrow.
   if(stock.candidateReason)return {days:1,date:future[0],paths:['次一營業日再達注意標準時，將公告處置'],official:true};
   const history=snapshot.calendar.filter(d=>d<=snapshot.asOf),base=countGate(stock,history,snapshot.asOf);
-  const countable=new Set(stock.notices.filter(n=>n.rules.some(r=>r>=1&&r<=8)).map(n=>n.date));
+  const countable=new Set(countableAttentionNotices(stock,snapshot.asOf).map(n=>n.date));
   for(let index=0;index<future.length;index++){
     const days=(index+1) as 1|2|3,assumed=future.slice(0,days),sessions=[...history,...assumed];
     const isCountable=(date:string)=>countable.has(date)||assumed.includes(date);

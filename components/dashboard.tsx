@@ -5,7 +5,7 @@ import {Tabs,TabsList,TabsTrigger} from './ui/tabs';
 import {Button} from './ui/button';
 import {SiteShell} from './site-shell';
 import type {MarketSnapshot,RiskForecast,Simulation,Stock} from '../lib/market-types';
-import {forecastDispositionRisk,simulate} from '../lib/rules';
+import {countableAttentionNotices,forecastDispositionRisk,simulate} from '../lib/rules';
 import {fmt,shortDate,ruleNames,displayIntervals} from '../lib/format';
 import {readFavorites,subscribeFavorites,parseFavorites,toggleFavorite} from '../lib/favorites';
 import {dispositionTier,dispositionTierLabel,type DispositionTier} from '../lib/disposition-tier';
@@ -16,14 +16,14 @@ import {recentDispositionExits} from '../lib/disposition-exits';
 function buildResults(snapshot:MarketSnapshot){return new Map(snapshot.stocks.map(stock=>{try{return [stock.code,simulate(stock,snapshot)] as const;}catch{return [stock.code,undefined] as const;}}));}
 function OfficialCandidateDot(){return <span className="official-candidate-dot" role="img" aria-label="官方累計候選" title="官方累計候選"/>;}
 function gateProgress(stock:Stock,calendar:string[],asOf:string){
- const dates=calendar.filter(date=>date<=asOf),noticeDates=new Map(stock.notices.map(notice=>[notice.date,new Set(notice.rules)]));
+ const dates=calendar.filter(date=>date<=asOf),noticeDates=new Map(countableAttentionNotices(stock,asOf).map(notice=>[notice.date,new Set(notice.rules)]));
  const first=(date:string)=>noticeDates.get(date)?.has(1)||false,any=(date:string)=>[...(noticeDates.get(date)||[])].some(rule=>rule>=1&&rule<=8);
  const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(!matches(date))break;count++;}return count;};
  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(any).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(any).length,limit:12}];
 }
 function hasRecentClauseNotice(stock:Stock,calendar:string[],asOf:string){
  const window=new Set(calendar.filter(date=>date<=asOf).slice(-30));
- return stock.notices.some(notice=>window.has(notice.date)&&notice.rules.some(rule=>rule>=1&&rule<=8));
+ return countableAttentionNotices(stock,asOf).some(notice=>window.has(notice.date));
 }
 type Mode='risk'|'attention'|'disposed'|'watchlist';
 type SortKey='default'|'code'|'price'|'change'|'market'|'tier'|'days'|'end'|'threshold'|'reason'|'volume'|'capital'|'turnover'|'dayTrade';
