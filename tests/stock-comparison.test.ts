@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {compareStocks,type ComparisonStock} from '../lib/stock-comparison.ts';
+import {compareStocks,sameDirectionSimilarity,type ComparisonStock} from '../lib/stock-comparison.ts';
 
 const stock=(code:string,closes:number[]):ComparisonStock=>({code,name:code,market:'TWSE',bars:closes.map((close,index)=>({date:`2026-09-${String(index+1).padStart(2,'0')}`,close}))});
 
@@ -98,10 +98,23 @@ test('3-day smoothed synchronization is weighted, bounded, and reaches 100 for i
   const result=compareStocks(stock('1111',closes(100)),stock('2222',closes(250)));
   assert.equal(result.smoothedSessionCount,28);
   assert.equal(result.synchronizationRate,100);
-  assert.equal(result.synchronizationWeights.pearson,.4);
-  assert.equal(result.synchronizationWeights.spearman,.3);
-  assert.equal(result.synchronizationWeights.returnDifference,.3);
+  assert.equal(result.synchronizationWeights.pearson,.25);
+  assert.equal(result.synchronizationWeights.spearman,.2);
+  assert.equal(result.synchronizationWeights.returnDifference,.1);
+  assert.equal(result.synchronizationWeights.sameDirection,.45);
   const noisy=compareStocks(stock('1111',closes(100)),stock('2222',closes(250).map((value,index)=>value*(index%2?1.005:.995))));
   assert.ok(noisy.synchronizationRate!>=0&&noisy.synchronizationRate!<=100);
   assert.ok(noisy.synchronizationRate!<100);
+  const weights=noisy.synchronizationWeights;
+  const expected=Math.round(100*(weights.pearson*(noisy.smoothedPearson!+1)/2+weights.spearman*(noisy.smoothedSpearman!+1)/2+weights.returnDifference*noisy.returnDifferenceSimilarity!+weights.sameDirection*sameDirectionSimilarity(noisy.sameDirection!)));
+  assert.equal(noisy.synchronizationRate,expected);
+});
+
+test('directional agreement rises quadratically to full credit at 85% and is capped',()=>{
+  assert.equal(sameDirectionSimilarity(0),0);
+  assert.ok(sameDirectionSimilarity(70)<sameDirectionSimilarity(80));
+  assert.ok(Math.abs(sameDirectionSimilarity(80)-(80/85)**2)<1e-12);
+  assert.equal(sameDirectionSimilarity(85),1);
+  assert.equal(sameDirectionSimilarity(100),1);
+  assert.equal(sameDirectionSimilarity(150),1);
 });

@@ -30,7 +30,11 @@ function standardDeviation(values:number[]):number{
   return Math.sqrt(values.reduce((sum,value)=>sum+(value-mean)**2,0)/values.length);
 }
 
-const SYNC_WEIGHTS={pearson:0.4,spearman:0.3,returnDifference:0.3} as const;
+const SYNC_WEIGHTS={pearson:0.25,spearman:0.2,returnDifference:0.1,sameDirection:0.45} as const;
+
+// 85% matching trading days is the full directional subscore; the quadratic
+// curve rewards unusually high agreement without letting this factor exceed 1.
+export const sameDirectionSimilarity=(percent:number)=>Math.min(1,Math.max(0,percent/85)**2);
 
 export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessions=30){
   const secondByDate=new Map(second.bars.filter(bar=>Number.isFinite(bar.close)&&bar.close>0).map(bar=>[bar.date,bar.close]));
@@ -62,10 +66,11 @@ export function compareStocks(first:ComparisonStock,second:ComparisonStock,sessi
   const typicalSmoothedVolatility=smoothed.length>=15?(standardDeviation(smoothedFirst)+standardDeviation(smoothedSecond))/2:null;
   const returnDifferenceSimilarity=smoothedDifferenceVolatility!==null&&typicalSmoothedVolatility!==null&&typicalSmoothedVolatility>0
     ?Math.max(0,Math.min(1,1-smoothedDifferenceVolatility/typicalSmoothedVolatility)):null;
-  const synchronizationRate=smoothedPearson!==null&&smoothedSpearman!==null&&returnDifferenceSimilarity!==null
-    ?Math.round(100*(SYNC_WEIGHTS.pearson*(smoothedPearson+1)/2+SYNC_WEIGHTS.spearman*(smoothedSpearman+1)/2+SYNC_WEIGHTS.returnDifference*returnDifferenceSimilarity)):null;
   const sameDirection=count?daily.filter(row=>row.first*row.second>0||(row.first===0&&row.second===0)).length/count*100:null;
+  const directionSimilarity=sameDirection===null?null:sameDirectionSimilarity(sameDirection);
+  const synchronizationRate=smoothedPearson!==null&&smoothedSpearman!==null&&returnDifferenceSimilarity!==null&&directionSimilarity!==null
+    ?Math.min(100,Math.round(100*(SYNC_WEIGHTS.pearson*(smoothedPearson+1)/2+SYNC_WEIGHTS.spearman*(smoothedSpearman+1)/2+SYNC_WEIGHTS.returnDifference*returnDifferenceSimilarity+SYNC_WEIGHTS.sameDirection*directionSimilarity))):null;
   const firstChange=count?chart.at(-1)!.first:null;
   const secondChange=count?chart.at(-1)!.second:null;
-  return {points:chart,priceRatioPoints,sessionCount:count,averagePriceRatio,currentPriceRatio,priceRatioDate,priceRatioSessionCount:ratioPoints.length,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
+  return {points:chart,priceRatioPoints,sessionCount:count,averagePriceRatio,currentPriceRatio,priceRatioDate,priceRatioSessionCount:ratioPoints.length,correlation,spearman,returnDifferenceVolatility,smoothedSessionCount:smoothed.length,smoothedPearson,smoothedSpearman,smoothedDifferenceVolatility,returnDifferenceSimilarity,directionSimilarity,synchronizationRate,synchronizationWeights:SYNC_WEIGHTS,sameDirection,firstChange,secondChange,spread:firstChange!==null&&secondChange!==null?firstChange-secondChange:null};
 }
