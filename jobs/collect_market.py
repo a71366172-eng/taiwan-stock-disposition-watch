@@ -934,13 +934,14 @@ def main():
         date=iso(h.get('Date',''))
         description=str(h.get('Name',''))+str(h.get('Description',''))
         if date and '開始交易' not in description and '最後交易' not in description: closed.add(date)
-    forecast_dates=[]; cursor=day
-    while len(forecast_dates)<3:
+    upcoming_sessions=[]; cursor=day
+    while len(upcoming_sessions)<8:
         cursor+=dt.timedelta(days=1)
-        if cursor.weekday()<5 and cursor.isoformat() not in closed: forecast_dates.append(cursor.isoformat())
+        if cursor.weekday()<5 and cursor.isoformat() not in closed: upcoming_sessions.append(cursor.isoformat())
+    forecast_dates=upcoming_sessions[:3]
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
     product_coverage={'stockFutures':futures_available,'warrants':warrants_available,'convertibleBonds':cb_available}
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'upcomingSessions':upcoming_sessions,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     result['coverage']={market:'attention, official candidates and active dispositions only; 90-session history publication guard' for market in ('TWSE','TPEX')}
     validate_publication(result,old_snapshot)
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)

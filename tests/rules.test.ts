@@ -5,6 +5,7 @@ import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
 import {isRiskWatchEligible,isCurrentlyDisposed} from '../lib/risk-watch.ts';
+import {recentDispositionExits} from '../lib/disposition-exits.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
 const context={asOf:calendar.at(-1)!,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendar,calendarVerified:true};
@@ -98,6 +99,19 @@ test('risk list hides active dispositions unless they are re-noticed and still f
  const renoticed={...active,notices:[{code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60}]};
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,true,false,false,false),true);
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,false,false,true,false),false);
+});
+test('recent disposition exits include grouped -3 to +5 actual trading sessions',()=>{
+ const sessions=['2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];
+ const future=['2026-10-09','2026-10-12','2026-10-13','2026-10-14','2026-10-15','2026-10-16','2026-10-19','2026-10-20'];
+ const entry=(code:string,end:string,announced:string):Stock['dispositions'][number]=>({code,name:code,announced,start:null,end,condition:'',measure:'',content:''});
+ const groups=recentDispositionExits([
+  entry('past-edge','2026-10-02','2026-10-01'),entry('past-out','2026-10-01','2026-10-01'),
+  entry('today-a','2026-10-08','2026-10-07'),entry('today-b','2026-10-08','2026-10-07'),
+  entry('future-edge','2026-10-15','2026-10-09'),entry('future-out','2026-10-16','2026-10-09')
+ ],sessions,'2026-10-08',future);
+ assert.deepEqual(groups.map(group=>[group.date,group.offset,group.items.map(item=>item.code)]),[
+  ['2026-10-02',-3,['past-edge']],['2026-10-08',0,['today-a','today-b']],['2026-10-15',5,['future-edge']]
+ ]);
 });
 test('30-day observation rows are optional and ended dispositions can remain in normal risk results',()=>{
  const observed={...base,notices:[{code:'TEST',name:'test',date:calendar.at(-1)!,reason:'',rules:[1],close:100,pe:60}]};
