@@ -1,0 +1,16 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {attentionPrediction,priceSummary} from '../lib/attention-prediction.ts';
+import {simulate,sixthClauseMinimumShares} from '../lib/rules.ts';
+import type {Stock} from '../lib/market-types.ts';
+const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
+const stock:Stock={code:'TEST',name:'test',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:1000000,issuedShares:100000000,paidInCapital:1000000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:1000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
+const context={asOf:calendar.at(-1)!,calendar,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendarVerified:true};
+const predict=(s=stock)=>attentionPrediction(s,context,simulate(s,context));
+test('all 14 clauses are visible and missing data is not no risk',()=>{const r=predict();assert.equal(r.length,14);assert.equal(r[11].status,'missing');assert.equal(r[12].status,'missing');assert.equal(r[7].status,'exempt');assert.equal(r[13].status,'manual');});
+test('volume floor includes tomorrow volume in 60-day denominator',()=>{assert.match(predict()[8].summary,/49,000/);});
+test('recent clause 3 exempts 9 and recent clause 4 exempts 10',()=>{const s={...stock,notices:[{code:'TEST',name:'test',date:context.asOf,rules:[3,4],reason:'',close:100,pe:60}]};assert.equal(predict(s)[8].status,'exempt');assert.equal(predict(s)[9].status,'exempt');});
+test('a missing session disables price projection',()=>{const s={...stock,bars:stock.bars.filter(b=>b.date!==calendar.at(-2))};assert.equal(predict(s)[2].status,'missing');});
+test('TPEx first clause uses 30 percent instead of TWSE 32 percent',()=>{const s={...stock,bars:stock.bars.map((b,i)=>i>=85?{...b,close:104.2,reference:100}:b)};const a=simulate(s,context).rules[0],b=simulate({...s,market:'TPEX'},context).rules[0];assert.equal(a.intervals.length,0);assert.ok(b.intervals.length>0);});
+test('TPEx sixth-clause volume uses 2000 lots and small-cap exception',()=>{assert.equal(sixthClauseMinimumShares(10000000,'TPEX',100000000),2000000);assert.equal(sixthClauseMinimumShares(5000000,'TPEX',50000000),250000);});
+test('price labels use directional inequalities and outside-limits status',()=>{assert.equal(priceSummary([],100),'超出漲跌停價');assert.match(priceSummary([109,109.5,110],100),/≥ 109/);});

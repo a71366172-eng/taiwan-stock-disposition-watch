@@ -64,7 +64,7 @@ test('disposition tier uses the latest 30 known business sessions',()=>{
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
  assert.equal(result.code,'5314');
- assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.3');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.4');
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);
