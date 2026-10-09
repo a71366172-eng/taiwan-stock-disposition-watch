@@ -1,7 +1,17 @@
 import type {MarketSnapshot,Simulation,Stock} from './market-types';
 import {cumulativeReturn,legalPrices,sixthClauseMinimumShares} from './rules.ts';
 
-export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[]};
+export type AttentionCheck={label:string;value:string;progress:number|null;state:'safe'|'near'|'triggered'|'unknown'};
+export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[]};
+export function attentionCheckState(checks:AttentionCheck[]):AttentionCheck['state']{
+ if(!checks.length||checks.some(check=>check.progress===null))return 'unknown';
+ const progress=Math.min(...checks.map(check=>check.progress??0));
+ return progress>=1?'triggered':progress>=.75?'near':'safe';
+}
+export function attentionOverallState(checks:AttentionCheck[]):AttentionCheck['state']{
+ const states=[attentionCheckState(checks.slice(0,2)),attentionCheckState(checks.slice(2))];
+ return states.includes('triggered')?'triggered':states.includes('near')?'near':states.includes('unknown')?'unknown':'safe';
+}
 const names=['累積漲跌幅異常','中長期漲跌異常','漲跌異常＋量能放大','漲跌異常＋高週轉','漲跌異常＋券商集中','本益比／股價淨值比異常','漲跌異常＋券資比','存託憑證溢折價','成交量放大','累積週轉率','起迄價差','借券賣出','當沖異常','其他交易異常'];
 const fmt=(n:number)=>n.toLocaleString('zh-TW',{maximumFractionDigits:3});
 /** Necessary price conditions only. Never turn partial coverage into a definitive attention decision. */
@@ -28,6 +38,18 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
   const values=prices.filter(p=>r.intervals.some(v=>p>=v.from&&p<=v.to));
   const volume=sixthClauseMinimumShares(shares,stock.market,stock.paidInCapital);
   priceRule(id,values,r.status!=='missing',id===6?`；且成交量 ≥ ${volume===null?'待補股數':fmt(volume/1000)} 張`:'',id===1?r.conditions:[`本益比負值，或 ≥ ${otc?65:60} 且超過市場加權平均 2 倍；淨值比 ≥ ${otc?4:6} 且超過市場平均 2 倍。`,`週轉率 ≥ 5%；產業淨值比比較、券商集中或單一投資人集中，須至少符合一個分支。`,'本列僅計算產業比較分支，市場與產業估值採情境假設；未達此分支不能排除其他分支。',...(small?['小資本額上櫃股適用法定比較及成交量除外條件。']:[])]);
+  if(id===1&&sum!==null&&five){
+   const differential=(limit:number)=>Math.min(sum>=0?sum-simulation.scenario.market6:simulation.scenario.market6-sum,sum>=0?sum-simulation.scenario.industry6:simulation.scenario.industry6-sum)/limit;
+   const checksFor=(standard:1|2)=>{
+    const cumulativeLimit=standard===1?(otc?30:32):(otc?23:25),cumulativeProgress=Math.abs(sum)/cumulativeLimit;
+    const diffValue=differential(20)*20,diffProgress=differential(20),gapLimit=otc?40:50,gapProgress=Math.abs(simulation.reference-five[0].close!)/gapLimit;
+    const selected=standard===1?[{label:'累積漲跌幅',value:`${fmt(sum)}% / ${cumulativeLimit}%`,progress:cumulativeProgress},{label:'與市場／同類差幅',value:`${fmt(diffValue)}% / 20%`,progress:diffProgress}]:[{label:'累積漲跌幅',value:`${fmt(sum)}% / ${cumulativeLimit}%`,progress:cumulativeProgress},{label:'與市場／同類差幅',value:`${fmt(diffValue)}% / 20%`,progress:diffProgress},{label:'六日收盤價差',value:`${fmt(Math.abs(simulation.reference-five[0].close!))} 元 / ${gapLimit} 元`,progress:gapProgress}];
+    return selected.map(check=>({label:check.label,value:check.value,progress:check.progress,state:check.progress>=1?'triggered':check.progress>=.75?'near':'safe'} as AttentionCheck));
+   };
+   const first=checksFor(1),second=checksFor(2);
+   rows[0].checks=[...first,...second];rows[0].details=[];
+   const overall=attentionOverallState(rows[0].checks);rows[0].summary=overall==='triggered'?'必觸發':overall==='near'?'可能觸發':overall==='unknown'?'待補資料':'無風險';
+  }else if(id===1){rows[0].checks=[{label:'條件進度',value:'缺少連續有效行情',progress:null,state:'unknown'}];rows[0].summary='待補資料';}
   if(id===6&&r.status==='no_price')set(6,'missing','產業分支未達；集中度分支待資料',rows[5].details);
  }
  const longValues=new Set<number>();let longReady=0;
