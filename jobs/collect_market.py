@@ -335,6 +335,41 @@ def pe_is_nonpositive(raw) -> bool:
     # Official TPEx output uses N/A for PE that cannot be calculated (e.g. EPS <= 0).
     return str(raw or '').strip().upper() in {'-','--','—','–','－','N/A','NA','N.A.'}
 
+def twse_margin_rows(payload: list | dict) -> dict[str, dict]:
+    """Normalize TWSE MI_MARGN; exchange balances are reported in lots."""
+    rows=payload if isinstance(payload,list) else payload.get('data',[]) if isinstance(payload,dict) else []
+    result={}
+    for row in rows:
+        if not isinstance(row,dict): continue
+        code=str(row.get('股票代號','')).strip()
+        if not re.fullmatch(r'[1-9]\d{3}',code): continue
+        finance=number(row.get('融資今日餘額'))
+        finance_prev=number(row.get('融資前日餘額'))
+        short=number(row.get('融券今日餘額'))
+        short_prev=number(row.get('融券前日餘額'))
+        result[code]={'marginFinanceLots':finance,'marginFinanceChangeLots':finance-finance_prev if finance is not None and finance_prev is not None else None,'marginShortLots':short,'marginShortChangeLots':short-short_prev if short is not None and short_prev is not None else None}
+    return result
+
+def tpex_margin_rows(payload: dict | list) -> dict[str, dict]:
+    """Normalize TPEx daily margin balances from its current tables response."""
+    tables=payload.get('tables',[]) if isinstance(payload,dict) else []
+    table=tables[0] if tables and isinstance(tables[0],dict) else {}
+    fields=table.get('fields','')
+    rows=table.get('data',[])
+    if not isinstance(fields,str) or not isinstance(rows,list): return {}
+    headers=fields.split()
+    try:
+        code_i=headers.index('代號'); finance_prev_i=headers.index('前資餘額(張)'); finance_i=headers.index('資餘額'); short_prev_i=headers.index('前券餘額(張)'); short_i=headers.index('券餘額')
+    except ValueError: return {}
+    result={}
+    for row in rows:
+        if not isinstance(row,(list,tuple)) or len(row)<=max(code_i,finance_prev_i,finance_i,short_prev_i,short_i): continue
+        code=str(row[code_i]).strip()
+        if not re.fullmatch(r'[1-9]\d{3}',code): continue
+        finance=number(row[finance_i]); finance_prev=number(row[finance_prev_i]); short=number(row[short_i]); short_prev=number(row[short_prev_i])
+        result[code]={'marginFinanceLots':finance,'marginFinanceChangeLots':finance-finance_prev if finance is not None and finance_prev is not None else None,'marginShortLots':short,'marginShortChangeLots':short-short_prev if short is not None and short_prev is not None else None}
+    return result
+
 def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
     """Normalize TPEx's official date-query JSON, keeping source date semantics."""
     if isinstance(payload, list):
@@ -576,6 +611,7 @@ def main():
     cand=get('https://openapi.twse.com.tw/v1/announcement/notetrans')
     punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
+    twse_margin=twse_margin_rows(get('https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN',False) or [])
     twse_valuation_url=f'https://www.twse.com.tw/exchangeReport/BWIBBU_d?date={compact}&selectType=ALL&response=json'
     twse_daily_valuations=twse_valuation_rows(get(twse_valuation_url,False),as_of)
     if twse_daily_valuations:
@@ -605,6 +641,8 @@ def main():
     tpex_punish_raw=get('https://www.tpex.org.tw/openapi/v1/tpex_disposal_information')
     tpex_fundamentals=get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis',False) or []
     tpex_roc_date=roc_date(as_of)
+    tpex_margin_url='https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date})
+    tpex_margin=tpex_margin_rows(get(tpex_margin_url,False) or {})
     tpex_daily_url='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date,'c':'','s':'0,asc'})
     tpex_daily_valuations=tpex_valuation_rows(get(tpex_daily_url,False),as_of)
     if tpex_daily_valuations:
@@ -819,6 +857,10 @@ def main():
         stock['hasStockFutures']=(code in futures_codes) if futures_available else None
         stock['hasWarrants']=(code in warrant_codes) if warrants_available else None
         stock['hasConvertibleBonds']=(code in cb_codes) if cb_available else None
+        margin=twse_margin.get(code) if stock['market']=='TWSE' else tpex_margin.get(code)
+        if margin:
+            stock.update(margin)
+            stock['marginTradingDate']=as_of
     stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
     for stock in stocks: stock['bars']=stock['bars'][-HISTORY_SESSIONS:]
     for stock in stocks:

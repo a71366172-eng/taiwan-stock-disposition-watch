@@ -1,7 +1,7 @@
 import datetime as dt
 import unittest
 
-from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, parse_twse_candidates, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes, tpex_valuation_rows, twse_valuation_rows
+from jobs.collect_market import history_months_to_fetch, merge_history_bars, parse_isin_convertibles, parse_tpex_warrant_codes, parse_twse_candidates, select_history_batch, select_incomplete_warrant_history, tpex_company_rows_from_quotes, tpex_margin_rows, tpex_valuation_rows, twse_margin_rows, twse_valuation_rows
 
 
 class TwseCandidateRosterTests(unittest.TestCase):
@@ -130,6 +130,17 @@ class ValuationDataTests(unittest.TestCase):
         self.assertEqual(rows[0]['PriceEarningRatio'],'N/A')
         self.assertTrue(rows[0]['PENonPositive'])
         self.assertEqual(rows[0]['PriceBookRatio'],'6.06')
+
+
+class MarginDataTests(unittest.TestCase):
+    def test_twse_margin_balances_and_daily_changes_are_normalized_in_lots(self):
+        rows=twse_margin_rows([{'股票代號':'2330','融資今日餘額':'31586','融資前日餘額':'30278','融券今日餘額':'45','融券前日餘額':'50'}])
+        self.assertEqual(rows['2330'],{'marginFinanceLots':31586,'marginFinanceChangeLots':1308,'marginShortLots':45,'marginShortChangeLots':-5})
+
+    def test_tpex_current_tables_margin_format_maps_balances_and_changes(self):
+        payload={'tables':[{'fields':'代號 名稱 前資餘額(張) 資買 資賣 現償 資餘額 資屬證金 資使用率(%) 資限額 前券餘額(張) 券賣 券買 券償 券餘額 券屬證金 券使用率(%) 券限額 資券相抵(張) 備註','data':[['8069','元太','13,874','168','169','0','13,873','210','5.06','273,750','12','18','1','0','29','1','0.01','273,750','1','']] }]}
+        rows=tpex_margin_rows(payload)
+        self.assertEqual(rows['8069'],{'marginFinanceLots':13873,'marginFinanceChangeLots':-1,'marginShortLots':29,'marginShortChangeLots':17})
 
 
 if __name__ == '__main__':
