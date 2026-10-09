@@ -108,11 +108,15 @@ class HistoryBatchSelectionTests(unittest.TestCase):
 class ValuationDataTests(unittest.TestCase):
     def test_twse_daily_valuation_table_maps_fields(self):
         rows=twse_valuation_rows({'fields':['證券代號','證券名稱','本益比','股價淨值比'],'data':[['2330','台積電','25.4','6.2']]},'2026-10-08')
-        self.assertEqual(rows,[{'Date':'2026-10-08','Code':'2330','Name':'台積電','PEratio':'25.4','PBratio':'6.2'}])
+        self.assertEqual(rows,[{'Date':'2026-10-08','Code':'2330','Name':'台積電','PEratio':'25.4','PENonPositive':False,'PBratio':'6.2'}])
+
+    def test_official_dash_pe_is_preserved_as_nonpositive_earnings_status(self):
+        rows=twse_valuation_rows({'fields':['證券代號','證券名稱','本益比','股價淨值比'],'data':[['2340','台亞','-','3.65']]},'2026-10-08')
+        self.assertTrue(rows[0]['PENonPositive'])
 
     def test_tpex_daily_valuation_array_keeps_query_date_and_values(self):
         rows=tpex_valuation_rows({'iTotalRecords':1,'aaData':[['8069','元太','20.1','2.0','114','1.3','4.5']]},'2026-10-08')
-        self.assertEqual(rows,[{'Date':'2026-10-08','SecuritiesCompanyCode':'8069','CompanyName':'元太','PriceEarningRatio':'20.1','PriceBookRatio':'4.5'}])
+        self.assertEqual(rows,[{'Date':'2026-10-08','SecuritiesCompanyCode':'8069','CompanyName':'元太','PriceEarningRatio':'20.1','PENonPositive':False,'PriceBookRatio':'4.5'}])
 
 
 if __name__ == '__main__':

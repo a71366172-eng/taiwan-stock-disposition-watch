@@ -106,7 +106,8 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
   const historicalSum=historyOkay?cumulativeQ(lastFive):q(0);
   const six=(p:number)=>historicalSum.add(money(p).div(money(reference)).sub(q(1)).mul(q(100)).trunc2());
   const peExemption=stock.market==='TPEX'?65:60;
-  const industryExempt=(p:number)=>stock.pe!==null&&positive(stock.close)&&stock.valuationDate===snapshot.asOf&&(stock.pe<0||q(stock.pe).mul(money(p)).div(money(stock.close)).cmp(q(peExemption))>=0);
+  const peNegative=stock.peNegative===true||(stock.pe!==null&&stock.pe<0);
+  const industryExempt=(p:number)=>positive(stock.close)&&stock.valuationDate===snapshot.asOf&&(peNegative||(stock.pe!==null&&q(stock.pe).mul(money(p)).div(money(stock.close)).cmp(q(peExemption))>=0));
   const differential=(r:Q,market:number,industry:number,min:number,exempt:boolean)=>r.cmp(q(0))>=0?(r.sub(q(market)).cmp(q(min))>=0&&(exempt||r.sub(q(industry)).cmp(q(min))>=0)):(q(market).sub(r).cmp(q(min))>=0&&(exempt||q(industry).sub(r).cmp(q(min))>=0));
   const otc=stock.market==='TPEX',small=otc&&positive(stock.paidInCapital)&&stock.paidInCapital<80_000_000;
   const firstMatches=(p:number)=>{const r=six(p);return p>=5&&(small||differential(r,scenario.market6,scenario.industry6,20,industryExempt(p)))&&(r.abs().cmp(q(otc?30:32))>0||((otc?r.abs().cmp(q(23))>=0:r.abs().cmp(q(25))>0)&&money(p).sub(money(lastFive[0].close!)).abs().cmp(q(otc?40:50))>=0));};
@@ -116,10 +117,10 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
 
   rules.push(result(2,'三十／六十／九十日漲跌幅',[],[...shared,'長期企業行動及處置除外條件需完整驗證後開放。'],'第二款尚未完成企業行動與除外條件驗證，暫不提供門檻'));
 
-  const valuationReady=stock.close!==null&&stock.pe!==null&&stock.pb!==null&&stock.pb>0&&stock.valuationDate===snapshot.asOf;
+  const valuationReady=stock.close!==null&&(stock.pe!==null||peNegative)&&stock.pb!==null&&stock.pb>0&&stock.valuationDate===snapshot.asOf;
   const sixthMatch=(p:number)=>{
-    const relative=money(p).div(money(stock.close!));const pe=q(stock.pe!).mul(relative),pb=q(stock.pb!).mul(relative);
-    return (pe.cmp(q(0))<0||(pe.cmp(q(otc?65:60))>=0&&(small||pe.cmp(q(scenario.marketPe).mul(q(2)))>0)))&&pb.cmp(q(otc?4:6))>=0&&(small||(pb.cmp(q(scenario.marketPb).mul(q(2)))>0&&pb.cmp(q(scenario.industryPb).mul(q(otc?2:4)))>=0));
+    const relative=money(p).div(money(stock.close!));const pe=stock.pe===null?null:q(stock.pe).mul(relative),pb=q(stock.pb!).mul(relative);
+    return (peNegative||(pe!==null&&(pe.cmp(q(otc?65:60))>=0&&(small||pe.cmp(q(scenario.marketPe).mul(q(2)))>0))))&&pb.cmp(q(otc?4:6))>=0&&(small||(pb.cmp(q(scenario.marketPb).mul(q(2)))>0&&pb.cmp(q(scenario.industryPb).mul(q(otc?2:4)))>=0));
   };
   rules.push(result(6,'估值與週轉率・產業比較分支',valuationReady?mergePrices(prices,sixthMatch,reference,6):[],['每股盈餘、每股淨值與本益比正負狀態不變。',`當日週轉率至少 5%，成交量至少 ${small?'不適用一般數量下限':otc?'2,000':'3,000'} 交易單位；上市依規定扣除鉅額交易。`,'全市場本益比、股價淨值比及產業股價淨值比為目前選擇的情境。','僅試算產業股價淨值比分支，券商／單一投資人集中度分支未涵蓋。'],valuationReady?undefined:'缺少同一交易日的本益比或股價淨值比'));
   return {code:stock.code,asOf:snapshot.asOf,targetDate:snapshot.targetDate,effectiveDate:snapshot.effectiveDate,rulesVersion:RULESET_VERSION,scenario,reference,referenceAssumed:scenario.referencePrice===undefined,limits:{low:prices[0],high:prices.at(-1)!},gate:countGate(stock,dates,snapshot.asOf),rules,intervals:rules.flatMap(r=>r.intervals),limitations:['本結果為指定情境的注意條件價格試算，並非確定處置價格。','第三、四、五、七至十四款及特殊決議尚未實作；無門檻不代表不會處置。',...(!snapshot.calendarVerified?['下一交易日依平日推估，官方休市表未成功取得。']:[])]};

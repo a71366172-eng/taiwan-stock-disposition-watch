@@ -327,6 +327,13 @@ def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
     except (ValueError, TypeError): return None
 
+def pe_is_nonpositive(raw) -> bool:
+    """TWSE/TPEx omit PE when reference EPS is zero or negative."""
+    value=number(raw)
+    if value is not None:
+        return value<=0
+    return str(raw or '').strip() in {'-','--','—','–','－'}
+
 def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
     """Normalize TPEx's official date-query JSON, keeping source date semantics."""
     if isinstance(payload, list):
@@ -340,9 +347,10 @@ def tpex_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
     for row in rows:
         if isinstance(row,dict):
             get_value=lambda *keys: next((row[key] for key in keys if key in row),None)
-            result.append({'Date':as_of,'SecuritiesCompanyCode':get_value('SecuritiesCompanyCode','證券代號','股票代號'),'CompanyName':get_value('CompanyName','證券名稱','名稱'),'PriceEarningRatio':get_value('PriceEarningRatio','PEratio','本益比'),'PriceBookRatio':get_value('PriceBookRatio','PBratio','股價淨值比')})
+            pe=get_value('PriceEarningRatio','PEratio','本益比')
+            result.append({'Date':as_of,'SecuritiesCompanyCode':get_value('SecuritiesCompanyCode','證券代號','股票代號'),'CompanyName':get_value('CompanyName','證券名稱','名稱'),'PriceEarningRatio':pe,'PENonPositive':pe_is_nonpositive(pe),'PriceBookRatio':get_value('PriceBookRatio','PBratio','股價淨值比')})
         elif isinstance(row,(list,tuple)) and len(row)>=7:
-            result.append({'Date':as_of,'SecuritiesCompanyCode':str(row[0]).strip(),'CompanyName':str(row[1]).strip(),'PriceEarningRatio':row[2],'PriceBookRatio':row[6]})
+            result.append({'Date':as_of,'SecuritiesCompanyCode':str(row[0]).strip(),'CompanyName':str(row[1]).strip(),'PriceEarningRatio':row[2],'PENonPositive':pe_is_nonpositive(row[2]),'PriceBookRatio':row[6]})
     return result
 
 def twse_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
@@ -358,7 +366,8 @@ def twse_valuation_rows(payload: dict | list, as_of: str) -> list[dict]:
         if not isinstance(row,dict):
             continue
         get_value=lambda *keys: next((row[key] for key in keys if key in row),None)
-        result.append({'Date':iso(get_value('Date','資料日期')) or as_of,'Code':str(get_value('Code','證券代號','股票代號') or '').strip(),'Name':get_value('Name','證券名稱','名稱'),'PEratio':get_value('PEratio','本益比'),'PBratio':get_value('PBratio','股價淨值比')})
+        pe=get_value('PEratio','本益比')
+        result.append({'Date':iso(get_value('Date','資料日期')) or as_of,'Code':str(get_value('Code','證券代號','股票代號') or '').strip(),'Name':get_value('Name','證券名稱','名稱'),'PEratio':pe,'PENonPositive':pe_is_nonpositive(pe),'PBratio':get_value('PBratio','股價淨值比')})
     return result
 
 INDUSTRY_NAMES={'01':'水泥工業','02':'食品工業','03':'塑膠工業','04':'紡織纖維','05':'電機機械','06':'電器電纜','08':'玻璃陶瓷','09':'造紙工業','10':'鋼鐵工業','11':'橡膠工業','12':'汽車工業','14':'建材營造','15':'航運業','16':'觀光餐旅','17':'金融保險','18':'貿易百貨','19':'綜合','20':'其他','21':'化學工業','22':'生技醫療業','23':'油電燃氣業','24':'半導體業','25':'電腦及週邊設備業','26':'光電業','27':'通信網路業','28':'電子零組件業','29':'電子通路業','30':'資訊服務業','31':'其他電子業','32':'文化創意業','33':'農業科技業','34':'電子商務業','35':'綠能環保','36':'數位雲端','37':'運動休閒','38':'居家生活','91':'外國企業（未列產業）'}
@@ -754,7 +763,7 @@ def main():
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
         valuation_date=iso(f.get('Date'))
         if valuation_date is None and latest.get('date')==as_of and latest.get('pe') is not None: valuation_date=as_of
-        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'peNegative':bool(f and (f.get('PENonPositive') or pe_is_nonpositive(f.get('PEratio')))),'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     def load_tpex_stock(code):
         q=tpex_quote_map.get(code,{}); bars=[]
@@ -792,7 +801,7 @@ def main():
         close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
         valuation_date=iso(f.get('Date'))
         if valuation_date is None and latest.get('date')==as_of and latest.get('pe') is not None: valuation_date=as_of
-        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(tpex_company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
+        return {'code':code,'name':q.get('CompanyName') or latest.get('name',code),'market':'TPEX','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(tpex_company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(tpex_company.get(code,{})),'pe':pe,'peNegative':bool(f and (f.get('PENonPositive') or pe_is_nonpositive(f.get('PriceEarningRatio')))),'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in tpex_history_complete,'candidateReason':tpex_candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         stocks=list(pool.map(load_twse_stock,sorted(twse_symbols)))+list(pool.map(load_tpex_stock,sorted(tpex_symbols)))

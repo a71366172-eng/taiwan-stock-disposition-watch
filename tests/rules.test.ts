@@ -29,6 +29,10 @@ test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
 test('sixth-clause strict market PE comparison excludes equality at 100',()=>{
  const r=simulate(base,context,DEFAULT_SCENARIO).rules.find(x=>x.rule===6)!;assert.equal(r.intervals[0].from,100.5);assert.equal(r.status,'conditional');
 });
+test('sixth clause recognizes official nonpositive-EPS PE omission without inventing a PE number',()=>{
+ const result=simulate({...base,pe:null,peNegative:true},context,{marketPe:20,marketPb:2,industryPb:2});
+ const sixth=result.rules.find(x=>x.rule===6)!;assert.equal(sixth.status,'conditional');assert.ok(sixth.intervals.length>0);
+});
 test('sixth-clause volume combines the 3,000-lot floor with 5% of issued shares',()=>{
  assert.equal(sixthClauseMinimumShares(100_000_000),5_000_000);
  assert.equal(sixthClauseMinimumShares(10_000_000),3_000_000);
