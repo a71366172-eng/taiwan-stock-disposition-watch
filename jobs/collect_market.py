@@ -643,8 +643,13 @@ def main():
     tpex_fundamentals=get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis',False) or []
     tpex_roc_date=roc_date(as_of)
     tpex_margin_url='https://www.tpex.org.tw/web/stock/margin_trading/margin_balance/margin_bal_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date})
-    tpex_margin=tpex_margin_rows(get(tpex_margin_url,False) or {})
+    tpex_margin_raw=get(tpex_margin_url,False) or {}
+    tpex_margin=tpex_margin_rows(tpex_margin_raw)
     print(f'TPEx margin balances normalized for {tpex_roc_date}: {len(tpex_margin)} stocks')
+    if isinstance(tpex_margin_raw,dict):
+        margin_tables=tpex_margin_raw.get('tables') or []
+        first_margin_table=margin_tables[0] if margin_tables and isinstance(margin_tables[0],dict) else {}
+        print(f'TPEx margin response shape: keys={list(tpex_margin_raw)[:8]}, tableKeys={list(first_margin_table)[:8]}, fields={str(first_margin_table.get("fields",""))[:300]}, dataRows={len(first_margin_table.get("data",[])) if isinstance(first_margin_table.get("data"),list) else "n/a"}')
     tpex_daily_url='https://www.tpex.org.tw/web/stock/aftertrading/peratio_analysis/pera_result.php?'+urllib.parse.urlencode({'l':'zh-tw','o':'json','d':tpex_roc_date,'c':'','s':'0,asc'})
     tpex_daily_valuations=tpex_valuation_rows(get(tpex_daily_url,False),as_of)
     if tpex_daily_valuations:
