@@ -16,7 +16,9 @@ errors: list[str] = []
 sources: list[dict] = []
 _request_lock=threading.Lock()
 _last_request_at: dict[str,float] = {}
-_request_interval=max(0.0,float(os.getenv('MARKET_API_MIN_INTERVAL_SECONDS','0.4')))
+# Keep public exchange requests serialized and spaced out. The override may
+# increase this delay, but cannot disable the floor accidentally.
+_request_interval=max(1.0,float(os.getenv('MARKET_API_MIN_INTERVAL_SECONDS','1.0')))
 PUBLIC_SOURCE_HOSTS = {'www.twse.com.tw', 'openapi.twse.com.tw', 'www.tpex.org.tw', 'openapi.taifex.com.tw', 'mopsfin.twse.com.tw', 'isin.twse.com.tw'}
 PUBLIC_QUERY_KEYS = {'cate', 'code', 'd', 'date', 'endDate', 'id', 'l', 'o', 'order', 'response', 's', 'se', 'selectType', 'startDate', 'stockNo', 'strMode', 't', 'type'}
 
@@ -124,10 +126,17 @@ def validate_publication(snapshot: dict, previous: dict):
             raise ValueError('Snapshot withheld: disposition records lost')
 
 def merge_disposition_history(current: list[dict], previous: dict, as_of: str) -> list[dict]:
-    """Retain prior official announcements when an exchange's rolling feed omits them."""
+    """Retain official disposition history when an exchange's daily feed rolls off."""
     cutoff=(dt.date.fromisoformat(as_of)-dt.timedelta(days=120)).isoformat()
     key=lambda item:(item['code'],item.get('announced'),item.get('start'),item.get('end'))
-    merged={key(item):item for item in previous.get('dispositions',[]) if item.get('announced','')>=cutoff}
+    archived=[]
+    try:
+        archive=json.loads((ROOT/'data'/'disposition-history.json').read_text(encoding='utf-8'))
+        archived=archive.get('records',[]) if isinstance(archive,dict) else []
+    except (OSError,ValueError,AttributeError):
+        pass
+    retained=lambda item:(item.get('announced','')>=cutoff or (item.get('end') or '')>=as_of)
+    merged={key(item):item for item in archived+previous.get('dispositions',[]) if retained(item)}
     merged.update({key(item):item for item in current})
     return list(merged.values())
 
@@ -721,18 +730,21 @@ def main():
     # exchange's threshold. Also include every stock with at least one recorded
     # 1st–8th clause notice in the rolling 30-session window.
     recent_sessions=[date for date in old_snapshot.get('calendar',[]) if date<=as_of][-30:]
+    # One broad official query provides the complete rolling attention history
+    # for every TPEx common stock. Do not fan out thousands of per-symbol calls.
+    tpex_bulk_history=fetch_tpex_all_historical_notices(history_start,as_of)
+    if tpex_bulk_history is None:
+        raise ValueError('TPEx bulk attention history unavailable; refusing to publish partial all-stock coverage')
+    tpex_bulk_history=[n for n in tpex_bulk_history if is_tpex_common(n['code']) and n['date']<=as_of]
+    all_notices.extend(tpex_bulk_history)
+    all_notices.extend(tpex_notices)
+    all_notices=list({(n['code'],n['date']):n for n in all_notices}.values())
     if len(recent_sessions)==30:
         near_twse=near_disposition_notice_codes(all_notices,recent_sessions)
         risk_twse_near=near_twse
         print(f'TWSE stocks with 30-session clause 1-8 notices: {len(risk_twse_near)}')
-        tpex_bulk_history=fetch_tpex_all_historical_notices(history_start,as_of)
-        if tpex_bulk_history is None:
-            risk_tpex_near=set()
-            print('TPEx all-security history unavailable; retaining current official candidate coverage')
-        else:
-            tpex_bulk_history=[n for n in tpex_bulk_history if is_tpex_common(n['code']) and n['date']<=as_of]
-            risk_tpex_near=near_disposition_notice_codes(tpex_bulk_history,recent_sessions)
-            print(f'TPEx stocks with 30-session clause 1-8 notices: {len(risk_tpex_near)} (bulk history rows={len(tpex_bulk_history)})')
+        risk_tpex_near=near_disposition_notice_codes(tpex_bulk_history,recent_sessions)
+        print(f'TPEx stocks with 30-session clause 1-8 notices: {len(risk_tpex_near)} (bulk history rows={len(tpex_bulk_history)})')
     else:
         risk_twse_near=set()
         risk_tpex_near=set()
@@ -759,8 +771,8 @@ def main():
     # transferred/delisted names. Use each market's quote roster as its security
     # master, without requiring the quote row itself to match as_of (the feeds
     # can differ by one session).
-    twse_market_symbols={str(x.get('Code','')) for x in quotes}
-    tpex_market_symbols={str(x.get('SecuritiesCompanyCode','')) for x in tpex_quotes}
+    twse_market_symbols={str(x.get('Code','')) for x in quotes if is_common(str(x.get('Code','')))}
+    tpex_market_symbols={str(x.get('SecuritiesCompanyCode','')) for x in tpex_quotes if is_tpex_common(str(x.get('SecuritiesCompanyCode','')))}
     # Candidate feeds also overlap across markets. Require roster membership
     # before collecting them, otherwise a TWSE candidate appears again as a
     # price-less TPEx record (and vice versa).
@@ -800,23 +812,26 @@ def main():
             by_date.update({notice['date']:notice for notice in historical})
             tpex_notices=[notice for notice in tpex_notices if notice['code']!=code]+list(by_date.values())
     all_notices.extend(tpex_notices)
+    all_notices=list({(n['code'],n['date']):n for n in all_notices}.values())
     today=[n for n in all_notices if n['date']==as_of]
-    # Rollback: fetch history only for attention/candidate/disposition stocks.
-    twse_symbols=risk_twse_symbols
-    tpex_symbols=risk_tpex_symbols
+    # Fetch per-stock daily history only for attention/candidate/disposition stocks.
+    # Publish every currently quoted common stock. Broad official attention
+    # feeds above determine risk for the full universe; expensive per-stock
+    # price-history calls remain limited to risk names and rotating refreshes.
+    twse_symbols=twse_market_symbols
+    tpex_symbols=tpex_market_symbols
     priority_twse={code for code in candidates if code in twse_symbols}|{n['code'] for n in today if n['code'] in twse_symbols}|{d['code'] for d in active if d['code'] in twse_symbols}
     priority_tpex={code for code in tpex_candidates if code in tpex_symbols}|{n['code'] for n in today if n['code'] in tpex_symbols}|{d['code'] for d in active if d['code'] in tpex_symbols}
-    # Split the broad history refresh across the five existing daily runs.
-    # We still publish every stock's current quote each run, retain previous
-    # history for untouched stocks, and always refresh official risk names.
+    # Keep quote and notice coverage broad while staggering the more expensive
+    # per-stock historical price requests for risk names across scheduled runs.
     taipei_now=dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)
     slots=[8,12,14,18,23]
     old_bars={f"{item.get('market')}:{item.get('code')}":item.get('bars',[]) for item in old_snapshot.get('stocks',[])}
     history_batch=select_history_batch(slots,taipei_now,os.getenv('HISTORY_BATCH_OVERRIDE'),old_snapshot.get('historyRefreshBatch'))
-    warrant_history_twse=select_incomplete_warrant_history(listed_warrant_codes,twse_symbols,old_bars,'TWSE') if listed_warrants_available else set()
-    warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes|listed_warrant_codes,tpex_symbols,old_bars,'TPEX') if tpex_warrants_available or listed_warrants_available else set()
-    refresh_twse={code for code in twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}|warrant_history_twse
-    refresh_tpex={code for code in tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}|warrant_history_tpex
+    warrant_history_twse=select_incomplete_warrant_history(listed_warrant_codes,risk_twse_symbols,old_bars,'TWSE') if listed_warrants_available else set()
+    warrant_history_tpex=select_incomplete_warrant_history(tpex_warrant_codes|listed_warrant_codes,risk_tpex_symbols,old_bars,'TPEX') if tpex_warrants_available or listed_warrants_available else set()
+    refresh_twse={code for code in risk_twse_symbols if code in priority_twse or int(code)%len(slots)==history_batch}|warrant_history_twse
+    refresh_tpex={code for code in risk_tpex_symbols if code in priority_tpex or int(code)%len(slots)==history_batch}|warrant_history_tpex
     months=[]
     for i in range(6):
         serial=day.year*12+day.month-1-i; months.append(f'{serial//12:04d}{serial%12+1:02d}01')
@@ -907,8 +922,11 @@ def main():
             stock.update(margin)
             stock['marginTradingDate']=as_of
     margin_coverage={market:sum(1 for stock in stocks if stock['market']==market and stock.get('marginFinanceLots') is not None) for market in ('TWSE','TPEX')}
-    print(f'Margin balances matched to published risk stocks: TWSE={margin_coverage["TWSE"]}, TPEx={margin_coverage["TPEX"]}')
-    stocks=[stock for stock in stocks if stock['code'] in (risk_twse_symbols if stock['market']=='TWSE' else risk_tpex_symbols)]
+    print(f'Margin balances matched to published stocks: TWSE={margin_coverage["TWSE"]}, TPEx={margin_coverage["TPEX"]}')
+    # The broad official feeds are complete for the whole snapshot window, so
+    # quiet stocks remain available for screening and future risk transitions.
+    for stock in stocks:
+        stock['noticeHistoryComplete']=True
     for stock in stocks: stock['bars']=stock['bars'][-HISTORY_SESSIONS:]
     for stock in stocks:
         company_row=(company if stock['market']=='TWSE' else tpex_company).get(stock['code'],{})
@@ -941,8 +959,7 @@ def main():
     forecast_dates=upcoming_sessions[:3]
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
     product_coverage={'stockFutures':futures_available,'warrants':warrants_available,'convertibleBonds':cb_available}
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'upcomingSessions':upcoming_sessions,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run','TPEX':f'all common-stock quote roster; 90-session history refresh batch {history_batch+1}/5; official risk stocks refresh every run'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
-    result['coverage']={market:'attention, official candidates and active dispositions only; 90-session history publication guard' for market in ('TWSE','TPEX')}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'upcomingSessions':upcoming_sessions,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all {len(twse_symbols)} common stocks; full official attention feed; risk-stock price history prioritized','TPEX':f'all {len(tpex_symbols)} common stocks; full official attention feed; risk-stock price history prioritized'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.3','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     validate_publication(result,old_snapshot)
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
@@ -952,6 +969,6 @@ def main():
     tmp=dest/'market.pending.json'; tmp.write_text(raw,encoding='utf-8'); tmp.replace(dest/'market.json')
     public=ROOT/'public'/'data'; public.mkdir(parents=True,exist_ok=True)
     (public/'market.json').write_text(raw,encoding='utf-8')
-    print(json.dumps({'asOf':as_of,'riskStocks':len(stocks),'todayNotices':len(today),'errors':len(errors),'output':str(dest/'market.json')},ensure_ascii=False))
+    print(json.dumps({'asOf':as_of,'allCommonStocks':len(stocks),'attentionHistoryRows':len(all_notices),'todayNotices':len(today),'dispositionRows':len(dispositions),'errors':len(errors),'output':str(dest/'market.json')},ensure_ascii=False))
 
 if __name__=='__main__': main()

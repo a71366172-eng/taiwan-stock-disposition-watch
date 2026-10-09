@@ -43,6 +43,8 @@ class PublicationGuardTests(unittest.TestCase):
         old=self.snapshot['dispositions'][0]
         current={**old,'code':'2455'}
         merged=merge_disposition_history([current],self.snapshot,self.snapshot['asOf'])
-        self.assertEqual({item['code'] for item in merged},{'6538','2455'})
-        self.assertEqual(len(merge_disposition_history([old],self.snapshot,self.snapshot['asOf'])),1)
+        codes={item['code'] for item in merged}
+        self.assertTrue({'6538','2455'}<=codes)
+        self.assertTrue(any(item['code']=='6538' and item['start']=='2026-09-11' for item in merged))
+        self.assertTrue(any(item['code']=='6538' and item['start']=='2026-10-01' for item in merge_disposition_history([old],self.snapshot,self.snapshot['asOf'])))
         self.assertEqual(merge_disposition_history([],self.snapshot,'2027-03-01'),[])

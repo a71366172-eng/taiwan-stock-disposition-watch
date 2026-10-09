@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {countGate,countableAttentionNotices,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
@@ -30,6 +31,16 @@ test('first-rule streak requires first clause specifically and consecutive sessi
  const notices=[2,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
  assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,0);
  notices.forEach(n=>n.rules=[1]);assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,2);
+});
+test('6538 is counted only after both official September disposition cycles',()=>{
+ const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
+ const archive=JSON.parse(fs.readFileSync(new URL('../data/disposition-history.json',import.meta.url),'utf8'));
+ const stock=snapshot.stocks.find((item:Stock)=>item.code==='6538') as Stock;
+ const disposed={...stock,dispositions:archive.records.filter((item:{code:string})=>item.code==='6538')};
+ const postDisposition=countableAttentionNotices(disposed,snapshot.asOf);
+ assert.equal(postDisposition.length,6);
+ assert.ok(postDisposition.every(notice=>notice.date>'2026-09-17'));
+ assert.ok(!countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
 });
 test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
  const prices=legalPrices(50);assert.ok(prices.includes(49.95));assert.ok(prices.includes(50));assert.ok(prices.includes(50.1));assert.ok(!prices.includes(50.05));assert.equal(prices.at(-1),55);
