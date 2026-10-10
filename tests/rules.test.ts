@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {countGate,countableAttentionNotices,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {attentionGateProgress,countGate,countableAttentionNotices,forecastDispositionRisk,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
@@ -26,6 +26,21 @@ test('a new disposition cycle clears pre-treatment and treatment notices from al
  const disposed={...base,notices,dispositions:[{code:'TEST',name:'test',announced:sessions[8],start:sessions[8],end:sessions[9],condition:'',measure:'',content:''}]};
  const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,7);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
  assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,undefined);
+});
+test('active-treatment progress counts clause 1–8 notices from the current disposition cycle',()=>{
+ const start=calendar.at(-2)!,asOf=calendar.at(-1)!;
+ const notices=[
+  {code:'TEST',name:'test',date:calendar.at(-4)!,reason:'處置前',rules:[1],close:100,pe:60},
+  {code:'TEST',name:'test',date:start,reason:'處置中',rules:[1,9],close:100,pe:60},
+  {code:'TEST',name:'test',date:asOf,reason:'處置中',rules:[1,13],close:100,pe:60},
+ ];
+ const active={...base,notices,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-3)!,start,end:'2026-04-01',condition:'',measure:'',content:''}]};
+ assert.deepEqual(attentionGateProgress(active,calendar,asOf),[
+  {label:'連3日',value:2,limit:3},
+  {label:'連5日',value:2,limit:5},
+  {label:'10營業日',value:2,limit:6},
+  {label:'30營業日',value:2,limit:12},
+ ]);
 });
 test('first-rule streak requires first clause specifically and consecutive sessions',()=>{
  const notices=[2,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));

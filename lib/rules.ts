@@ -79,6 +79,18 @@ export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notice
   }
   return stock.notices.filter(notice=>notice.date<=asOf&&(!cutoff||notice.date>cutoff)&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
+/** Progress shown for a stock still under disposition: count only clause 1–8 notices published during this active disposition cycle. */
+export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string){
+  const active=[...stock.dispositions].filter(item=>item.start&&item.end&&item.start<=asOf&&item.end>=asOf).sort((a,b)=>a.start!.localeCompare(b.start!)).at(-1);
+  const notices=active
+    ?stock.notices.filter(notice=>notice.date>=active.start!&&notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8))
+    :countableAttentionNotices(stock,asOf);
+  const dates=calendar.filter(date=>date<=asOf),byDate=new Map<string,Set<number>>();
+  for(const notice of notices){const rules=byDate.get(notice.date)||new Set<number>();notice.rules.filter(rule=>rule>=1&&rule<=8).forEach(rule=>rules.add(rule));byDate.set(notice.date,rules);}
+  const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
+  const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(active&&date<active.start!)break;if(!matches(date))break;count++;}return count;};
+  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(any).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(any).length,limit:12}];
+}
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
   const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
   if(!future.length)return null;
