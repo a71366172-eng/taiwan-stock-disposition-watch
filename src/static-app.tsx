@@ -5,6 +5,7 @@ import {loadLatestSnapshot} from '../lib/static-data';
 import {Dashboard} from '../components/dashboard';
 import {DispositionStocks} from '../components/disposition-stocks';
 import {StockDetail} from '../components/stock-detail';
+import {EtfDetail} from '../components/etf-detail';
 import {StockCompare} from '../components/stock-compare-live';
 import Methodology from '../app/methodology/page';
 import {SiteShell} from '../components/site-shell';
@@ -24,8 +25,9 @@ export function StaticApp(){
  if(path==='/compare')return <StockCompare snapshot={snapshot}/>;
  if(path==='/history')return <StaticHistory/>;
  if(path==='/dispositions')return <DispositionStocks snapshot={snapshot}/>;
- const match=path.match(/^\/stocks\/(\d{4})$/),stock=match?snapshot.stocks.find(item=>item.code===match[1]):undefined;
+ const match=path.match(/^\/stocks\/(\d{4,6}[A-Z]?)$/i),stock=match?snapshot.stocks.find(item=>item.code===match[1]):undefined;
  if(stock&&stock.close)return <StockDetail stock={stock} snapshot={snapshot} initial={simulate(stock,snapshot)}/>;
+ if(match)return <EtfDetail code={match[1].toUpperCase()} asOf={snapshot.asOf}/>;
  return <Dashboard key={`${snapshot.generatedAt}-${storage}`} initial={snapshot} storage={storage} servedAt={Date.parse(snapshot.generatedAt)}/>;
 }
 

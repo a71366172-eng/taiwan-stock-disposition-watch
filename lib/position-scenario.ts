@@ -6,6 +6,12 @@ type EntryCosts=NonNullable<ReturnType<typeof calculateMixedEntryCosts>>;
 export type ScenarioRates={commissionPercent:number;stockSellTaxPercent:number;etfSellTaxPercent:number;futuresFee:number;futuresTaxPercent:number;otherFees:number;warrantSellTaxPercent?:number;holdingDays?:number;ivChangePoints?:number};
 export type ScenarioLeg={instrument:PositionInstrument;side:PositionSide;isEtf:boolean;warrant?:WarrantTerms;underlyingPrice?:number};
 
+/** Derive the editable strategy magnitude from the two manually adjusted leg returns. */
+export function scenarioMagnitudeForReturns(mode:ScenarioMode,returns:[number,number]):number{
+ if(mode==='sync-up'||mode==='sync-down')return Math.abs((returns[0]+returns[1])*50);
+ return Math.abs(((1+returns[0])/(1+returns[1])-1)*100);
+}
+
 export function scenarioReturns(mode:ScenarioMode,percent:number,currentRatio:number|null,averageRatio:number|null):[number,number]|null{
  if(!Number.isFinite(percent)||percent<0||percent>1000)return null;
  if(mode==='sync-up'||mode==='sync-down'){

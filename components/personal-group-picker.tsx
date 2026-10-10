@@ -31,11 +31,12 @@ export function PersonalGroupPicker({stocks,watchGroups,onClose,onApply}:{stocks
   document.addEventListener('keydown',onKey);
   return()=>document.removeEventListener('keydown',onKey);
  },[onClose]);
- const allSources=[...sources,{id:'attention_disposition',label:'注意股和處置股',source:'注意股含近 45 個日曆日有公告或官方候選；處置股以資料快照日仍在處置期間判定。',groups:watchGroups}];
+ const allSources=[...sources,{id:'all_symbols',label:'全部股票與 ETF',source:`完整上市／上櫃股票與 ETF 名單，共 ${stocks.length} 檔；可搜尋代號或名稱。`,groups:[{id:'all_symbols',name:'全部上市櫃股票與 ETF',codes:stocks.map(stock=>stock.code)}]},{id:'attention_disposition',label:'注意股和處置股',source:'注意股含近 45 個日曆日有公告或官方候選；處置股以資料快照日仍在處置期間判定。',groups:watchGroups}];
  const currentSource=allSources.find(source=>source.id===sourceId);
  const groups=currentSource?.groups||[];
  useEffect(()=>{if(sources.length)searchRef.current?.focus()},[sources.length]);
- const visibleGroups=groups.filter(group=>group.name.toLocaleLowerCase().includes(groupQuery.trim().toLocaleLowerCase()));
+ const availableGroupCodes=(group:Group)=>group.codes.filter(code=>stockByCode.has(code));
+ const visibleGroups=groups.filter(group=>(sourceId!=='fine_industry'||availableGroupCodes(group).length>5)&&group.name.toLocaleLowerCase().includes(groupQuery.trim().toLocaleLowerCase()));
  const currentGroup=groups.find(group=>group.id===groupId);
  const visibleStocks=(currentGroup?.codes||[]).filter(code=>{
   const stock=stockByCode.get(code);
@@ -51,10 +52,10 @@ export function PersonalGroupPicker({stocks,watchGroups,onClose,onApply}:{stocks
   <section className="personal-group-dialog" role="dialog" aria-modal="true" aria-labelledby="personal-group-title">
    <header><div><h2 id="personal-group-title">股票清單選股</h2><p>勾選兩檔股票，依勾選順序帶入 A、B。</p></div><button type="button" className="personal-group-close" onClick={onClose} aria-label="關閉分類選股">×</button></header>
    {error?<p className="compare-note" role="alert">{error}</p>:!sources.length?<p className="compare-note">正在載入分類…</p>:<>
-    <nav className="personal-group-source-tabs" aria-label="選擇股票清單">{allSources.map(source=><button type="button" key={source.id} className={source.id===sourceId?'active':''} onClick={()=>{setSourceId(source.id);setGroupId(source.groups[0]?.id||'');setGroupQuery('');setStockQuery('')}}>{source.label}</button>)}</nav>
+    <nav className="personal-group-source-tabs" aria-label="選擇股票清單">{allSources.map(source=><button type="button" key={source.id} className={source.id===sourceId?'active':''} onClick={()=>{const nextGroups=source.id==='fine_industry'?source.groups.filter(group=>group.codes.filter(code=>stockByCode.has(code)).length>5):source.groups;setSourceId(source.id);setGroupId(nextGroups[0]?.id||'');setGroupQuery('');setStockQuery('')}}>{source.label}</button>)}</nav>
     <p className="personal-group-source-note">{currentSource?.source}</p>
     <div className="personal-group-body">
-    <aside className="personal-group-categories"><label>搜尋分類<input ref={searchRef} value={groupQuery} onChange={event=>setGroupQuery(event.target.value)} placeholder="例如 PCB、矽光子"/></label><div className="personal-group-category-list">{visibleGroups.map(group=><button type="button" key={group.id} className={group.id===groupId?'active':''} onClick={()=>{setGroupId(group.id);setStockQuery('')}}>{group.name}<small>{group.codes.length}</small></button>)}{!visibleGroups.length&&<p>找不到分類</p>}</div></aside>
+    <aside className="personal-group-categories"><label>搜尋分類<input ref={searchRef} value={groupQuery} onChange={event=>setGroupQuery(event.target.value)} placeholder="例如 PCB、矽光子"/></label><div className="personal-group-category-list">{visibleGroups.map(group=><button type="button" key={group.id} className={group.id===groupId?'active':''} onClick={()=>{setGroupId(group.id);setStockQuery('')}}>{group.name}<small>{availableGroupCodes(group).length}</small></button>)}{!visibleGroups.length&&<p>找不到分類</p>}</div></aside>
     <div className="personal-group-stocks"><label>搜尋 {currentGroup?.name||''} 股票<input value={stockQuery} onChange={event=>setStockQuery(event.target.value)} placeholder="輸入代號或名稱"/></label><div className="personal-group-stock-list">{visibleStocks.map(code=>{const stock=stockByCode.get(code)!;const checked=selected.includes(code);return <label key={code} className={checked?'selected':''}><input type="checkbox" checked={checked} disabled={!checked&&selected.length>=2} onChange={()=>toggle(code)}/><strong>{code}</strong><span>{stock.name}</span><small>{checked?selected.indexOf(code)===0?'A':'B':''}</small></label>})}{!visibleStocks.length&&<p>這個分類沒有目前可比較的上市／上櫃股票。</p>}</div></div>
     </div></>}
    <footer><span>已選：{selected.map((code,index)=>`${index===0?'A':'B'} ${code} ${stockByCode.get(code)?.name||''}`).join('、')||'請選兩檔股票'}</span><div><button type="button" onClick={onClose}>取消</button><button type="button" className="compare-button" onClick={apply} disabled={selected.length!==2}>帶入股票 A、B</button></div></footer>

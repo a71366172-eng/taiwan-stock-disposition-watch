@@ -48,7 +48,7 @@ export function StockCompare({snapshot}:{snapshot:MarketSnapshot}){
  const [symbols,setSymbols]=useState<SymbolInfo[]>([]);
  const [symbolsError,setSymbolsError]=useState('');
  const [firstInput,setFirstInput]=useState('2330 台積電');
- const [secondInput,setSecondInput]=useState('2317 鴻海');
+ const [secondInput,setSecondInput]=useState('0050 元大台灣50');
  const [pair,setPair]=useState<[ComparisonStock,ComparisonStock]|null>(null);
  const [loading,setLoading]=useState(false);
  const [error,setError]=useState('');

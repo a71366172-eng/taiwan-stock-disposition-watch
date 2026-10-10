@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {calculateMixedEntryCosts,calculateMixedPosition} from '../lib/position-ratio.ts';
-import {calculatePositionScenario,calculatePositionScenarioForReturns,percentForLegProfit,scenarioReturns,type ScenarioLeg} from '../lib/position-scenario.ts';
+import {calculatePositionScenario,calculatePositionScenarioForReturns,percentForLegProfit,scenarioMagnitudeForReturns,scenarioReturns,type ScenarioLeg} from '../lib/position-scenario.ts';
 
 const position=calculateMixedPosition(100,100,1,1,'stock','stock',null,null,'long','short')!;
 const entry=calculateMixedEntryCosts(position,'stock','stock','long','short',.1425,.3,18,.002,0)!;
@@ -22,6 +22,13 @@ test('convergence changes A/B ratio by the requested percentage',()=>{
  assert.ok(returns[0]<0&&returns[1]>0);
  assert.ok(Math.abs((1+returns[0])/(1+returns[1])-.97)<1e-12);
  assert.equal(scenarioReturns('convergence',3,null,1),null);
+});
+
+test('strategy magnitude follows directly edited A/B returns',()=>{
+ const convergence=scenarioReturns('convergence',3,1.2,1)!;
+ assert.ok(Math.abs(scenarioMagnitudeForReturns('convergence',convergence)-3)<1e-10);
+ assert.equal(scenarioMagnitudeForReturns('sync-up',[.05,.05]),5);
+ assert.equal(scenarioMagnitudeForReturns('sync-down',[-.03,-.03]),3);
 });
 
 test('independent A/B slider returns calculate each leg profit passively',()=>{
