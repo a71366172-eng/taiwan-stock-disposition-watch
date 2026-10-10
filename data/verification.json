@@ -1,8 +1,8 @@
 {
   "asOf": "2026-10-08",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 244,
-  "skipped": 266,
+  "compared": 320,
+  "skipped": 190,
   "failures": [],
   "checks": [
     {
@@ -258,10 +258,45 @@
       "pass": true
     },
     {
+      "code": "2351",
+      "date": "2026-08-28",
+      "announced": 27.95,
+      "calculated": 27.95,
+      "pass": true
+    },
+    {
+      "code": "2351",
+      "date": "2026-08-27",
+      "announced": 27.34,
+      "calculated": 27.34,
+      "pass": true
+    },
+    {
       "code": "2368",
       "date": "2026-09-01",
       "announced": 26.5,
       "calculated": 26.5,
+      "pass": true
+    },
+    {
+      "code": "2426",
+      "date": "2026-08-27",
+      "announced": 37,
+      "calculated": 37,
+      "pass": true
+    },
+    {
+      "code": "2426",
+      "date": "2026-08-26",
+      "announced": 41.54,
+      "calculated": 41.54,
+      "pass": true
+    },
+    {
+      "code": "2426",
+      "date": "2026-08-07",
+      "announced": 37.01,
+      "calculated": 37.01,
       "pass": true
     },
     {
@@ -426,6 +461,48 @@
       "pass": true
     },
     {
+      "code": "2486",
+      "date": "2026-07-30",
+      "announced": -28.89,
+      "calculated": -28.89,
+      "pass": true
+    },
+    {
+      "code": "2491",
+      "date": "2026-08-28",
+      "announced": 45.26,
+      "calculated": 45.26,
+      "pass": true
+    },
+    {
+      "code": "2491",
+      "date": "2026-08-11",
+      "announced": 37.07,
+      "calculated": 37.07,
+      "pass": true
+    },
+    {
+      "code": "2491",
+      "date": "2026-08-10",
+      "announced": 43.86,
+      "calculated": 43.86,
+      "pass": true
+    },
+    {
+      "code": "2491",
+      "date": "2026-08-07",
+      "announced": 37.55,
+      "calculated": 37.55,
+      "pass": true
+    },
+    {
+      "code": "2491",
+      "date": "2026-08-06",
+      "announced": 32.23,
+      "calculated": 32.23,
+      "pass": true
+    },
+    {
       "code": "2492",
       "date": "2026-10-08",
       "announced": 35.35,
@@ -521,6 +598,97 @@
       "date": "2026-07-30",
       "announced": -33.08,
       "calculated": -33.08,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-17",
+      "announced": 26.79,
+      "calculated": 26.79,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-13",
+      "announced": 25.28,
+      "calculated": 25.28,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-12",
+      "announced": 34.24,
+      "calculated": 34.24,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-11",
+      "announced": 36.58,
+      "calculated": 36.58,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-08-03",
+      "announced": -30.99,
+      "calculated": -30.99,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-31",
+      "announced": -41.27,
+      "calculated": -41.27,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-30",
+      "announced": -41.41,
+      "calculated": -41.41,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-29",
+      "announced": -34.29,
+      "calculated": -34.29,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-21",
+      "announced": -25.81,
+      "calculated": -25.81,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-20",
+      "announced": -45.58,
+      "calculated": -45.58,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-17",
+      "announced": -30.13,
+      "calculated": -30.13,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-06",
+      "announced": 29.11,
+      "calculated": 29.11,
+      "pass": true
+    },
+    {
+      "code": "3026",
+      "date": "2026-07-03",
+      "announced": 26.2,
+      "calculated": 26.2,
       "pass": true
     },
     {
@@ -720,6 +888,41 @@
       "pass": true
     },
     {
+      "code": "3406",
+      "date": "2026-09-03",
+      "announced": 28.28,
+      "calculated": 28.28,
+      "pass": true
+    },
+    {
+      "code": "3406",
+      "date": "2026-09-02",
+      "announced": 43.89,
+      "calculated": 43.89,
+      "pass": true
+    },
+    {
+      "code": "3406",
+      "date": "2026-09-01",
+      "announced": 44.44,
+      "calculated": 44.44,
+      "pass": true
+    },
+    {
+      "code": "3406",
+      "date": "2026-08-31",
+      "announced": 45.2,
+      "calculated": 45.2,
+      "pass": true
+    },
+    {
+      "code": "3406",
+      "date": "2026-08-28",
+      "announced": 35.91,
+      "calculated": 35.91,
+      "pass": true
+    },
+    {
       "code": "3443",
       "date": "2026-09-24",
       "announced": 33.59,
@@ -892,6 +1095,20 @@
       "date": "2026-10-05",
       "announced": 40.79,
       "calculated": 40.79,
+      "pass": true
+    },
+    {
+      "code": "4956",
+      "date": "2026-09-23",
+      "announced": 33.07,
+      "calculated": 33.07,
+      "pass": true
+    },
+    {
+      "code": "4956",
+      "date": "2026-09-21",
+      "announced": 39.97,
+      "calculated": 39.97,
       "pass": true
     },
     {
@@ -1119,10 +1336,192 @@
       "pass": true
     },
     {
+      "code": "6226",
+      "date": "2026-09-21",
+      "announced": 41.39,
+      "calculated": 41.39,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-18",
+      "announced": 36.04,
+      "calculated": 36.04,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-17",
+      "announced": 41.77,
+      "calculated": 41.77,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-16",
+      "announced": 32.04,
+      "calculated": 32.04,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-09-01",
+      "announced": 40.16,
+      "calculated": 40.16,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-08-31",
+      "announced": 42.47,
+      "calculated": 42.47,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-08-28",
+      "announced": 45.89,
+      "calculated": 45.89,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-08-27",
+      "announced": 39.32,
+      "calculated": 39.32,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-07-23",
+      "announced": -41.07,
+      "calculated": -41.07,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-07-03",
+      "announced": 39.68,
+      "calculated": 39.68,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-07-02",
+      "announced": 59.55,
+      "calculated": 59.55,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-07-01",
+      "announced": 59.47,
+      "calculated": 59.47,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-06-30",
+      "announced": 59.5,
+      "calculated": 59.5,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-06-29",
+      "announced": 50.33,
+      "calculated": 50.33,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-06-26",
+      "announced": 40.47,
+      "calculated": 40.47,
+      "pass": true
+    },
+    {
+      "code": "6226",
+      "date": "2026-06-25",
+      "announced": 33.44,
+      "calculated": 33.44,
+      "pass": true
+    },
+    {
+      "code": "6426",
+      "date": "2026-09-23",
+      "announced": 28.18,
+      "calculated": 28.18,
+      "pass": true
+    },
+    {
+      "code": "6426",
+      "date": "2026-08-12",
+      "announced": 25.76,
+      "calculated": 25.76,
+      "pass": true
+    },
+    {
+      "code": "6426",
+      "date": "2026-08-11",
+      "announced": 33.74,
+      "calculated": 33.74,
+      "pass": true
+    },
+    {
+      "code": "6426",
+      "date": "2026-08-10",
+      "announced": 38.15,
+      "calculated": 38.15,
+      "pass": true
+    },
+    {
+      "code": "6426",
+      "date": "2026-08-07",
+      "announced": 42.13,
+      "calculated": 42.13,
+      "pass": true
+    },
+    {
       "code": "6449",
       "date": "2026-07-20",
       "announced": -37.47,
       "calculated": -37.47,
+      "pass": true
+    },
+    {
+      "code": "6456",
+      "date": "2026-09-30",
+      "announced": 35.37,
+      "calculated": 35.37,
+      "pass": true
+    },
+    {
+      "code": "6456",
+      "date": "2026-09-29",
+      "announced": 32.93,
+      "calculated": 32.93,
+      "pass": true
+    },
+    {
+      "code": "6526",
+      "date": "2026-09-29",
+      "announced": 26.99,
+      "calculated": 26.99,
+      "pass": true
+    },
+    {
+      "code": "6526",
+      "date": "2026-09-24",
+      "announced": 30.08,
+      "calculated": 30.08,
+      "pass": true
+    },
+    {
+      "code": "6526",
+      "date": "2026-09-23",
+      "announced": 31.04,
+      "calculated": 31.04,
       "pass": true
     },
     {
@@ -1298,6 +1697,41 @@
       "date": "2026-06-25",
       "announced": 41.99,
       "calculated": 41.99,
+      "pass": true
+    },
+    {
+      "code": "6861",
+      "date": "2026-09-30",
+      "announced": 32.29,
+      "calculated": 32.29,
+      "pass": true
+    },
+    {
+      "code": "6861",
+      "date": "2026-09-29",
+      "announced": 32.09,
+      "calculated": 32.09,
+      "pass": true
+    },
+    {
+      "code": "6861",
+      "date": "2026-07-17",
+      "announced": -26.2,
+      "calculated": -26.2,
+      "pass": true
+    },
+    {
+      "code": "6861",
+      "date": "2026-07-15",
+      "announced": -28.62,
+      "calculated": -28.62,
+      "pass": true
+    },
+    {
+      "code": "6861",
+      "date": "2026-07-14",
+      "announced": -31.08,
+      "calculated": -31.08,
       "pass": true
     },
     {
@@ -1504,6 +1938,69 @@
       "pass": true
     },
     {
+      "code": "7711",
+      "date": "2026-09-15",
+      "announced": -32.65,
+      "calculated": -32.65,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-09-14",
+      "announced": -26.13,
+      "calculated": -26.13,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-09-07",
+      "announced": 32.01,
+      "calculated": 32.01,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-09-04",
+      "announced": 26.37,
+      "calculated": 26.37,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-08-14",
+      "announced": 28.04,
+      "calculated": 28.04,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-08-13",
+      "announced": 41.87,
+      "calculated": 41.87,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-08-12",
+      "announced": 41.88,
+      "calculated": 41.88,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-08-11",
+      "announced": 33.97,
+      "calculated": 33.97,
+      "pass": true
+    },
+    {
+      "code": "7711",
+      "date": "2026-08-10",
+      "announced": 33.82,
+      "calculated": 33.82,
+      "pass": true
+    },
+    {
       "code": "7788",
       "date": "2026-08-31",
       "announced": 25.11,
@@ -1641,6 +2138,41 @@
       "date": "2026-07-16",
       "announced": 36.56,
       "calculated": 36.56,
+      "pass": true
+    },
+    {
+      "code": "8046",
+      "date": "2026-10-01",
+      "announced": 30.12,
+      "calculated": 30.12,
+      "pass": true
+    },
+    {
+      "code": "8046",
+      "date": "2026-07-31",
+      "announced": -26.89,
+      "calculated": -26.89,
+      "pass": true
+    },
+    {
+      "code": "8046",
+      "date": "2026-07-30",
+      "announced": -42.54,
+      "calculated": -42.54,
+      "pass": true
+    },
+    {
+      "code": "8046",
+      "date": "2026-07-29",
+      "announced": -28.11,
+      "calculated": -28.11,
+      "pass": true
+    },
+    {
+      "code": "8046",
+      "date": "2026-07-15",
+      "announced": 28.82,
+      "calculated": 28.82,
       "pass": true
     },
     {
