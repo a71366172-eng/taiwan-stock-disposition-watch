@@ -43,6 +43,8 @@ test('active-treatment progress counts clause 1–8 notices from the current dis
   {code:'TEST',name:'test',date:asOf,reason:'處置中',rules:[1,13],close:100,pe:60},
  ];
  const active={...base,notices,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-3)!,start,end:'2026-04-01',condition:'',measure:'',content:''}]};
+ const newCycleGate=countGate(active,calendar,asOf);
+ assert.equal(newCycleGate.firstStreak,0,'new-cycle forecast counters intentionally exclude treatment-period notices');
  assert.deepEqual(attentionGateProgress(active,calendar,asOf),[
   {label:'連3日',value:2,limit:3},
   {label:'連5日',value:2,limit:5},
