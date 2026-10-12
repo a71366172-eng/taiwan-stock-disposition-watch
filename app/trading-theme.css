@@ -44,6 +44,7 @@ body{background:#202428;color:#e4e9ed}.app-shell{min-height:100vh;background:#20
 @media(max-width:760px){.risk-table{min-width:950px!important}.risk-table thead{display:block}.risk-table thead tr,.risk-stock-row{grid-template-columns:145px 95px minmax(350px,1fr) 265px 30px}.stock-panel .table-scroll table:not(.risk-table),.expanded-stock-grid .stock-panel .table-scroll table:not(.risk-table){min-width:1100px}.stock-extra-metrics{min-width:270px}.expanded-stock-grid .side-column{grid-template-columns:1fr}}
 /* Keep six disposition indicators aligned in two rows. */
 .disposition-metrics,.disposition-list.grid-view .disposition-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.risk-tier-filter-row .segmented-control{border-color:#475058}.risk-tier-filter-row .segmented-control button{background:#252a2e;color:#b9c4cc;font-size:12px;padding:7px 12px}.risk-tier-filter-row .segmented-control button.active{background:#1479f5;color:#fff}
 @media(max-width:760px){.disposition-list.grid-view .disposition-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .disposition-list-header{display:grid;grid-template-columns:minmax(180px,.9fr) minmax(380px,2fr) minmax(230px,1.4fr);align-items:center;gap:12px;padding:8px 10px;margin:5px 0;color:#aebbc4;border-bottom:1px solid #49535a}
 .disposition-header-stock{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px}

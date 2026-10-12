@@ -8,10 +8,17 @@ import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.
 import {isRiskWatchEligible,isCurrentlyDisposed,isTodayFirstClauseNotice} from '../lib/risk-watch.ts';
 import {recentDispositionExits} from '../lib/disposition-exits.ts';
 import {tradingViewUrl} from '../lib/tradingview-url.ts';
+import {activeDispositions,dispositionReferenceDate} from '../lib/disposition-status.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
 const context={asOf:calendar.at(-1)!,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendar,calendarVerified:true};
 const forecastContext={...context,forecastDates:['2026-04-01','2026-04-02','2026-04-03']};
+test('watch and disposition pages use the same inclusive Taiwan-date cutoff',()=>{
+ const records=[{code:'2492',name:'華新科',announced:'2026-10-12',start:'2026-10-13',end:'2026-10-19',condition:'連續三次',measure:'第一次處置',content:''},{code:'2033',name:'佳大',announced:'2026-10-05',start:'2026-10-06',end:'2026-10-13',condition:'連續三次',measure:'第一次處置',content:''}];
+ assert.equal(dispositionReferenceDate('2026-10-12',new Date('2026-10-12T17:00:00Z')),'2026-10-13');
+ assert.deepEqual(activeDispositions(records,'2026-10-13').map(item=>item.code),['2492','2033']);
+ assert.deepEqual(activeDispositions(records,'2026-10-14').map(item=>item.code),['2492']);
+});
 test('one day with several reasons is counted once; ninth+one window excludes old tenth day',()=>{
  const notices=[10,9,8,7,6].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[1,6],close:100,pe:60}));
  const g=countGate({...base,notices},calendar,context.asOf);assert.equal(g.nineCount,4);assert.ok(!g.paths.includes('十日內六日'));
@@ -135,6 +142,8 @@ test('risk list hides active dispositions unless they are re-noticed and still f
  const renoticed={...active,notices:[{code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60}]};
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,true,false,false,false),true);
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,false,false,true,false),false);
+ const startsToday={...base,dispositions:[{code:'TEST',name:'test',announced:'2026-03-31',start:context.asOf,end:'2026-04-10',condition:'',measure:'第一次處置',content:''}]};
+ assert.equal(isRiskWatchEligible(startsToday,context.asOf,true,false,false,false),false);
 });
 test('today first-clause filter accepts only a clause 1 notice on the data date',()=>{
  const today={...base,notices:[{code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60}]};

@@ -1,6 +1,7 @@
 import {CalendarDays,ExternalLink,Info,ShieldAlert} from 'lucide-react';
 import {useState} from 'react';
 import {dispositionMetrics} from '../lib/disposition-metrics';
+import {activeDispositions,dispositionReferenceDate} from '../lib/disposition-status';
 import type {Disposition,MarketSnapshot,Stock} from '../lib/market-types';
 import {SiteShell} from './site-shell';
 
@@ -9,7 +10,6 @@ type Sort='end'|'end-late'|'code-asc'|'code-desc'|'return-high'|'return-low'|'fi
 type Direction='all'|'positive'|'negative';
 const compareNullable=(a:number|null|undefined,b:number|null|undefined,descending:boolean)=>a==null?(b==null?0:1):b==null?-1:descending?b-a:a-b;
 const directionMatches=(value:number|null|undefined,direction:Direction)=>direction==='all'||(value!=null&&(direction==='positive'?value>0:value<0));
-const todayTaipei=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const lots=(shares:number|null|undefined)=>shares==null?'—':`${shares>0?'+':''}${(shares/1000).toLocaleString('zh-TW',{maximumFractionDigits:1})} 張`;
 const date=(value:string|null)=>value?.replaceAll('-','.')||'—';
 const price=(value:number|null|undefined)=>value==null?'—':value.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -21,13 +21,12 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
  const toggleSort=(first:Sort,second:Sort)=>setSort(current=>current===first?second:first);
  const sortHeader=(label:string,first:Sort,second:Sort,firstAscending:boolean)=><button type="button" className={`disposition-header-button ${sort===first||sort===second?'active':''}`} onClick={()=>toggleSort(first,second)} aria-label={`${label}，${sort===first?`目前${firstAscending?'升冪':'降冪'}，點擊切換`:sort===second?`目前${firstAscending?'降冪':'升冪'}，點擊切換`:'點擊排序'}`} aria-pressed={sort===first||sort===second}>{label}<span aria-hidden="true">{sort===first?(firstAscending?'↑':'↓'):sort===second?(firstAscending?'↓':'↑'):'↕'}</span></button>;
  const [endWithin,setEndWithin]=useState('all'),[returnDirection,setReturnDirection]=useState<Direction>('all'),[institutionalDirection,setInstitutionalDirection]=useState<Direction>('all'),[ma20Direction,setMa20Direction]=useState<Direction>('all'),[fiveDayDirection,setFiveDayDirection]=useState<Direction>('all'),[tenDayDirection,setTenDayDirection]=useState<Direction>('all');
- const referenceDate=[snapshot.asOf,todayTaipei()].sort().at(-1)!;
+ const referenceDate=dispositionReferenceDate(snapshot.asOf);
  const byCode=new Map(snapshot.stocks.map(stock=>[stock.code,stock]));
  const unique=new Map<string,Disposition>();
- for(const disposition of snapshot.dispositions){
-  if(!disposition.start||!disposition.end||disposition.start>referenceDate||disposition.end<referenceDate)continue;
+ for(const disposition of activeDispositions(snapshot.dispositions,referenceDate)){
   const previous=unique.get(disposition.code);
-  if(!previous||disposition.start>previous.start!)unique.set(disposition.code,disposition);
+  if(!previous||disposition.start!>previous.start!)unique.set(disposition.code,disposition);
  }
  const items:ActiveItem[]=[...unique.values()].map(disposition=>{const stock=byCode.get(disposition.code);return {disposition,stock,metrics:dispositionMetrics(disposition,stock,referenceDate)};});
  const visibleItems=items.filter(({disposition,stock,metrics})=>{
