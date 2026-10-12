@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.4';
+export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.5';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -74,31 +74,37 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
   if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十個營業日內十二日');
   return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
 }
-/** Clause 1–8 notice dates count once per day in rolling 10/30-session windows. */
+/**
+ * Count official notice records that cite clauses 1–8. The clause-level
+ * exceptions are applied before TPEx/TWSE publish an official notice; this
+ * history contains the clauses that actually qualified after those checks.
+ * When one clause is exempt but another clause 1–8 is published the same day,
+ * that date still counts once under Article 6.
+ */
 export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notices']{
   return stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
 function attentionCycleNotices(stock:Stock,asOf:string){
-  return countableAttentionNotices(stock,asOf).filter(notice=>isInCurrentAttentionCycle(stock,notice.date,asOf));
+  const excludedThrough=stock.dispositions
+    .filter(item=>item.announced<=asOf&&isCommitteeDisposition(item))
+    .map(item=>item.end||item.start||item.announced)
+    .filter((date):date is string=>!!date)
+    .sort()
+    .at(-1);
+  return countableAttentionNotices(stock,asOf).filter(notice=>!excludedThrough||notice.date>excludedThrough);
 }
-/** A disposition starts a fresh attention-counting cycle; while it is active, count notices from its start. */
-function isInCurrentAttentionCycle(stock:Stock,date:string,asOf:string):boolean{
-  const latest=[...stock.dispositions].filter(item=>item.announced<=asOf).sort((a,b)=>(a.start||a.announced).localeCompare(b.start||b.announced)).at(-1);
-  if(!latest)return true;
-  const active=latest.start&&latest.end&&latest.start<=asOf&&latest.end>=asOf;
-  if(active)return date>=latest.start!;
-  const cutoff=latest.end||latest.start||latest.announced;
-  return date>cutoff;
+/** Article 6(7): only committee-decided dispositions may exclude pre-treatment and in-treatment notice dates. */
+function isCommitteeDisposition(item:Stock['dispositions'][number]):boolean{
+  return /監視業務督導會報|共同責任制(?:交割結算基金特別管理委員會|給付結算基金管理委員會)/.test(item.content);
 }
-/** Progress shown for a stock still under disposition: count only clause 1–8 notices published during this active disposition cycle. */
+/** Progress uses the same rolling 10/30-session and consecutive-day windows as the disposition gates. */
 export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string){
-  const active=[...stock.dispositions].filter(item=>item.start&&item.end&&item.start<=asOf&&item.end>=asOf).sort((a,b)=>a.start!.localeCompare(b.start!)).at(-1);
   const notices=attentionCycleNotices(stock,asOf);
   const dates=calendar.filter(date=>date<=asOf),byDate=new Map<string,Set<number>>();
   for(const notice of notices){const rules=byDate.get(notice.date)||new Set<number>();notice.rules.filter(rule=>rule>=1&&rule<=8).forEach(rule=>rules.add(rule));byDate.set(notice.date,rules);}
   const rollingByDate=new Set(notices.map(notice=>notice.date));
   const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
-  const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(active&&date<active.start!)break;if(!matches(date))break;count++;}return count;};
+  const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(!matches(date))break;count++;}return count;};
   return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(date=>rollingByDate.has(date)).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(date=>rollingByDate.has(date)).length,limit:12}];
 }
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{

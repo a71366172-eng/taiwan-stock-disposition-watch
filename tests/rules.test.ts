@@ -23,19 +23,28 @@ test('one day with several reasons is counted once; ninth+one window excludes ol
  const notices=[10,9,8,7,6].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[1,6],close:100,pe:60}));
  const g=countGate({...base,notices},calendar,context.asOf);assert.equal(g.nineCount,4);assert.ok(!g.paths.includes('十日內六日'));
 });
+test('clause exemptions are applied per announced clause; another qualifying clause still makes the day count once',()=>{
+ const notices=[
+  {code:'TEST',name:'test',date:calendar.at(-2)!,reason:'正式公告第一款及第二款',rules:[1,2],close:100,pe:60},
+  {code:'TEST',name:'test',date:calendar.at(-1)!,reason:'正式公告第九款',rules:[9],close:100,pe:60},
+ ];
+ const countable=countableAttentionNotices({...base,notices},context.asOf);
+ assert.equal(countable.length,1);
+ assert.deepEqual(countGate({...base,notices},calendar,context.asOf).twentyNineCount,1);
+});
 test('ninth+one window qualifies at five existing days, unrelated rule13 does not count',()=>{
  const notices=[9,8,7,6,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
  notices.push({...notices[0],date:calendar.at(-2)!,rules:[9]},{...notices[0],date:calendar.at(-3)!,rules:[13]});
  assert.ok(countGate({...base,notices},calendar,context.asOf).paths.includes('十日內六日'));
 });
-test('an ordinary disposition resets all notice progress; only new-cycle clauses 1-8 count',()=>{
+test('ordinary rule-based dispositions do not reset rolling notice counts; only clauses 1-8 count',()=>{
  const sessions=calendar.slice(-30),notices=sessions.slice(5,17).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
  notices.push({code:'TEST',name:'test',date:sessions[17],reason:'',rules:[13],close:100,pe:60},{code:'TEST',name:'test',date:sessions[18],reason:'',rules:[10],close:100,pe:60});
  const disposed={...base,notices,dispositions:[{code:'TEST',name:'test',announced:sessions[8],start:sessions[8],end:sessions[9],condition:'',measure:'',content:''}]};
- const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,12);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
- assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,undefined);
+ const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,12);assert.equal(gate.twentyNineCount,12);assert.ok(gate.paths.includes('三十個營業日內十二日'));
+ assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,1);
 });
-test('active-treatment progress starts at the treatment date and ignores non-1-8 clauses',()=>{
+test('active ordinary-treatment progress stays on rolling windows and ignores non-1-8 clauses',()=>{
  const start=calendar.at(-2)!,asOf=calendar.at(-1)!;
  const notices=[
   {code:'TEST',name:'test',date:calendar.at(-4)!,reason:'處置前',rules:[1],close:100,pe:60},
@@ -48,25 +57,31 @@ test('active-treatment progress starts at the treatment date and ignores non-1-8
  assert.deepEqual(attentionGateProgress(active,calendar,asOf),[
   {label:'連3日',value:2,limit:3},
   {label:'連5日',value:2,limit:5},
-  {label:'10營業日',value:2,limit:6},
-  {label:'30營業日',value:2,limit:12},
+  {label:'10營業日',value:3,limit:6},
+  {label:'30營業日',value:3,limit:12},
  ]);
+});
+test('committee-decided dispositions exclude pre-treatment and in-treatment notice dates',()=>{
+ const dates=calendar.slice(-30),notices=dates.slice(-6).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
+ const treatment={...base,notices,dispositions:[{code:'TEST',name:'test',announced:dates.at(-5)!,start:dates.at(-4)!,end:dates.at(-2)!,condition:'',measure:'',content:'經監視業務督導會報決議採行處置措施'}]};
+ assert.deepEqual(countableAttentionNotices(treatment,context.asOf).map(n=>n.date),dates.slice(-6));
+ assert.equal(countGate(treatment,dates,context.asOf).twentyNineCount,1);
 });
 test('first-rule streak requires first clause specifically and consecutive sessions',()=>{
  const notices=[2,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
  assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,0);
  notices.forEach(n=>n.rules=[1]);assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,2);
 });
-test('6538 excludes notices before and during its last disposition from fresh 30-session progress',()=>{
+test('6538 follows its published clause 1-8 dates; no generic disposition reset is inferred',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const archive=JSON.parse(fs.readFileSync(new URL('../data/disposition-history.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='6538') as Stock;
  const disposed={...stock,dispositions:archive.records.filter((item:{code:string})=>item.code==='6538')};
  const qualifying=countableAttentionNotices(disposed,snapshot.asOf);
  assert.equal(qualifying.filter(notice=>snapshot.calendar.slice(-30).includes(notice.date)).length,13);
- assert.equal(countGate(disposed,snapshot.calendar,snapshot.asOf).twentyNineCount,6);
- assert.ok(!countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
- assert.equal(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')?.value,6);
+ assert.equal(countGate(disposed,snapshot.calendar,snapshot.asOf).twentyNineCount,13);
+ assert.ok(countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
+ assert.equal(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')?.value,13);
 });
 test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
  const prices=legalPrices(50);assert.ok(prices.includes(49.95));assert.ok(prices.includes(50));assert.ok(prices.includes(50.1));assert.ok(!prices.includes(50.05));assert.equal(prices.at(-1),55);
@@ -116,7 +131,7 @@ test('repeat disposition tier is shown only during an active treatment period',(
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
  assert.equal(result.code,'5314');
- assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.4');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.5');
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);
