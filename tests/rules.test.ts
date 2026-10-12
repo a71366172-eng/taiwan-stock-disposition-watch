@@ -94,11 +94,13 @@ test('daily returns truncate toward zero before summing, including negative frac
  assert.equal(cumulativeReturn([{...base.bars[0],close:101,reference:103}]),-1.94);
  assert.equal(cumulativeReturn([{...base.bars[0],close:104,reference:103},{...base.bars[0],close:102,reference:103}]),0);
 });
-test('disposition tier uses the latest 30 known business sessions',()=>{
- const recent={...base,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-30)!,start:null,end:null,condition:'',measure:'',content:''}]};
+test('repeat disposition tier is shown only during an active treatment period',()=>{
+ const recent={...base,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-30)!,start:calendar.at(-2)!,end:context.asOf,condition:'',measure:'',content:''}]};
  const old={...recent,dispositions:[{...recent.dispositions[0],announced:calendar.at(-31)!}]};
+ const exited={...recent,dispositions:[{...recent.dispositions[0],end:calendar.at(-2)!}]};
  assert.equal(dispositionTier(recent,calendar,context.asOf),'repeat');
  assert.equal(dispositionTier(old,calendar,context.asOf),'first');
+ assert.equal(dispositionTier(exited,calendar,context.asOf),'first');
 });
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
