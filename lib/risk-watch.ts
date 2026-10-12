@@ -4,6 +4,10 @@ export function isCurrentlyDisposed(stock:Stock,asOf:string){
   return stock.dispositions.some(item=>Boolean(item.start&&item.end&&item.start<=asOf&&item.end>=asOf));
 }
 
+export function isTodayFirstClauseNotice(stock:Stock,asOf:string){
+  return stock.notices.some(notice=>notice.date===asOf&&notice.rules.includes(1));
+}
+
 export function wasNoticedDuringCurrentDisposition(stock:Stock,asOf:string){
   return stock.dispositions.some(item=>Boolean(item.start&&item.end&&item.start<=asOf&&item.end>=asOf&&stock.notices.some(notice=>notice.date>=item.start!&&notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8))));
 }

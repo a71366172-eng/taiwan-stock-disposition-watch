@@ -5,7 +5,7 @@ import {attentionGateProgress,countGate,countableAttentionNotices,forecastDispos
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
-import {isRiskWatchEligible,isCurrentlyDisposed} from '../lib/risk-watch.ts';
+import {isRiskWatchEligible,isCurrentlyDisposed,isTodayFirstClauseNotice} from '../lib/risk-watch.ts';
 import {recentDispositionExits} from '../lib/disposition-exits.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
@@ -134,6 +134,14 @@ test('risk list hides active dispositions unless they are re-noticed and still f
  const renoticed={...active,notices:[{code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60}]};
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,true,false,false,false),true);
  assert.equal(isRiskWatchEligible(renoticed,context.asOf,false,false,true,false),false);
+});
+test('today first-clause filter accepts only a clause 1 notice on the data date',()=>{
+ const today={...base,notices:[{code:'TEST',name:'test',date:context.asOf,reason:'',rules:[1],close:100,pe:60}]};
+ const yesterday={...today,notices:[{...today.notices[0],date:calendar.at(-2)!}]};
+ const otherClause={...today,notices:[{...today.notices[0],rules:[6]}]};
+ assert.equal(isTodayFirstClauseNotice(today,context.asOf),true);
+ assert.equal(isTodayFirstClauseNotice(yesterday,context.asOf),false);
+ assert.equal(isTodayFirstClauseNotice(otherClause,context.asOf),false);
 });
 test('recent disposition exits include grouped -3 to +5 actual trading sessions',()=>{
  const sessions=['2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];

@@ -1,5 +1,5 @@
 'use client';
-import {ArrowLeft,ArrowUpRight} from 'lucide-react';
+import {ArrowLeft,ArrowUpRight,ExternalLink} from 'lucide-react';
 import {Area,AreaChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis} from 'recharts';
 import {SiteShell} from './site-shell';
 import type {Stock,MarketSnapshot,Simulation} from '../lib/market-types';
@@ -15,7 +15,7 @@ export function StockDetail({stock:s,snapshot,initial}:{stock:Stock;snapshot:Mar
  const tier=dispositionTier(s,snapshot.calendar,snapshot.asOf);
  const turnover=s.volume!=null&&s.issuedShares!=null&&s.issuedShares>0?s.volume/s.issuedShares*100:null;
  const deltaLabel=(value:number|null|undefined)=>value==null?'日增減 —':`日增減 ${value>0?'+':''}${fmt(value,0)} 張`;
- return <SiteShell><a href="#/" className="back-link"><ArrowLeft size={16}/> 返回觀測清單</a><div className="page-heading detail-heading"><div><div className="eyebrow">{s.code} · {s.market==='TPEX'?'上櫃':'上市'}普通股 · 推估{dispositionTierLabel[tier]}</div><h1>{s.name}<span className="badge amber">{s.candidateReason?'官方處置候選':'注意條件觀測'}</span></h1><p>以 {snapshot.asOf} 盤後資料，試算 {result.targetDate} 收盤條件。</p><a className="tradingview-link" href={tradingViewUrl(s.market==='TPEX'?'TPEX':'TWSE',s.code)} target="_blank" rel="noopener noreferrer" aria-label={`在 TradingView 查看 ${s.code} ${s.name} K 線圖`}>K 線圖 <ArrowUpRight size={15}/><span>TradingView</span></a></div><div className="quote-block"><strong>{fmt(s.close)}</strong><span className={(s.changePercent||0)>=0?'up':'down'}>{(s.change||0)>0?'+':''}{fmt(s.change)}（{(s.changePercent||0)>0?'+':''}{fmt(s.changePercent)}%）</span></div></div>
+ return <SiteShell><a href="#/" className="back-link"><ArrowLeft size={16}/> 返回觀測清單</a><div className="page-heading detail-heading"><div><div className="eyebrow">{s.code} · {s.market==='TPEX'?'上櫃':'上市'}普通股 · 推估{dispositionTierLabel[tier]}</div><h1>{s.name}<span className="badge amber">{s.candidateReason?'官方處置候選':'注意條件觀測'}</span></h1><p>以 {snapshot.asOf} 盤後資料，試算 {result.targetDate} 收盤條件。</p><a className="tradingview-link" href={tradingViewUrl(s.market==='TPEX'?'TPEX':'TWSE',s.code)} target="_blank" rel="noopener noreferrer" aria-label={`在 TradingView 查看 ${s.code} ${s.name} K 線圖`}>K 線圖 <ArrowUpRight size={15}/><span>TradingView</span></a> <a className="tradingview-link" href={`https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID=${encodeURIComponent(s.code)}`} target="_blank" rel="noopener noreferrer" aria-label={`在 Goodinfo 查看 ${s.code} ${s.name} 公司資訊`}>公司資訊 <ExternalLink size={15}/><span>Goodinfo</span></a></div><div className="quote-block"><strong>{fmt(s.close)}</strong><span className={(s.changePercent||0)>=0?'up':'down'}>{(s.change||0)>0?'+':''}{fmt(s.change)}（{(s.changePercent||0)>0?'+':''}{fmt(s.changePercent)}%）</span></div></div>
  <details className="stock-metrics">
   <summary><strong>個股數據</strong><span>成交量、週轉率、股本、估值與融資融券 · 預設收合</span></summary>
   <div className="stock-metrics-grid">
