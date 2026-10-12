@@ -25,17 +25,17 @@ test('one day with several reasons is counted once; ninth+one window excludes ol
 });
 test('ninth+one window qualifies at five existing days, unrelated rule13 does not count',()=>{
  const notices=[9,8,7,6,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
- notices.push({...notices[0],date:calendar.at(-2)!,rules:[13]});
+ notices.push({...notices[0],date:calendar.at(-2)!,rules:[9]},{...notices[0],date:calendar.at(-3)!,rules:[13]});
  assert.ok(countGate({...base,notices},calendar,context.asOf).paths.includes('十日內六日'));
 });
-test('a new disposition cycle clears pre-treatment and treatment notices from all accumulation counts',()=>{
+test('an ordinary disposition resets all notice progress; only new-cycle clauses 1-8 count',()=>{
  const sessions=calendar.slice(-30),notices=sessions.slice(5,17).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
  notices.push({code:'TEST',name:'test',date:sessions[17],reason:'',rules:[13],close:100,pe:60},{code:'TEST',name:'test',date:sessions[18],reason:'',rules:[10],close:100,pe:60});
  const disposed={...base,notices,dispositions:[{code:'TEST',name:'test',announced:sessions[8],start:sessions[8],end:sessions[9],condition:'',measure:'',content:''}]};
- const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,7);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
+ const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,12);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
  assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,undefined);
 });
-test('active-treatment streaks restart but 10/30-session progress remains rolling',()=>{
+test('active-treatment progress starts at the treatment date and ignores non-1-8 clauses',()=>{
  const start=calendar.at(-2)!,asOf=calendar.at(-1)!;
  const notices=[
   {code:'TEST',name:'test',date:calendar.at(-4)!,reason:'處置前',rules:[1],close:100,pe:60},
@@ -44,12 +44,12 @@ test('active-treatment streaks restart but 10/30-session progress remains rollin
  ];
  const active={...base,notices,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-3)!,start,end:'2026-04-01',condition:'',measure:'',content:''}]};
  const newCycleGate=countGate(active,calendar,asOf);
- assert.equal(newCycleGate.firstStreak,0,'new-cycle forecast counters intentionally exclude treatment-period notices');
+ assert.equal(newCycleGate.firstStreak,2,'active cycle counts qualifying first-clause notices from treatment start');
  assert.deepEqual(attentionGateProgress(active,calendar,asOf),[
   {label:'連3日',value:2,limit:3},
   {label:'連5日',value:2,limit:5},
-  {label:'10營業日',value:3,limit:6},
-  {label:'30營業日',value:3,limit:12},
+  {label:'10營業日',value:2,limit:6},
+  {label:'30營業日',value:2,limit:12},
  ]);
 });
 test('first-rule streak requires first clause specifically and consecutive sessions',()=>{
@@ -57,15 +57,16 @@ test('first-rule streak requires first clause specifically and consecutive sessi
  assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,0);
  notices.forEach(n=>n.rules=[1]);assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,2);
 });
-test('6538 is counted only after both official September disposition cycles',()=>{
+test('6538 excludes notices before and during its last disposition from fresh 30-session progress',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const archive=JSON.parse(fs.readFileSync(new URL('../data/disposition-history.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='6538') as Stock;
  const disposed={...stock,dispositions:archive.records.filter((item:{code:string})=>item.code==='6538')};
- const postDisposition=countableAttentionNotices(disposed,snapshot.asOf);
- assert.equal(postDisposition.length,6);
- assert.ok(postDisposition.every(notice=>notice.date>'2026-09-17'));
+ const qualifying=countableAttentionNotices(disposed,snapshot.asOf);
+ assert.equal(qualifying.filter(notice=>snapshot.calendar.slice(-30).includes(notice.date)).length,13);
+ assert.equal(countGate(disposed,snapshot.calendar,snapshot.asOf).twentyNineCount,6);
  assert.ok(!countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
+ assert.equal(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')?.value,6);
 });
 test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
  const prices=legalPrices(50);assert.ok(prices.includes(49.95));assert.ok(prices.includes(50));assert.ok(prices.includes(50.1));assert.ok(!prices.includes(50.05));assert.equal(prices.at(-1),55);

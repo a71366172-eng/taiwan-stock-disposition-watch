@@ -60,38 +60,43 @@ export function sixDayTwentyFivePercentFloor(stock:Stock,asOf:string):{price:num
 // This is an empirically validated convention, not a claim of a fully verified exchange implementation.
 function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b.close!).div(money(b.reference!)).sub(q(1)).mul(q(100)).trunc2()),q(0));}
 export function countGate(stock:Stock,calendar:string[],asOf:string){
-  const dates=calendar.filter(d=>d<=asOf);const byDate=new Map<string,Set<number>>();
-  for(const n of countableAttentionNotices(stock,asOf)){const set=byDate.get(n.date)||new Set<number>();n.rules.forEach(r=>set.add(r));byDate.set(n.date,set);}
-  const first=(d:string)=>byDate.get(d)?.has(1)||false;
-  const any=(d:string)=>[...(byDate.get(d)||[])].some(r=>r>=1&&r<=8);
+  const dates=calendar.filter(d=>d<=asOf),rollingByDate=new Map<string,Set<number>>(),streakByDate=new Map<string,Set<number>>();
+  const cycleNotices=attentionCycleNotices(stock,asOf);
+  for(const n of cycleNotices){
+    const rolling=rollingByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>rolling.add(r));rollingByDate.set(n.date,rolling);
+    const streak=streakByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>streak.add(r));streakByDate.set(n.date,streak);
+  }
+  const first=(d:string)=>streakByDate.get(d)?.has(1)||false;
+  const any=(d:string)=>[...(streakByDate.get(d)||[])].some(r=>r>=1&&r<=8);
   const streak=(fn:(d:string)=>boolean)=>{let n=0;for(const d of [...dates].reverse()){if(!fn(d))break;n++;}return n;};
-  const firstStreak=streak(first),anyStreak=streak(any),nineCount=dates.slice(-9).filter(any).length,twentyNineCount=dates.slice(-29).filter(any).length;
+  const firstStreak=streak(first),anyStreak=streak(any),nineCount=dates.slice(-9).filter(d=>rollingByDate.has(d)).length,twentyNineCount=dates.slice(-29).filter(d=>rollingByDate.has(d)).length;
   const paths:string[]=[];
   if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十個營業日內十二日');
   return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
 }
-/** Notices before and during the latest completed disposition cycle are excluded from a new disposition base. */
+/** Clause 1–8 notice dates count once per day in rolling 10/30-session windows. */
 export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notices']{
+  return stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
+}
+function attentionCycleNotices(stock:Stock,asOf:string){
+  return countableAttentionNotices(stock,asOf).filter(notice=>isInCurrentAttentionCycle(stock,notice.date,asOf));
+}
+/** A disposition starts a fresh attention-counting cycle; while it is active, count notices from its start. */
+function isInCurrentAttentionCycle(stock:Stock,date:string,asOf:string):boolean{
   const latest=[...stock.dispositions].filter(item=>item.announced<=asOf).sort((a,b)=>(a.start||a.announced).localeCompare(b.start||b.announced)).at(-1);
-  let cutoff:string|undefined;
-  if(latest){
-    cutoff=latest.end&&latest.end<=asOf?latest.end:latest.end?asOf:latest.start&&latest.start<=asOf?asOf:latest.announced;
-  }
-  return stock.notices.filter(notice=>notice.date<=asOf&&(!cutoff||notice.date>cutoff)&&notice.rules.some(rule=>rule>=1&&rule<=8));
+  if(!latest)return true;
+  const active=latest.start&&latest.end&&latest.start<=asOf&&latest.end>=asOf;
+  if(active)return date>=latest.start!;
+  const cutoff=latest.end||latest.start||latest.announced;
+  return date>cutoff;
 }
 /** Progress shown for a stock still under disposition: count only clause 1–8 notices published during this active disposition cycle. */
 export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string){
   const active=[...stock.dispositions].filter(item=>item.start&&item.end&&item.start<=asOf&&item.end>=asOf).sort((a,b)=>a.start!.localeCompare(b.start!)).at(-1);
-  const notices=active
-    ?stock.notices.filter(notice=>notice.date>=active.start!&&notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8))
-    :countableAttentionNotices(stock,asOf);
-  // The 10/30-session thresholds are rolling windows. A routine disposition
-  // does not reset those counts; only the special committee-decided exclusion
-  // is specified in the exchange rule (not distinguishable in this dataset).
-  const rollingNotices=stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
+  const notices=attentionCycleNotices(stock,asOf);
   const dates=calendar.filter(date=>date<=asOf),byDate=new Map<string,Set<number>>();
   for(const notice of notices){const rules=byDate.get(notice.date)||new Set<number>();notice.rules.filter(rule=>rule>=1&&rule<=8).forEach(rule=>rules.add(rule));byDate.set(notice.date,rules);}
-  const rollingByDate=new Set(rollingNotices.map(notice=>notice.date));
+  const rollingByDate=new Set(notices.map(notice=>notice.date));
   const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
   const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(active&&date<active.start!)break;if(!matches(date))break;count++;}return count;};
   return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(date=>rollingByDate.has(date)).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(date=>rollingByDate.has(date)).length,limit:12}];
@@ -104,7 +109,7 @@ export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot
   // not itself a declaration that a disposition will happen tomorrow.
   if(stock.candidateReason)return {days:1,date:future[0],paths:['次一營業日再達注意標準時，將公告處置'],official:true};
   const history=snapshot.calendar.filter(d=>d<=snapshot.asOf),base=countGate(stock,history,snapshot.asOf);
-  const countable=new Set(countableAttentionNotices(stock,snapshot.asOf).map(n=>n.date));
+  const countable=new Set(attentionCycleNotices(stock,snapshot.asOf).map(n=>n.date));
   for(let index=0;index<future.length;index++){
     const days=(index+1) as 1|2|3,assumed=future.slice(0,days),sessions=[...history,...assumed];
     const isCountable=(date:string)=>countable.has(date)||assumed.includes(date);
