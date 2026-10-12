@@ -35,7 +35,7 @@ test('a new disposition cycle clears pre-treatment and treatment notices from al
  const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,7);assert.equal(gate.twentyNineCount,7);assert.ok(!gate.paths.includes('三十個營業日內十二日'));
  assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,undefined);
 });
-test('active-treatment progress counts clause 1–8 notices from the current disposition cycle',()=>{
+test('active-treatment streaks restart but 10/30-session progress remains rolling',()=>{
  const start=calendar.at(-2)!,asOf=calendar.at(-1)!;
  const notices=[
   {code:'TEST',name:'test',date:calendar.at(-4)!,reason:'處置前',rules:[1],close:100,pe:60},
@@ -48,8 +48,8 @@ test('active-treatment progress counts clause 1–8 notices from the current dis
  assert.deepEqual(attentionGateProgress(active,calendar,asOf),[
   {label:'連3日',value:2,limit:3},
   {label:'連5日',value:2,limit:5},
-  {label:'10營業日',value:2,limit:6},
-  {label:'30營業日',value:2,limit:12},
+  {label:'10營業日',value:3,limit:6},
+  {label:'30營業日',value:3,limit:12},
  ]);
 });
 test('first-rule streak requires first clause specifically and consecutive sessions',()=>{

@@ -85,11 +85,16 @@ export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string)
   const notices=active
     ?stock.notices.filter(notice=>notice.date>=active.start!&&notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8))
     :countableAttentionNotices(stock,asOf);
+  // The 10/30-session thresholds are rolling windows. A routine disposition
+  // does not reset those counts; only the special committee-decided exclusion
+  // is specified in the exchange rule (not distinguishable in this dataset).
+  const rollingNotices=stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
   const dates=calendar.filter(date=>date<=asOf),byDate=new Map<string,Set<number>>();
   for(const notice of notices){const rules=byDate.get(notice.date)||new Set<number>();notice.rules.filter(rule=>rule>=1&&rule<=8).forEach(rule=>rules.add(rule));byDate.set(notice.date,rules);}
+  const rollingByDate=new Set(rollingNotices.map(notice=>notice.date));
   const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
   const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(active&&date<active.start!)break;if(!matches(date))break;count++;}return count;};
-  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(any).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(any).length,limit:12}];
+  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(date=>rollingByDate.has(date)).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(date=>rollingByDate.has(date)).length,limit:12}];
 }
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
   const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
