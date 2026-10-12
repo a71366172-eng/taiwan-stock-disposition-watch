@@ -6,10 +6,18 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from jobs import collect_market
-from jobs.collect_market import near_disposition_notice_codes, notice_rules, tpex_historical_notices
+from jobs.collect_market import near_disposition_notice_codes, notice_rules, tpex_historical_notices, taipei_today, twse_punish_query_range
 
 
 class TpexHistoricalNoticeTests(unittest.TestCase):
+    def test_twse_disposition_query_reaches_taiwan_today_after_last_quote(self):
+        now = collect_market.dt.datetime(2026, 10, 12, 17, 0, tzinfo=collect_market.dt.timezone.utc)
+        self.assertEqual(taipei_today(now), collect_market.dt.date(2026, 10, 13))
+        self.assertEqual(
+            twse_punish_query_range("2026-10-12", collect_market.dt.date(2026, 10, 13)),
+            ("20260630", "20261013"),
+        )
+
     def test_quote_fallback_tolerates_older_bars_without_reference(self):
         self.assertEqual(
             collect_market.fill_quote_from_bar({"close": 41.5, "volume": 12000}, None, None, None),

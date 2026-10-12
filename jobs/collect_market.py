@@ -510,6 +510,19 @@ def iso(v):
     try: return dt.date(y,m,d).isoformat()
     except ValueError: return None
 
+def taipei_today(now: dt.datetime | None = None) -> dt.date:
+    """Return the current date in Taiwan, independent of the runner timezone."""
+    current=now or dt.datetime.now(dt.timezone.utc)
+    if current.tzinfo is None:
+        current=current.replace(tzinfo=dt.timezone.utc)
+    return (current.astimezone(dt.timezone(dt.timedelta(hours=8)))).date()
+
+def twse_punish_query_range(as_of: str, today: dt.date | None = None) -> tuple[str,str]:
+    """Query through Taiwan today because the exchange publishes after-close notices one day past the quote snapshot."""
+    end=today or taipei_today()
+    start=end-dt.timedelta(days=105)
+    return start.strftime('%Y%m%d'),end.strftime('%Y%m%d')
+
 def roc_date(value: str):
     date=dt.date.fromisoformat(value)
     return f'{date.year-1911:03d}/{date.month:02d}/{date.day:02d}'
@@ -636,7 +649,8 @@ def main():
     day=dt.date.fromisoformat(as_of); compact=as_of.replace('-',''); start=(day-dt.timedelta(days=105)).strftime('%Y%m%d')
     notices=get(f'https://www.twse.com.tw/announcement/notice?response=json&startDate={start}&endDate={compact}')
     cand=get('https://openapi.twse.com.tw/v1/announcement/notetrans')
-    punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={start}&endDate={compact}')
+    punish_start,punish_end=twse_punish_query_range(as_of)
+    punish=get(f'https://www.twse.com.tw/announcement/punish?response=json&startDate={punish_start}&endDate={punish_end}')
     fundamentals=get('https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL',False) or []
     twse_margin=twse_margin_rows(get('https://openapi.twse.com.tw/v1/exchangeReport/MI_MARGN',False) or [])
     print(f'TWSE margin balances normalized: {len(twse_margin)} stocks')
