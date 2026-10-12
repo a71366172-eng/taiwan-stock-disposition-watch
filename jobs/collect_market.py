@@ -136,7 +136,12 @@ def merge_disposition_history(current: list[dict], previous: dict, as_of: str) -
     except (OSError,ValueError,AttributeError):
         pass
     retained=lambda item:(item.get('announced','')>=cutoff or (item.get('end') or '')>=as_of)
-    merged={key(item):item for item in archived+previous.get('dispositions',[]) if retained(item)}
+    previous_records=previous.get('dispositions',[])
+    # A same-day refresh must preserve the exact prior snapshot. Apply the
+    # rolling history cutoff only when advancing to a newer market date.
+    retained_previous=lambda item:previous.get('asOf')==as_of or retained(item)
+    merged={key(item):item for item in archived if retained(item)}
+    merged.update({key(item):item for item in previous_records if retained_previous(item)})
     merged.update({key(item):item for item in current})
     return list(merged.values())
 

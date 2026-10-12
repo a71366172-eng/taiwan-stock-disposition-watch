@@ -1,5 +1,10 @@
 import copy
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
+from jobs import collect_market
 from jobs.collect_market import merge_disposition_history, validate_publication
 
 
@@ -48,3 +53,16 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertTrue(any(item['code']=='6538' and item['start']=='2026-09-11' for item in merged))
         self.assertTrue(any(item['code']=='6538' and item['start']=='2026-10-01' for item in merge_disposition_history([old],self.snapshot,self.snapshot['asOf'])))
         self.assertEqual(merge_disposition_history([],self.snapshot,'2027-03-01'),[])
+
+    def test_same_day_refresh_preserves_old_dispositions_then_prunes_on_next_day(self):
+        with TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'data').mkdir()
+            (root/'data'/'disposition-history.json').write_text(json.dumps({'records':[]}),encoding='utf-8')
+            previous=copy.deepcopy(self.snapshot)
+            previous['dispositions']=[{'code':'6830','announced':'2026-05-20','start':'2026-05-21','end':'2026-05-29'}]
+            with patch.object(collect_market,'ROOT',root):
+                same_day=merge_disposition_history([],previous,'2026-10-02')
+                next_day=merge_disposition_history([],previous,'2026-10-03')
+            self.assertEqual(len(same_day),1)
+            self.assertEqual(next_day,[])
