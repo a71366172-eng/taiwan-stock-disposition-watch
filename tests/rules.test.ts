@@ -7,6 +7,7 @@ import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
 import {isRiskWatchEligible,isCurrentlyDisposed,isTodayFirstClauseNotice} from '../lib/risk-watch.ts';
 import {recentDispositionExits} from '../lib/disposition-exits.ts';
+import {tradingViewUrl} from '../lib/tradingview-url.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const base:Stock={code:'TEST',name:'測試資料',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:5000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:5000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
 const context={asOf:calendar.at(-1)!,targetDate:'2026-04-01',effectiveDate:'2026-04-02',calendar,calendarVerified:true};
@@ -142,6 +143,10 @@ test('today first-clause filter accepts only a clause 1 notice on the data date'
  assert.equal(isTodayFirstClauseNotice(today,context.asOf),true);
  assert.equal(isTodayFirstClauseNotice(yesterday,context.asOf),false);
  assert.equal(isTodayFirstClauseNotice(otherClause,context.asOf),false);
+});
+test('TradingView links use the Taiwan chart route and the matching market symbol',()=>{
+ assert.equal(tradingViewUrl('TWSE','2330'),'https://tw.tradingview.com/chart/?symbol=TWSE%3A2330');
+ assert.equal(tradingViewUrl('TPEX','8069'),'https://tw.tradingview.com/chart/?symbol=TPEX%3A8069');
 });
 test('recent disposition exits include grouped -3 to +5 actual trading sessions',()=>{
  const sessions=['2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];
