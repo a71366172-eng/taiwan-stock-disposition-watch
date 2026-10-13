@@ -1,5 +1,6 @@
 import type {MarketSnapshot,Simulation,Stock} from './market-types';
 import {cumulativeReturn,legalPrices,sixthClauseMinimumShares} from './rules.ts';
+import {clause2RecentFirstNoticeExcludes} from './attention-law.ts';
 
 export type AttentionCheck={label:string;value:string;progress:number|null;state:'safe'|'near'|'triggered'|'unknown'};
 export type AttentionRow={rule:number;name:string;status:'partial'|'outside'|'missing'|'exempt'|'manual';summary:string;details:string[];checks?:AttentionCheck[];ease?:number;conditionSummary?:string};
@@ -15,7 +16,7 @@ export function attentionOverallState(checks:AttentionCheck[]):AttentionCheck['s
 }
 export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const first=rows.find(row=>row.rule===1);
- const firstState=first?.checks?attentionOverallState(first.checks):first?.status==='outside'||first?.status==='exempt'?'safe':first?.status==='partial'?'near':'unknown';
+ const firstState=first?.status==='outside'||first?.status==='exempt'?'safe':first?.checks?attentionOverallState(first.checks):first?.status==='partial'?'near':'unknown';
  const firstTrigger=first?.checks?.find(check=>check.state==='triggered');
  const firstSummary=firstState==='triggered'?(first?.conditionSummary&&firstTrigger?`${first.conditionSummary}（${firstTrigger.value.replace(' / ',' > ')}）`:firstTrigger?`${firstTrigger.label} ${firstTrigger.value.replace(' / ',' > ')}`:'觸發門檻已達，價格條件待補'):firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':'資料不足';
  const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
@@ -64,13 +65,14 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
    };
    const first=checksFor(1),second=checksFor(2);
    rows[0].checks=[...first,...second];rows[0].details=[];
-   const overall=attentionOverallState(rows[0].checks);rows[0].summary=overall==='triggered'?'必觸發':overall==='near'?'可能觸發':overall==='unknown'?'待補資料':'無風險';
+   const overall=rows[0].status==='outside'?'safe':attentionOverallState(rows[0].checks);rows[0].summary=overall==='triggered'?'必觸發':overall==='near'?'可能觸發':overall==='unknown'?'待補資料':'無風險';
   }else if(id===1){rows[0].checks=[{label:'條件進度',value:'缺少連續有效行情',progress:null,state:'unknown'}];rows[0].summary='待補資料';}
   if(id===6&&r.status==='no_price')set(6,'missing','產業分支未達；集中度分支待資料',rows[5].details);
  }
- const longValues=new Set<number>();let longReady=0;
- for(const [n,threshold] of [[30,100],[60,otc?140:130],[90,160]]){const b=tail(n-1);if(!b?.every(x=>x.close!==null&&x.close>0))continue;longReady++;for(const p of prices){const limit=otc&&p<5?({30:120,60:180,90:240}[n]??threshold):threshold;if(Math.abs((p/b[0].close!-1)*100)>limit&&p>simulation.reference)longValues.add(p);}}
- priceRule(2,prices.filter(p=>longValues.has(p)),longReady===3,'',['計算 30／60／90 日起迄價差的基本價格門檻；市場及同類差幅仍須達標。','近 30 個營業日第一款注意、近 60 個營業日僅第二款處置與企業行動的除外條件尚待完整驗證，因此不作確定觸發判定。']);
+ const longValues=new Set<number>(),longBasicValues=new Set<number>();let longReady=0;
+ for(const [n,threshold] of [[30,100],[60,otc?140:130],[90,160]]){const b=tail(n-1);if(!b?.every(x=>x.close!==null&&x.close>0))continue;longReady++;for(const p of prices){const limit=otc&&p<5?({30:120,60:180,90:240}[n]??threshold):threshold;if(Math.abs((p/b[0].close!-1)*100)>limit&&p>simulation.reference){longBasicValues.add(p);if(!(sum!==null&&clause2RecentFirstNoticeExcludes(stock,snapshot,six(p),'up',simulation.scenario.market6,simulation.scenario.industry6)))longValues.add(p);}}}
+ priceRule(2,prices.filter(p=>longValues.has(p)),longReady===3,'',['計算 30／60／90 日起迄價差的基本價格門檻；市場及同類差幅仍須達標。','已套用近 30 營業日第一款注意的可計算除外條件；近 60 營業日僅第二款處置、企業行動及其他缺資料除外條件仍須核對，故不作確定觸發判定。']);
+ if(longReady===3&&longBasicValues.size>0&&longValues.size===0)set(2,'exempt','依目前情境，近 30 日第一款注意使候選價格均符合第二款除外',rows[1].details);
  const volume59=tail(59),sum59=volume59?.every(b=>b.volume!==null)?volume59.reduce((a,b)=>a+b.volume!,0):null;
  // V >= 5 * (sum59 + V) / 60, not five times yesterday's average.
  const min3=sum59!==null&&shares?Math.ceil(Math.max(5*sum59/55,small?0:(otc?300_000:500_000),shares*(otc?.01:.001))):null;
@@ -78,7 +80,7 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
  priceRule(3,shared,sum!==null,`；且量 ≥ ${min3===null?'待補 59 日量／股數':fmt(min3/1000)} 張（基本門檻）`,[...diff,'成交量／含預測日的 60 日均量 ≥ 5 倍，且比市場平均放大倍數至少高 4 倍；市場條件可能提高量門檻。'],min3!==null&&sum59!==null?min3/(sum59/59):undefined);
  const min4=shares?(otc?Math.floor(shares*.05)+1:Math.ceil(shares*.1)):null;
  priceRule(4,shared,sum!==null,`；且量 ≥ ${min4===null?'待補股數':fmt(min4/1000)} 張（基本門檻）`,[...diff,`週轉率${otc?' > 5%':' ≥ 10%'}，且比市場平均高至少 ${otc?3:5} 個百分點。`],min4!==null&&sum59!==null?min4/(sum59/59):undefined);
- priceRule(5,shared,sum!==null,`；且券商集中 > ${otc?20:25}%`,[...diff,`券商成交買進或賣出須逾 ${otc?300:500} 張；每分支機構增加 1 個百分點，上限 ${otc?30:35}%。`,'券商集中度為下個交易日成交後資料，價格僅為必要條件。']);
+ priceRule(5,shared,sum!==null,`；且券商集中 > ${otc?20:25}%`,[...diff,`${small?'小資本額上櫃股免成交張數門檻':`券商成交買進或賣出須逾 ${otc?300:500} 張`}；每分支機構增加 1 個百分點，上限 ${otc?30:35}%。`,'券商集中度為下個交易日成交後資料，價格僅為必要條件。']);
  priceRule(7,shared,sum!==null,'；券資條件待資料',[...diff,`前一交易日券資比 ≥ ${otc?10:20}%，融資使用率 ≥ ${otc?20:25}%，融券使用率 ≥ ${otc?10:15}%。`,'券資比較近六日最低值放大至少四倍，且不得低於再前一交易日；不能用未來融資券增量替代此既定資料。']);
  const tdr=/-DR$/i.test(stock.name)||stock.code.startsWith('91');
  set(8,tdr?'missing':'exempt',tdr?'待補存託憑證溢折價資料':'僅適用臺灣存託憑證；本檔不適用',[]);
