@@ -117,12 +117,13 @@ test('6538 follows its published clause 1-8 dates; no generic disposition reset 
 test('2466 next consecutive cycle agrees with the official October 8-12 two-day candidate',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='2466') as Stock;
- const progress=attentionGateProgress(stock,snapshot.calendar,snapshot.asOf);
+ const observationDate='2026-10-12';
+ const progress=attentionGateProgress(stock,snapshot.calendar,observationDate);
  assert.deepEqual(progress.map(item=>gateCountDisplay(item.value,item.limit)),[
   {value:2,excess:0},{value:2,excess:0},{value:6,excess:0},{value:7,excess:0},
  ]);
  assert.ok(stock.candidateReason,'the snapshot identifies this stock as an official candidate');
- const calculated=forecastDispositionRisk({...stock,candidateReason:null},snapshot);
+ const calculated=forecastDispositionRisk({...stock,candidateReason:null},{...snapshot,asOf:observationDate,forecastDates:['2026-10-13','2026-10-14','2026-10-15']});
  assert.equal(calculated?.days,1);
  assert.ok(calculated?.paths.includes('第一款連續三日'));
 });
