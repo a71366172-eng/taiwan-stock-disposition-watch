@@ -1,14 +1,16 @@
 import type {Disposition} from './market-types';
+import {tradingReferenceDate} from './disposition-status.ts';
 
 export type RecentDispositionExitGroup={date:string;offset:number;items:Disposition[]};
 
 /** Returns stocks whose disposition end date is within -3 to +5 trading sessions. */
-export function recentDispositionExits(dispositions:Disposition[],calendar:string[],asOf:string,futureSessions:string[]):RecentDispositionExitGroup[]{
+export function recentDispositionExits(dispositions:Disposition[],calendar:string[],asOf:string,futureSessions:string[],now:Date=new Date()):RecentDispositionExitGroup[]{
   const past=calendar.filter(date=>date<=asOf).sort();
-  const today=past.at(-1);
-  if(!today)return [];
-  const sessions=[...new Set([...past,...futureSessions.filter(date=>date>today)])].sort();
+  if(!past.length)return [];
+  const today=tradingReferenceDate(asOf,futureSessions,now);
+  const sessions=[...new Set([...past,...futureSessions.filter(date=>date>asOf)])].sort();
   const todayIndex=sessions.indexOf(today);
+  if(todayIndex<0)return [];
   const relevant=new Map<string,{item:Disposition;offset:number}>();
   for(const item of dispositions){
     if(!item.end)continue;

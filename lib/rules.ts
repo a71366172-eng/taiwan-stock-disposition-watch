@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.6';
+export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.7';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -69,10 +69,10 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
   const first=(d:string)=>streakByDate.get(d)?.has(1)||false;
   const any=(d:string)=>[...(streakByDate.get(d)||[])].some(r=>r>=1&&r<=8);
   const streak=(fn:(d:string)=>boolean)=>{let n=0;for(const d of [...dates].reverse()){if(!fn(d))break;n++;}return n;};
-  const firstStreak=streak(first),anyStreak=streak(any),nineCount=dates.slice(-9).filter(d=>rollingByDate.has(d)).length,twentyNineCount=dates.slice(-29).filter(d=>rollingByDate.has(d)).length;
+  const firstStreak=streak(first),anyStreak=streak(any),tenCount=dates.slice(-10).filter(d=>rollingByDate.has(d)).length,thirtyCount=dates.slice(-30).filter(d=>rollingByDate.has(d)).length;
   const paths:string[]=[];
-  if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=9&&nineCount>=5)paths.push('十日內六日');if(dates.length>=29&&twentyNineCount>=11)paths.push('三十個營業日內十二日');
-  return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,nineCount,twentyNineCount};
+  if(firstStreak>=2)paths.push('第一款連續三日');if(anyStreak>=4)paths.push('連續五日');if(dates.length>=10&&tenCount>=6)paths.push('十日內六日');if(dates.length>=30&&thirtyCount>=12)paths.push('三十個營業日內十二日');
+  return {official:!!stock.candidateReason,paths,firstStreak,anyStreak,tenCount,thirtyCount};
 }
 /** Officially attributed clauses 1–8 count; the exchange applies each clause's exemptions before publication. */
 export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notices']{
@@ -99,6 +99,9 @@ export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string)
   const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
   const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(!matches(date))break;count++;}return count;};
   return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(date=>rollingByDate.has(date)).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(date=>rollingByDate.has(date)).length,limit:12}];
+}
+export function gateCountDisplay(value:number,limit:number){
+  return {value:Math.min(value,limit),excess:Math.max(0,value-limit)};
 }
 export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'targetDate'|'effectiveDate'|'forecastDates'|'calendar'>,horizon=3):RiskForecast|null{
   const future=(snapshot.forecastDates?.length?snapshot.forecastDates:[snapshot.targetDate,snapshot.effectiveDate]).slice(0,horizon);
