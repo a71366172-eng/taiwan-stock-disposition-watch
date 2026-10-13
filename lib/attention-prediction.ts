@@ -40,7 +40,7 @@ export function priceSummary(prices:number[],reference:number){
 }
 export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'calendar'>,simulation:Simulation):AttentionRow[]{
  const otc=stock.market==='TPEX',bars=stock.bars.filter(b=>b.date<=snapshot.asOf).sort((a,b)=>a.date.localeCompare(b.date)),dates=snapshot.calendar.filter(d=>d<=snapshot.asOf);
- const tail=(n:number)=>{const b=bars.slice(-n);return b.length===n&&b.every((x,i)=>x.date===dates.slice(-n)[i]&&!x.note)?b:null;};
+ const tail=(n:number)=>{const b=bars.slice(-n);return b.length===n&&b.every((x,i)=>x.date===dates.slice(-n)[i]&&(!x.note||x.note==='官方當日行情補齊'))?b:null;};
  const five=tail(5),sum=five?cumulativeReturn(five):null,prices=legalPrices(simulation.reference);
  const six=(p:number)=>sum!+Math.trunc((p/simulation.reference-1)*10000+Math.sign(p-simulation.reference)*1e-8)/100;
  const shared=sum===null?[]:prices.filter(p=>Math.abs(six(p))>(otc?27:25));

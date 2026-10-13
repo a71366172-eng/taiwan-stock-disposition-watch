@@ -33,6 +33,13 @@ test('all 14 clauses are visible and missing data is not no risk',()=>{const r=p
 test('volume floor includes tomorrow volume in 60-day denominator',()=>{assert.match(predict()[8].summary,/49,000/);});
 test('recent clause 3 exempts 9 and recent clause 4 exempts 10',()=>{const s={...stock,notices:[{code:'TEST',name:'test',date:context.asOf,rules:[3,4],reason:'',close:100,pe:60}]};assert.equal(predict(s)[8].status,'exempt');assert.equal(predict(s)[9].status,'exempt');});
 test('a missing session disables price projection',()=>{const s={...stock,bars:stock.bars.filter(b=>b.date!==calendar.at(-2))};assert.equal(predict(s)[2].status,'missing');});
+test('official close-only daily supplement remains valid for next-session forecasts',()=>{
+ const bars=stock.bars.map((bar,index)=>index===stock.bars.length-1?{...bar,open:null,high:null,low:null,note:'官方當日行情補齊'}:bar);
+ const supplemented={...stock,bars};
+ assert.equal(simulate(supplemented,context).rules[0].status,simulate(stock,context).rules[0].status);
+ assert.equal(predict(supplemented)[1].status,predict(stock)[1].status);
+ assert.equal(predict({...stock,bars:bars.map((bar,index)=>index===bars.length-1?{...bar,note:'**'}:bar)})[1].status,'missing');
+});
 test('90-session bars enable the long-window clause checks; short history stays unknown',()=>{assert.notEqual(predict()[1].status,'missing');const short={...stock,bars:stock.bars.slice(-31)};assert.equal(predict(short)[1].status,'missing');});
 test('TPEx first clause uses 30 percent instead of TWSE 32 percent',()=>{const s={...stock,bars:stock.bars.map((b,i)=>i>=85?{...b,close:104.2,reference:100}:b)};const a=simulate(s,context).rules[0],b=simulate({...s,market:'TPEX'},context).rules[0];assert.equal(a.intervals.length,0);assert.ok(b.intervals.length>0);});
 test('TPEx sixth-clause volume uses 2000 lots and small-cap exception',()=>{assert.equal(sixthClauseMinimumShares(10000000,'TPEX',100000000),2000000);assert.equal(sixthClauseMinimumShares(5000000,'TPEX',50000000),250000);});

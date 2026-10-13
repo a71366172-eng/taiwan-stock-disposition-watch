@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from jobs import collect_market
-from jobs.collect_market import merge_disposition_history, merge_history_bars, validate_publication
+from jobs.collect_market import merge_disposition_history, merge_history_bars, twse_close_rows, validate_publication
 
 
 class PublicationGuardTests(unittest.TestCase):
@@ -28,6 +28,14 @@ class PublicationGuardTests(unittest.TestCase):
         completed = merge_history_bars(previous, [{'date': '2026-10-13', 'close': 113}], '2026-10-13')
         self.assertEqual(len(completed), 13)
         self.assertEqual(completed[-1]['close'], 113)
+
+    def test_dated_twse_close_table_recovers_fresh_signed_quote(self):
+        payload = {'stat': 'OK', 'date': '20261013', 'tables': [{
+            'fields': ['證券代號', '證券名稱', '成交股數', '收盤價', '漲跌(+/-)', '漲跌價差'],
+            'data': [['2330', '台積電', '40,796,261', '2,490.00', '<p>-</p>', '50.00']]}]}
+        self.assertEqual(twse_close_rows(payload), [{
+            'Date': '2026-10-13', 'Code': '2330', 'Name': '台積電',
+            'ClosingPrice': 2490.0, 'Change': -50.0, 'TradeVolume': 40796261.0}])
 
     def test_failed_source_cannot_replace_good_snapshot(self):
         broken = copy.deepcopy(self.snapshot)

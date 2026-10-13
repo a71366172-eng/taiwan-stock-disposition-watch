@@ -344,6 +344,24 @@ def number(v):
     try: return float(str(v).replace(',', '').replace('+', '').strip())
     except (ValueError, TypeError): return None
 
+def twse_close_rows(payload: dict) -> list[dict]:
+    """Normalize the dated TWSE closing table when STOCK_DAY_ALL lags after close."""
+    date=iso(payload.get('date')) if isinstance(payload,dict) else None
+    if not date or payload.get('stat')!='OK': return []
+    table=next((table for table in payload.get('tables',[]) if {'證券代號','收盤價','漲跌價差','成交股數'}<=set(table.get('fields',[]))),None)
+    if not table: return []
+    field={name:i for i,name in enumerate(table['fields'])}
+    rows=[]
+    for row in table.get('data',[]):
+        if len(row)<len(field): continue
+        code=str(row[field['證券代號']]).strip()
+        close=number(row[field['收盤價']]); movement=number(row[field['漲跌價差']])
+        if not code or close is None: continue
+        sign=strip(row[field['漲跌(+/-)']]) if '漲跌(+/-)' in field else ''
+        change=(-movement if '-' in sign else movement) if movement is not None else None
+        rows.append({'Date':date,'Code':code,'Name':strip(row[field['證券名稱']]),'ClosingPrice':close,'Change':change,'TradeVolume':number(row[field['成交股數']])})
+    return rows
+
 def pe_is_nonpositive(raw) -> bool:
     """TWSE/TPEx omit PE when reference EPS is zero or negative."""
     value=number(raw)
@@ -654,6 +672,16 @@ def main():
     tpex_dates=sorted({iso(x.get('Date')) for x in tpex_quotes if iso(x.get('Date'))})
     if not twse_dates or not tpex_dates:
         raise ValueError(f'Market quote dates unavailable: TWSE={twse_dates[-1:]}, TPEX={tpex_dates[-1:]}')
+    if twse_dates[-1]<tpex_dates[-1]:
+        day=tpex_dates[-1].replace('-','')
+        url=f'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={day}&type=ALLBUT0999'
+        dated_quotes=twse_close_rows(get(url,False) or {})
+        if len({row['Code'] for row in dated_quotes if is_common(row['Code'])})>=len({row['Code'] for row in quotes if is_common(str(row.get('Code','')))})*.8:
+            quotes=dated_quotes
+            twse_dates=[tpex_dates[-1]]
+            print(f'TWSE dated closing table supplied {len(dated_quotes)} quotes for {twse_dates[-1]}')
+        else:
+            raise ValueError(f'TWSE complete {tpex_dates[-1]} close unavailable; latest STOCK_DAY_ALL is {twse_dates[-1]}')
     # The two official daily quote feeds can publish at different times. Anchor
     # the whole snapshot to the newest feed date, then recover any lagging
     # market's prices from its official per-stock daily history endpoint below.

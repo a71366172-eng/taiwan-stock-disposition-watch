@@ -136,7 +136,7 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
   const scenario=validateScenario(raw), reference=scenario.referencePrice??stock.close;
   if(!positive(reference))throw new Error('缺少有效收盤或參考價格');
   const prices=legalPrices(reference),bars=stock.bars.filter(b=>b.date<=snapshot.asOf),lastFive=bars.slice(-5),dates=snapshot.calendar.filter(d=>d<=snapshot.asOf);
-  const historyOkay=lastFive.length===5&&lastFive.every(b=>positive(b.close)&&positive(b.reference)&&!b.note)&&lastFive.every((b,i)=>b.date===dates.slice(-5)[i]);
+  const historyOkay=lastFive.length===5&&lastFive.every(b=>positive(b.close)&&positive(b.reference)&&(!b.note||b.note==='官方當日行情補齊'))&&lastFive.every((b,i)=>b.date===dates.slice(-5)[i]);
   const historicalSum=historyOkay?cumulativeQ(lastFive):q(0);
   const six=(p:number)=>historicalSum.add(money(p).div(money(reference)).sub(q(1)).mul(q(100)).trunc2());
   const peExemption=stock.market==='TPEX'?65:60;
