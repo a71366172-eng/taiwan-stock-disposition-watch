@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from jobs import collect_market
-from jobs.collect_market import merge_disposition_history, merge_history_bars, twse_close_rows, validate_publication
+from jobs.collect_market import fill_quote_from_bar, merge_disposition_history, merge_history_bars, twse_close_rows, validate_publication
 
 
 class PublicationGuardTests(unittest.TestCase):
@@ -36,6 +36,11 @@ class PublicationGuardTests(unittest.TestCase):
         self.assertEqual(twse_close_rows(payload), [{
             'Date': '2026-10-13', 'Code': '2330', 'Name': '台積電',
             'ClosingPrice': 2490.0, 'Change': -50.0, 'TradeVolume': 40796261.0}])
+
+    def test_current_official_bar_overrides_stale_bulk_quote(self):
+        bar={'close':2490,'reference':2540,'volume':40796261}
+        self.assertEqual(fill_quote_from_bar(bar,2540,-10,1000000,True),(2490,-50,40796261))
+        self.assertEqual(fill_quote_from_bar(bar,2490,-50,40796261),(2490,-50,40796261))
 
     def test_failed_source_cannot_replace_good_snapshot(self):
         broken = copy.deepcopy(self.snapshot)

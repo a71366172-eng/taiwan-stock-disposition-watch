@@ -37,17 +37,16 @@ export function attentionLegalDetails(stock:Stock,rule:number):LegalDetail[]{
  const premium:LegalDetail[]=[
   {effect:'不適用本款',text:'若適用溢折價規定，前一營業日溢折價未超過 10%，或溢折方向與本款漲跌方向相反，整款不適用；目前缺該官方欄位，尚未自動判定。'},
  ];
- const uncommon:LegalDetail[]=[
-  {effect:'不適用本款',text:'法定排除的非普通股、權證等商品不適用；普通股不能因這一項豁免。'},
- ];
+ const clause2Products:LegalDetail={effect:'不適用本款',text:'非分離型附認股權公司債、非分離型附認股權特別股、認購（售）權證與認股權憑證不適用；不能擴張成所有非普通股或 ETF 均排除。'};
+ const volumeProducts:LegalDetail={effect:'不適用本款',text:`${otc?'轉換／交換公司債、股款繳納憑證、':'轉換公司債、'}附認股權公司債／特別股、債券換股權利證書、權證、ETF 與指數投資證券等法定商品不適用；一般普通股仍須判斷。`};
  switch(rule){
   case 1:return [...shared,{effect:'不適用本款',text:'普通股當日收盤價未滿 5 元，不適用第一款。'},...sector,...smallCap,...premium,{effect:'須核對',text:'權證另有無成交、當日零漲跌或方向相反的排除；本頁普通股不套用。'}];
-  case 2:return [...shared,...uncommon,
+  case 2:return [...shared,clause2Products,
    {effect:'不適用本款',text:`近 30 營業日曾公告第一款，且本次六日漲跌幅未超過 ${otc?27:25}%、「超過但與全市場及同類差幅均未達 ${otc?15:20} 個百分點」，或與本款長期漲跌方向相反，任一成立即排除第二款；可計算部分已從候選價格剔除。`},
    {effect:'不適用本款',text:'近 60 營業日最近一次處置「原因僅第二款」時，六日漲跌幅未超過 10%、超過但兩項差幅均未達 5 個百分點，或方向相反，任一成立即排除；處置原因仍須人工核對。'},...sector,...smallCap,...premium];
-  case 3:return [...shared,...uncommon,
+  case 3:return [...shared,volumeProducts,
    {effect:'不適用本款',text:`當日週轉率未達 ${otc?'1%':'0.1%'}，或成交量未達 ${otc?'300':'500'} 張，任一成立即排除；下個交易日的量尚未發生。${otc?'實收資本額未達 8,000 萬元者，法定成交量排除門檻不適用。':''}`},...sector,...smallCap,...premium];
-  case 4:return [...shared,...uncommon,...sector,...smallCap,...premium];
+  case 4:return [...shared,volumeProducts,...sector,...smallCap,...premium];
   case 5:return [...shared,
    {effect:'不適用本款',text:'法定排除的公司債與換股權利證書不適用；權證不是本款的通用豁免。'},...sector,...smallCap,...premium];
   case 6:return [

@@ -27,6 +27,8 @@ test('legal explanations distinguish full exclusions from omitted sector compari
  assert.ok(first.some(item=>item.effect==='不適用本款'&&item.text.includes('未滿 5 元')));
  assert.ok(first.some(item=>item.effect==='免同類比較'&&item.text.includes('仍須符合')));
  for(let rule=1;rule<=8;rule++)assert.ok(attentionLegalDetails(stock,rule).length>0,`rule ${rule}`);
+ assert.ok(attentionLegalDetails(stock,2).some(item=>item.text.includes('不能擴張成所有非普通股')));
+ assert.ok(attentionLegalDetails(stock,3).some(item=>item.text.includes('ETF')));
  assert.ok(attentionLegalDetails({...stock,market:'TPEX'},6).some(item=>item.effect==='免市場與同類比較'));
 });
 test('all 14 clauses are visible and missing data is not no risk',()=>{const r=predict();assert.equal(r.length,14);assert.equal(r[11].status,'missing');assert.equal(r[12].status,'missing');assert.equal(r[7].status,'exempt');assert.equal(r[13].status,'manual');});

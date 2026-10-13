@@ -553,9 +553,14 @@ def roc_date(value: str):
     date=dt.date.fromisoformat(value)
     return f'{date.year-1911:03d}/{date.month:02d}/{date.day:02d}'
 
-def fill_quote_from_bar(bar, close, change, volume):
+def fill_quote_from_bar(bar, close, change, volume, prefer_bar=False):
     if not bar: return close,change,volume
-    close=bar.get('close') if close is None else close
+    if prefer_bar and bar.get('close') is not None:
+        close=bar['close']
+        change=None
+        volume=None
+    else:
+        close=bar.get('close') if close is None else close
     reference=bar.get('reference')
     if change is None and close is not None and reference is not None: change=close-reference
     volume=bar.get('volume') if volume is None else volume
@@ -678,7 +683,7 @@ def main():
         dated_quotes=twse_close_rows(get(url,False) or {})
         common_code=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',str(code)))
         if len({row['Code'] for row in dated_quotes if common_code(row['Code'])})>=len({row['Code'] for row in quotes if common_code(row.get('Code',''))})*.8:
-            quotes=dated_quotes
+            quotes=list({**{row['Code']:row for row in quotes},**{row['Code']:row for row in dated_quotes}}.values())
             twse_dates=[tpex_dates[-1]]
             print(f'TWSE dated closing table supplied {len(dated_quotes)} quotes for {twse_dates[-1]}')
         else:
@@ -931,7 +936,7 @@ def main():
         close=number(q.get('ClosingPrice')) if q else None
         change=number(q.get('Change')) if q else None
         volume=number(q.get('TradeVolume')) if q else None
-        close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume)
+        close,change,volume=fill_quote_from_bar(as_of_bar,close,change,volume,iso(q.get('Date'))!=as_of)
         valuation_date=iso(f.get('Date'))
         if valuation_date is None and latest.get('date')==as_of and latest.get('pe') is not None: valuation_date=as_of
         return {'code':code,'name':q.get('Name') or company.get(code,{}).get('公司簡稱') or latest.get('name',code),'market':'TWSE','quoteDate':iso(q.get('Date')) if q else (as_of_bar['date'] if as_of_bar else None),'industry':industry_name(company.get(code,{}).get('產業別','')),'close':close,'change':change,'changePercent':change/(close-change)*100 if close and change is not None and close!=change else None,'volume':volume,'issuedShares':issued_shares(company.get(code,{})),'pe':pe,'peNegative':bool(f and (f.get('PENonPositive') or pe_is_nonpositive(f.get('PEratio')))),'pb':pb,'valuationDate':valuation_date if pe is not None or pb is not None else None,'bars':bars,'notices':stock_notices,'noticeHistoryComplete':code in twse_history_complete,'candidateReason':candidates.get(code),'dispositions':[d for d in dispositions if d['code']==code]}
