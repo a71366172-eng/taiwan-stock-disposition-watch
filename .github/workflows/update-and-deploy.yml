@@ -2,6 +2,12 @@ name: Update market data and deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_existing_snapshot:
+        description: Deploy the current verified snapshot without collecting new market data
+        required: false
+        type: boolean
+        default: false
   schedule:
     # GitHub Actions cron uses UTC. Taiwan (UTC+8): every four hours
     # at 00:00, 04:00, 08:00, 12:00, 16:00, and 20:00.
@@ -11,6 +17,7 @@ on:
   push:
     branches: [main]
     paths-ignore:
+      - '.github/workflows/**'
       - 'data/market.json'
       - 'data/verification.json'
       - 'data/futures-margins.json'
@@ -42,11 +49,12 @@ jobs:
       - name: Build personal industry groups
         run: python scripts/build_personal_groups.py
       - name: Collect official TWSE and TPEx data
+        if: github.event.inputs.deploy_existing_snapshot != 'true'
         env:
           HISTORY_BATCH_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && 'next' || '' }}
         run: python jobs/collect_market.py
       - name: Collect official stock-futures initial margins
-        if: github.event_name != 'push'
+        if: github.event_name != 'push' && github.event.inputs.deploy_existing_snapshot != 'true'
         run: python jobs/collect_futures_margins.py
       - name: Verify snapshot and rules
         run: |
@@ -54,6 +62,7 @@ jobs:
           node --experimental-strip-types --test tests/rules.test.ts tests/attention-prediction.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts tests/stock-comparison.test.ts tests/comparison-symbols.test.ts tests/position-ratio.test.ts tests/position-scenario.test.ts
           python -m unittest discover -s tests -p 'test_*.py'
       - name: Publish immutable snapshot to Supabase
+        if: github.event.inputs.deploy_existing_snapshot != 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -64,6 +73,7 @@ jobs:
           fi
           python scripts/publish_supabase.py data/market.json
       - name: Commit updated public snapshot
+        if: github.event.inputs.deploy_existing_snapshot != 'true'
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
