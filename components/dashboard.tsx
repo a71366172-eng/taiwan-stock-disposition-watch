@@ -5,7 +5,7 @@ import {Tabs,TabsList,TabsTrigger} from './ui/tabs';
 import {Button} from './ui/button';
 import {SiteShell} from './site-shell';
 import type {MarketSnapshot,RiskForecast,Simulation,Stock} from '../lib/market-types';
-import {attentionGateProgress,countableAttentionNotices,forecastDispositionRisk,simulate} from '../lib/rules';
+import {attentionGateProgress,countableAttentionNotices,forecastDispositionRisk,gateCountDisplay,simulate} from '../lib/rules';
 import {fmt,shortDate,ruleNames,displayIntervals} from '../lib/format';
 import {readFavorites,subscribeFavorites,parseFavorites,toggleFavorite} from '../lib/favorites';
 import {dispositionTier,dispositionTierLabel,type DispositionTier} from '../lib/disposition-tier';
@@ -113,7 +113,7 @@ function StockRow({stock:s,result:r,risk,saved,toggle,mode,asOf,tier,calendar}:{
  const guaranteed=risk?.days===1&&isGuaranteedDispositionNextSession(s,r);
  const gates=r?gateProgress(s,calendar,asOf):[];
  const historyReady=s.noticeHistoryComplete===true;
- const progress=<div className="gate-progress">{gates.map(gate=><div className="gate-progress-item" key={gate.label} aria-label={`${gate.label} ${historyReady?`${gate.value}/${gate.limit}`:gate.value?`至少已知 ${gate.value}/${gate.limit}，歷史補抓中`:'資料待補'}`}><span>{gate.label}</span><div><i style={{width:historyReady||gate.value?`${Math.min(100,gate.value/gate.limit*100)}%`:'0%'}}/></div><b>{historyReady?`${gate.value}/${gate.limit}`:gate.value?`≥${gate.value}/${gate.limit}`:'—'}</b></div>)}</div>;
+ const progress=<div className="gate-progress">{gates.map(gate=>{const tally=gateCountDisplay(gate.value,gate.limit),excess=tally.excess?`，實際累計 ${gate.value} 日`:'';return <div className="gate-progress-item" key={gate.label} aria-label={`${gate.label} ${historyReady?`${tally.value}/${gate.limit}${excess}`:gate.value?`至少已知 ${tally.value}/${gate.limit}${excess}，歷史補抓中`:'資料待補'}`}><span>{gate.label}</span><div><i style={{width:historyReady||gate.value?`${Math.min(100,gate.value/gate.limit*100)}%`:'0%'}}/></div><b title={excess.trim().replace(/^，/,'')||undefined}>{historyReady?`${tally.value}/${gate.limit}`:gate.value?`≥${tally.value}/${gate.limit}`:'—'}</b></div>})}</div>;
  const turnoverPct=s.volume!==null&&s.issuedShares!=null&&s.issuedShares>0?s.volume/s.issuedShares*100:null;
  const dayTradePct=s.volume!==null&&s.volume>0&&s.dayTradeShares!=null?s.dayTradeShares/s.volume*100:null;
  const metrics=<div className="stock-metrics-grid"><div><small>成交量</small><strong>{s.volume===null?'—':`${fmt(s.volume/1000,0)} 張`}</strong></div><div><small>股本</small><strong>{s.paidInCapital==null?'—':`${fmt(s.paidInCapital/100000000,2)} 億`}</strong></div><div><small>週轉率</small><strong>{turnoverPct===null?'—':`${fmt(turnoverPct,2)}%`}</strong></div><div><small>當沖率</small><strong>{dayTradePct===null?'—':`${fmt(dayTradePct,2)}%`}</strong></div></div>;
