@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.7';
+export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.8';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -62,8 +62,13 @@ function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b
 export function countGate(stock:Stock,calendar:string[],asOf:string){
   const dates=calendar.filter(d=>d<=asOf),rollingByDate=new Map<string,Set<number>>(),streakByDate=new Map<string,Set<number>>();
   const cycleNotices=attentionCycleNotices(stock,asOf);
+  // A published disposition consumes the preceding consecutive-day run.
+  // New notices during ordinary treatment start the next run immediately.
+  // Rolling windows remain separate; only committee exclusions affect those.
+  const consumedThrough=stock.dispositions.map(item=>item.announced).filter(date=>date&&date<=asOf).sort().at(-1);
   for(const n of cycleNotices){
     const rolling=rollingByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>rolling.add(r));rollingByDate.set(n.date,rolling);
+    if(consumedThrough&&n.date<=consumedThrough)continue;
     const streak=streakByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>streak.add(r));streakByDate.set(n.date,streak);
   }
   const first=(d:string)=>streakByDate.get(d)?.has(1)||false;
@@ -93,12 +98,8 @@ function isCommitteeDisposition(item:Stock['dispositions'][number]):boolean{
 }
 /** Progress uses the same rolling 10/30-session and consecutive-day windows as the disposition gates. */
 export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string){
-  const notices=attentionCycleNotices(stock,asOf),dates=calendar.filter(date=>date<=asOf),byDate=new Map<string,Set<number>>();
-  for(const notice of notices){const rules=byDate.get(notice.date)||new Set<number>();notice.rules.filter(rule=>rule>=1&&rule<=8).forEach(rule=>rules.add(rule));byDate.set(notice.date,rules);}
-  const rollingByDate=new Set(byDate.keys());
-  const first=(date:string)=>byDate.get(date)?.has(1)===true,any=(date:string)=>[...(byDate.get(date)||[])].length>0;
-  const streak=(matches:(date:string)=>boolean)=>{let count=0;for(const date of [...dates].reverse()){if(!matches(date))break;count++;}return count;};
-  return [{label:'連3日',value:streak(first),limit:3},{label:'連5日',value:streak(any),limit:5},{label:'10營業日',value:dates.slice(-10).filter(date=>rollingByDate.has(date)).length,limit:6},{label:'30營業日',value:dates.slice(-30).filter(date=>rollingByDate.has(date)).length,limit:12}];
+  const gate=countGate(stock,calendar,asOf);
+  return [{label:'連3日',value:gate.firstStreak,limit:3},{label:'連5日',value:gate.anyStreak,limit:5},{label:'10營業日',value:gate.tenCount,limit:6},{label:'30營業日',value:gate.thirtyCount,limit:12}];
 }
 export function gateCountDisplay(value:number,limit:number){
   return {value:Math.min(value,limit),excess:Math.max(0,value-limit)};

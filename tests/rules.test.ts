@@ -114,14 +114,42 @@ test('6538 follows its published clause 1-8 dates; no generic disposition reset 
  assert.ok(countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
  assert.equal(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')?.value,13);
 });
-test('2466 official repeat candidate keeps true counts while meter values stay within limits',()=>{
+test('2466 next consecutive cycle agrees with the official October 8-12 two-day candidate',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='2466') as Stock;
  const progress=attentionGateProgress(stock,snapshot.calendar,snapshot.asOf);
  assert.deepEqual(progress.map(item=>gateCountDisplay(item.value,item.limit)),[
-  {value:3,excess:2},{value:5,excess:1},{value:6,excess:0},{value:7,excess:0},
+  {value:2,excess:0},{value:2,excess:0},{value:6,excess:0},{value:7,excess:0},
  ]);
  assert.ok(stock.candidateReason,'the snapshot identifies this stock as an official candidate');
+ const calculated=forecastDispositionRisk({...stock,candidateReason:null},snapshot);
+ assert.equal(calculated?.days,1);
+ assert.ok(calculated?.paths.includes('第一款連續三日'));
+});
+
+test('6672 replays both published disposition boundaries without reusing the consumed streak',()=>{
+ const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
+ const stock={...snapshot.stocks.find((item:Stock)=>item.code==='6672'),candidateReason:null} as Stock;
+ for(const [date,expected] of [['2026-10-02',2],['2026-10-05',0],['2026-10-06',1],['2026-10-07',2],['2026-10-08',0],['2026-10-12',1]] as const){
+  const gate=countGate(stock,snapshot.calendar,date);
+  assert.equal(gate.firstStreak,expected,date);
+  assert.equal(gate.anyStreak,expected,date);
+  assert.equal(attentionGateProgress(stock,snapshot.calendar,date)[0].value,expected,date);
+ }
+ const forecast=forecastDispositionRisk(stock,{...snapshot,asOf:'2026-10-07',forecastDates:['2026-10-08','2026-10-12','2026-10-13']});
+ assert.equal(forecast?.date,'2026-10-08');
+ assert.ok(forecast?.paths.includes('第一款連續三日'));
+});
+
+test('a published disposition consumes both consecutive paths; future announcements do not',()=>{
+ const notices=calendar.slice(-5).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
+ const disposition={code:'TEST',name:'test',announced:context.asOf,start:context.targetDate,end:'2026-04-10',condition:'連續五次',measure:'第一次處置',content:''};
+ assert.equal(countGate({...base,notices},calendar,context.asOf).anyStreak,5);
+ assert.equal(countGate({...base,notices,dispositions:[disposition]},calendar,context.asOf).anyStreak,0);
+ assert.equal(countGate({...base,notices,dispositions:[{...disposition,announced:context.targetDate}]},calendar,context.asOf).anyStreak,5);
+ const newDates=[...calendar,context.targetDate];
+ const next={...base,notices:[...notices,{...notices[0],date:context.targetDate}],dispositions:[disposition]};
+ assert.equal(countGate(next,newDates,context.targetDate).anyStreak,1);
 });
 test('legal ticks cross 50 and 100 correctly; no float drift',()=>{
  const prices=legalPrices(50);assert.ok(prices.includes(49.95));assert.ok(prices.includes(50));assert.ok(prices.includes(50.1));assert.ok(!prices.includes(50.05));assert.equal(prices.at(-1),55);
@@ -160,18 +188,18 @@ test('daily returns truncate toward zero before summing, including negative frac
  assert.equal(cumulativeReturn([{...base.bars[0],close:101,reference:103}]),-1.94);
  assert.equal(cumulativeReturn([{...base.bars[0],close:104,reference:103},{...base.bars[0],close:102,reference:103}]),0);
 });
-test('repeat disposition tier is shown only during an active treatment period',()=>{
+test('repeat disposition tier depends on recent announcements, including after release',()=>{
  const recent={...base,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-30)!,start:calendar.at(-2)!,end:context.asOf,condition:'',measure:'',content:''}]};
  const old={...recent,dispositions:[{...recent.dispositions[0],announced:calendar.at(-31)!}]};
  const exited={...recent,dispositions:[{...recent.dispositions[0],end:calendar.at(-2)!}]};
  assert.equal(dispositionTier(recent,calendar,context.asOf),'repeat');
  assert.equal(dispositionTier(old,calendar,context.asOf),'first');
- assert.equal(dispositionTier(exited,calendar,context.asOf),'first');
+ assert.equal(dispositionTier(exited,calendar,context.asOf),'repeat');
 });
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
  assert.equal(result.code,'5314');
- assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.7');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.8');
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);

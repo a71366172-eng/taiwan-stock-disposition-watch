@@ -2,10 +2,8 @@ import type {MarketSnapshot,Stock} from './market-types';
 
 export type DispositionTier='first'|'repeat';
 
-/** Estimate the next disposition tier only while the stock is currently under treatment. */
+/** Prior disposition announcements in the 30-session window determine the tier, even after release. */
 export function dispositionTier(stock:Stock,calendar:MarketSnapshot['calendar'],asOf:string):DispositionTier{
-  const currentlyDisposed=stock.dispositions.some(item=>Boolean(item.start&&item.end&&item.start<=asOf&&item.end>=asOf));
-  if(!currentlyDisposed)return 'first';
   const sessions=calendar.filter(date=>date<=asOf);
   const windowStart=sessions.at(-30);
   if(!windowStart)return 'first';
