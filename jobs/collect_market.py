@@ -676,7 +676,8 @@ def main():
         day=tpex_dates[-1].replace('-','')
         url=f'https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?response=json&date={day}&type=ALLBUT0999'
         dated_quotes=twse_close_rows(get(url,False) or {})
-        if len({row['Code'] for row in dated_quotes if is_common(row['Code'])})>=len({row['Code'] for row in quotes if is_common(str(row.get('Code','')))})*.8:
+        common_code=lambda code: bool(re.fullmatch(r'[1-9]\d{3}',str(code)))
+        if len({row['Code'] for row in dated_quotes if common_code(row['Code'])})>=len({row['Code'] for row in quotes if common_code(row.get('Code',''))})*.8:
             quotes=dated_quotes
             twse_dates=[tpex_dates[-1]]
             print(f'TWSE dated closing table supplied {len(dated_quotes)} quotes for {twse_dates[-1]}')
