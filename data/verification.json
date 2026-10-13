@@ -1,8 +1,8 @@
 {
-  "asOf": "2026-10-12",
+  "asOf": "2026-10-13",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 332,
-  "skipped": 161,
+  "compared": 334,
+  "skipped": 158,
   "failures": [],
   "checks": [
     {
@@ -307,6 +307,13 @@
       "pass": true
     },
     {
+      "code": "2424",
+      "date": "2026-10-13",
+      "announced": 35.16,
+      "calculated": 35.16,
+      "pass": true
+    },
+    {
       "code": "2426",
       "date": "2026-08-27",
       "announced": 37,
@@ -409,6 +416,13 @@
       "date": "2026-08-06",
       "announced": 38.51,
       "calculated": 38.51,
+      "pass": true
+    },
+    {
+      "code": "2466",
+      "date": "2026-10-13",
+      "announced": 54.28,
+      "calculated": 54.28,
       "pass": true
     },
     {
@@ -1476,13 +1490,6 @@
       "pass": true
     },
     {
-      "code": "6226",
-      "date": "2026-06-29",
-      "announced": 50.33,
-      "calculated": 50.33,
-      "pass": true
-    },
-    {
       "code": "6426",
       "date": "2026-09-23",
       "announced": 28.18,
@@ -2328,6 +2335,13 @@
       "announced": -25.22,
       "calculated": -25.22,
       "pass": true
+    },
+    {
+      "code": "9103",
+      "date": "2026-10-13",
+      "announced": 36.4,
+      "calculated": 36.4,
+      "pass": true
     }
   ],
   "candidates": [
@@ -2338,13 +2352,12 @@
         "official": true,
         "paths": [
           "第一款連續三日",
-          "連續五日",
           "十日內六日"
         ],
-        "firstStreak": 5,
-        "anyStreak": 6,
-        "nineCount": 6,
-        "twentyNineCount": 7
+        "firstStreak": 3,
+        "anyStreak": 3,
+        "tenCount": 7,
+        "thirtyCount": 8
       }
     },
     {
@@ -2355,29 +2368,15 @@
         "paths": [
           "連續五日"
         ],
-        "firstStreak": 0,
-        "anyStreak": 4,
-        "nineCount": 4,
-        "twentyNineCount": 7
+        "firstStreak": 1,
+        "anyStreak": 5,
+        "tenCount": 5,
+        "thirtyCount": 8
       }
     },
     {
-      "code": "3265",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "nineCount": 2,
-        "twentyNineCount": 2
-      }
-    },
-    {
-      "code": "3597",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
+      "code": "3564",
+      "officialReason": "115年10月12日至115年10月13日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [
@@ -2385,70 +2384,8 @@
         ],
         "firstStreak": 2,
         "anyStreak": 3,
-        "nineCount": 3,
-        "twentyNineCount": 3
-      }
-    },
-    {
-      "code": "4174",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日",
-          "連續五日",
-          "十日內六日"
-        ],
-        "firstStreak": 8,
-        "anyStreak": 8,
-        "nineCount": 8,
-        "twentyNineCount": 8
-      }
-    },
-    {
-      "code": "4760",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日",
-          "連續五日",
-          "十日內六日"
-        ],
-        "firstStreak": 5,
-        "anyStreak": 5,
-        "nineCount": 5,
-        "twentyNineCount": 5
-      }
-    },
-    {
-      "code": "5205",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日",
-          "連續五日",
-          "十日內六日"
-        ],
-        "firstStreak": 5,
-        "anyStreak": 5,
-        "nineCount": 5,
-        "twentyNineCount": 5
-      }
-    },
-    {
-      "code": "7772",
-      "officialReason": "115年10月08日至115年10月12日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "nineCount": 2,
-        "twentyNineCount": 9
+        "tenCount": 3,
+        "thirtyCount": 3
       }
     }
   ]
