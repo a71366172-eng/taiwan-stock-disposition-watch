@@ -3,7 +3,13 @@ export const stripHtml=(v:unknown)=>String(v??'').replace(/<[^>]*>/g,'').trim();
 export function toDate(v:unknown){const parts=String(v??'').match(/\d+/g);if(!parts)return null;let a=parts;if(parts.length===1&&[7,8].includes(parts[0].length)){const s=parts[0];a=[s.slice(0,-4),s.slice(-4,-2),s.slice(-2)];}if(a.length<3)return null;let y=Number(a[0]);if(y<1911)y+=1911;const m=Number(a[1]),d=Number(a[2]);if(m<1||m>12||d<1||d>31)return null;return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
 export function numeric(v:unknown):number|null{if(v===null||v===undefined||String(v).trim()==='')return null;const n=Number(String(v).replaceAll(',','').trim());return Number.isFinite(n)?n:null;}
 const cn:Record<string,number>={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14};
-export function parseNotice(r:unknown[]):Notice{return {code:String(r[1]),name:String(r[2]),date:toDate(r[5])||'',reason:stripHtml(r[4]),rules:[...new Set([...String(r[4]).matchAll(/第([一二三四五六七八九十]+)款/g)].map(m=>cn[m[1]]).filter(Boolean))],close:numeric(r[6]),pe:numeric(r[7])};}
+export function parseNotice(r:unknown[]):Notice{
+ const reason=stripHtml(r[4]),normalized=reason.normalize('NFKC');
+ const attributed=[...normalized.matchAll(/[（(\[〔]([^）)\]〕]*)[）)\]〕]/g)].flatMap(annotation=>[...annotation[1].matchAll(/第\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款/g)].map(match=>match[1]));
+ const fallback=attributed.length?[]:normalized.match(/^\s*第?\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款(?:注意交易資訊)?\s*$/)?.slice(1)||[];
+ const rules=[...new Set([...attributed,...fallback].map(value=>/^\d+$/.test(value)?Number(value):cn[value]).filter((value):value is number=>Boolean(value)))];
+ return {code:String(r[1]),name:String(r[2]),date:toDate(r[5])||'',reason,rules,close:numeric(r[6]),pe:numeric(r[7])};
+}
 type Row=Record<string,unknown>; type Report={stat:string;data:unknown[][];title?:string};
 async function fetchJson<T>(url:string):Promise<T>{const response=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('官方來源目前無法回應');const data=await response.json() as T;if(data&&typeof data==='object'&&'stat' in data&&(data as {stat:string}).stat!=='OK')throw new Error('官方來源尚未提供完整資料');return data;}
 const common=(s:string)=>/^[1-9]\d{3}$/.test(s);

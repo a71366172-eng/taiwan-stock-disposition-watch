@@ -23,7 +23,7 @@ test('one day with several reasons is counted once; ninth+one window excludes ol
  const notices=[10,9,8,7,6].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[1,6],close:100,pe:60}));
  const g=countGate({...base,notices},calendar,context.asOf);assert.equal(g.nineCount,4);assert.ok(!g.paths.includes('十日內六日'));
 });
-test('clause exemptions are applied per announced clause; another qualifying clause still makes the day count once',()=>{
+test('only officially attributed clauses 1-8 count; one qualifying clause still makes the day count once',()=>{
  const notices=[
   {code:'TEST',name:'test',date:calendar.at(-2)!,reason:'正式公告第一款及第二款',rules:[1,2],close:100,pe:60},
   {code:'TEST',name:'test',date:calendar.at(-1)!,reason:'正式公告第九款',rules:[9],close:100,pe:60},
@@ -31,6 +31,13 @@ test('clause exemptions are applied per announced clause; another qualifying cla
  const countable=countableAttentionNotices({...base,notices},context.asOf);
  assert.equal(countable.length,1);
  assert.deepEqual(countGate({...base,notices},calendar,context.asOf).twentyNineCount,1);
+});
+test('every officially published clause 1-8 counts once per day; clauses 9-14 never count',()=>{
+ for(let clause=1;clause<=14;clause++){
+  const notices=[{code:'TEST',name:'test',date:context.asOf,reason:`(第${clause}款)`,rules:[clause],close:100,pe:60}];
+  const result=countGate({...base,notices},calendar,context.asOf);
+  assert.equal(result.twentyNineCount,clause<=8?1:0,`clause ${clause}`);
+ }
 });
 test('ninth+one window qualifies at five existing days, unrelated rule13 does not count',()=>{
  const notices=[9,8,7,6,1].map(offset=>({code:'TEST',name:'test',date:calendar.at(-offset)!,reason:'',rules:[6],close:100,pe:60}));
@@ -131,7 +138,7 @@ test('repeat disposition tier is shown only during an active treatment period',(
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
  assert.equal(result.code,'5314');
- assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.5');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.6');
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);
@@ -170,6 +177,11 @@ test('today first-clause filter accepts only a clause 1 notice on the data date'
  assert.equal(isTodayFirstClauseNotice(today,context.asOf),true);
  assert.equal(isTodayFirstClauseNotice(yesterday,context.asOf),false);
  assert.equal(isTodayFirstClauseNotice(otherClause,context.asOf),false);
+});
+test('live TWSE notice parsing ignores clauses mentioned outside official attribution tags',async()=>{
+ const {parseNotice}=await import('../lib/live-refresh.ts');
+ const row=[null,'6538','倉和',null,'最近30個營業日曾依第四條第一項第一款公告；當日符合標準﹝第二款﹞', '115/10/12',303,60];
+ assert.deepEqual(parseNotice(row).rules,[2]);
 });
 test('TradingView links use the Taiwan chart route and the matching market symbol',()=>{
  assert.equal(tradingViewUrl('TWSE','2330'),'https://tw.tradingview.com/chart/?symbol=TWSE%3A2330');

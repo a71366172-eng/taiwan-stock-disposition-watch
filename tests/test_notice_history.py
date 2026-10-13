@@ -70,6 +70,13 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
     def test_clause_parser_handles_full_width_digits_and_spacing(self):
         self.assertEqual(notice_rules("最近注意交易資訊（第 ６ 款及第 1 款）"), [1, 6])
 
+    def test_clause_parser_does_not_count_clause_references_as_today_qualifying_clauses(self):
+        reason = "最近30個營業日曾依第四條第一項第一款公告；當日符合標準﹝第二款﹞"
+        self.assertEqual(notice_rules(reason), [2])
+
+    def test_clause_parser_accepts_a_bare_legacy_clause_reason(self):
+        self.assertEqual(notice_rules("第1款"), [1])
+
     def test_tpex_history_posts_roc_dates_to_official_query(self):
         payload = {
             "stat": "ok",
@@ -78,7 +85,7 @@ class TpexHistoricalNoticeTests(unittest.TestCase):
                 "data": [["115/09/18", "6538", "倉和", "第一款注意交易資訊"]],
             }],
         }
-        with TemporaryDirectory() as temp_dir:
+        with TemporaryDirectory(dir=Path(__file__).resolve().parents[1] / "work") as temp_dir:
             with patch.object(collect_market, "RAW", Path(temp_dir)), patch.object(
                 collect_market.urllib.request,
                 "urlopen",

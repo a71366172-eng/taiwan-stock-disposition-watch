@@ -543,9 +543,22 @@ def fill_quote_from_bar(bar, close, change, volume):
 CN={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12,'十三':13,'十四':14}
 def strip(v): return re.sub('<[^>]+>', '', str(v)).strip()
 def notice_rules(reason):
+    """Return only clauses explicitly attributed to this official notice.
+
+    Reasons can mention another clause while describing an exception (notably
+    clause 2 refers to a prior clause-1 notice). Such a reference is not a
+    second clause that qualified today. Official attribution is parenthesized;
+    retain a narrow fallback for short legacy reason strings.
+    """
     rules=set()
     normalized=unicodedata.normalize('NFKC',str(reason))
-    for value in re.findall(r'第\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款',normalized):
+    values=[]
+    for annotation in re.findall(r'[（(\[〔]([^）)\]〕]*)[）)\]〕]',normalized):
+        values.extend(re.findall(r'第\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款',annotation))
+    if not values:
+        short=re.fullmatch(r'\s*第?\s*([0-9]{1,2}|[一二三四五六七八九十]+)\s*款(?:注意交易資訊)?\s*',normalized)
+        values=[short.group(1)] if short else []
+    for value in values:
         rule=int(value) if value.isdigit() else CN.get(value)
         if rule is not None: rules.add(rule)
     return sorted(rules)
@@ -978,7 +991,7 @@ def main():
     forecast_dates=upcoming_sessions[:3]
     target=dt.date.fromisoformat(forecast_dates[0]); effective=dt.date.fromisoformat(forecast_dates[1])
     product_coverage={'stockFutures':futures_available,'warrants':warrants_available,'convertibleBonds':cb_available}
-    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'upcomingSessions':upcoming_sessions,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all {len(twse_symbols)} common stocks; full official attention feed; risk-stock price history prioritized','TPEX':f'all {len(tpex_symbols)} common stocks; full official attention feed; risk-stock price history prioritized'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.5','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
+    result={'schemaVersion':3,'asOf':as_of,'targetDate':target.isoformat(),'effectiveDate':effective.isoformat(),'forecastDates':forecast_dates,'upcomingSessions':upcoming_sessions,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'calendarVerified':bool(holidays),'classificationVerified':bool(company),'corporateActionsAvailable':exrights is not None,'calendar':calendar,'stocks':stocks,'todayNotices':today,'dispositions':dispositions,'sources':sources,'ingestionErrors':errors,'productCoverage':product_coverage,'coverage':{'TWSE':f'all {len(twse_symbols)} common stocks; full official attention feed; risk-stock price history prioritized','TPEX':f'all {len(tpex_symbols)} common stocks; full official attention feed; risk-stock price history prioritized'},'historyRefreshBatch':history_batch+1,'historyRefreshBatches':len(slots),'rulesVersion':'TW-MARKETS-2026-08-10-v0.6','predictionLabel':'三個交易日處置風險・官方隔日候選優先'}
     validate_publication(result,old_snapshot)
     dest=ROOT/'data'; dest.mkdir(exist_ok=True)
     raw=json.dumps(result,ensure_ascii=False,indent=2)
