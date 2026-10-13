@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from jobs import collect_market
-from jobs.collect_market import merge_disposition_history, validate_publication
+from jobs.collect_market import merge_disposition_history, merge_history_bars, validate_publication
 
 
 class PublicationGuardTests(unittest.TestCase):
@@ -20,6 +20,14 @@ class PublicationGuardTests(unittest.TestCase):
 
     def test_complete_snapshot_is_accepted(self):
         validate_publication(self.snapshot, copy.deepcopy(self.snapshot))
+
+    def test_pending_price_row_does_not_erase_valid_history(self):
+        previous = [{'date': f'2026-10-{day:02}', 'close': 100 + day} for day in range(1, 13)]
+        incoming = [{'date': '2026-10-12', 'close': None}, {'date': '2026-10-13', 'close': None}]
+        self.assertEqual(merge_history_bars(previous, incoming, '2026-10-13'), previous)
+        completed = merge_history_bars(previous, [{'date': '2026-10-13', 'close': 113}], '2026-10-13')
+        self.assertEqual(len(completed), 13)
+        self.assertEqual(completed[-1]['close'], 113)
 
     def test_failed_source_cannot_replace_good_snapshot(self):
         broken = copy.deepcopy(self.snapshot)

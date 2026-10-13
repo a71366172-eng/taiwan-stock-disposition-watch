@@ -90,7 +90,10 @@ def history_months_to_fetch(old_bars: list[dict], months: list[str], enabled: bo
 def merge_history_bars(old_bars: list[dict], new_bars: list[dict], as_of: str) -> list[dict]:
     """Keep prior sessions and let freshly fetched official rows replace corrections."""
     merged={str(bar.get('date')):bar for bar in old_bars if bar.get('date') and bar.get('date')<=as_of}
-    merged.update({str(bar.get('date')):bar for bar in new_bars if bar.get('date') and bar.get('date')<=as_of})
+    # The daily-history feeds sometimes publish a row before its closing price
+    # is populated. Such a row must not erase an older valid close or consume
+    # one of the 91 retained price sessions.
+    merged.update({str(bar.get('date')):bar for bar in new_bars if bar.get('date') and bar.get('date')<=as_of and bar.get('close') is not None})
     return sorted(merged.values(),key=lambda bar:bar['date'])
 
 def validate_publication(snapshot: dict, previous: dict):
@@ -881,11 +884,11 @@ def main():
             time.sleep(.3)
         bars=merge_history_bars(old_stock_bars,bars,as_of)
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
-        if not as_of_bar and iso(q.get('Date'))==as_of:
+        if (not as_of_bar or as_of_bar['close'] is None) and iso(q.get('Date'))==as_of:
             quote_close=number(q.get('ClosingPrice')); quote_change=number(q.get('Change'))
             if quote_close is not None:
                 as_of_bar={'date':as_of,'open':None,'high':None,'low':None,'close':quote_close,'reference':quote_close-quote_change if quote_change is not None else None,'volume':number(q.get('TradeVolume')),'note':'官方當日行情補齊'}
-                bars.append(as_of_bar)
+                bars=merge_history_bars(bars,[as_of_bar],as_of)
         if code in candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TWSE daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
@@ -920,11 +923,11 @@ def main():
             time.sleep(.2)
         bars=merge_history_bars(old_stock_bars,bars,as_of)
         as_of_bar=next((b for b in reversed(bars) if b['date']==as_of),None)
-        if not as_of_bar and iso(q.get('Date'))==as_of:
+        if (not as_of_bar or as_of_bar['close'] is None) and iso(q.get('Date'))==as_of:
             quote_close=number(q.get('Close')); quote_change=number(q.get('Change'))
             if quote_close is not None:
                 as_of_bar={'date':as_of,'open':None,'high':None,'low':None,'close':quote_close,'reference':quote_close-quote_change if quote_change is not None else None,'volume':number(q.get('TradingShares')),'note':'官方當日行情補齊'}
-                bars.append(as_of_bar)
+                bars=merge_history_bars(bars,[as_of_bar],as_of)
         if code in tpex_candidates and (not as_of_bar or as_of_bar['close'] is None):
             raise ValueError(f'Missing official TPEx daily history for candidate {code} on {as_of}')
         stock_notices=sorted([n for n in all_notices if n['code']==code],key=lambda n:n['date'],reverse=True)
@@ -959,7 +962,10 @@ def main():
     # quiet stocks remain available for screening and future risk transitions.
     for stock in stocks:
         stock['noticeHistoryComplete']=True
-    for stock in stocks: stock['bars']=stock['bars'][-HISTORY_SESSIONS:]
+    for stock in stocks:
+        # Keep the most recent valid closing-price sessions. An incomplete
+        # same-day history row is not a trading-price observation.
+        stock['bars']=[bar for bar in stock['bars'] if bar.get('close') is not None][-HISTORY_SESSIONS:]
     for stock in stocks:
         company_row=(company if stock['market']=='TWSE' else tpex_company).get(stock['code'],{})
         stock['paidInCapital']=number(company_row.get('實收資本額'))
