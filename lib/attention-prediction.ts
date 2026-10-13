@@ -35,7 +35,7 @@ export function priceSummary(prices:number[],reference:number){
  if(!prices.length)return '超出漲跌停價';
  const all=legalPrices(reference),groups:number[][]=[];
  for(const p of prices){const last=groups.at(-1);if(last&&all.indexOf(p)===all.indexOf(last.at(-1)!)+1)last.push(p);else groups.push([p]);}
- return groups.map(g=>g.length===all.length?'漲跌停範圍內皆符合價格條件':g[0]===all[0]?`收盤 ≤ ${fmt(g.at(-1)!)} 元`:g.at(-1)===all.at(-1)?`收盤 ≥ ${fmt(g[0])} 元`:g.length===1?`收盤 = ${fmt(g[0])} 元`:`收盤 ≥ ${fmt(g[0])} 且 ≤ ${fmt(g.at(-1)!)} 元`).join('；或 ');
+ return groups.map(g=>g.length===all.length?`收盤 ${fmt(all[0])}～${fmt(all.at(-1)!)} 元`:g[0]===all[0]?`收盤 ≤ ${fmt(g.at(-1)!)} 元`:g.at(-1)===all.at(-1)?`收盤 ≥ ${fmt(g[0])} 元`:g.length===1?`收盤 = ${fmt(g[0])} 元`:`收盤 ≥ ${fmt(g[0])} 且 ≤ ${fmt(g.at(-1)!)} 元`).join('；或 ');
 }
 export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'calendar'>,simulation:Simulation):AttentionRow[]{
  const otc=stock.market==='TPEX',bars=stock.bars.filter(b=>b.date<=snapshot.asOf).sort((a,b)=>a.date.localeCompare(b.date)),dates=snapshot.calendar.filter(d=>d<=snapshot.asOf);

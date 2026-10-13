@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {attentionPrediction,attentionQuickSummary,priceSummary} from '../lib/attention-prediction.ts';
-import {simulate,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {legalPrices,simulate,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
 const stock:Stock={code:'TEST',name:'test',market:'TWSE',industry:'',close:100,change:0,changePercent:0,volume:1000000,issuedShares:100000000,paidInCapital:1000000000,pe:60,pb:12,valuationDate:calendar.at(-1)!,bars:calendar.map(date=>({date,open:100,high:100,low:100,close:100,reference:100,volume:1000000,note:''})),notices:[],candidateReason:null,dispositions:[]};
@@ -15,6 +15,10 @@ test('90-session bars enable the long-window clause checks; short history stays 
 test('TPEx first clause uses 30 percent instead of TWSE 32 percent',()=>{const s={...stock,bars:stock.bars.map((b,i)=>i>=85?{...b,close:104.2,reference:100}:b)};const a=simulate(s,context).rules[0],b=simulate({...s,market:'TPEX'},context).rules[0];assert.equal(a.intervals.length,0);assert.ok(b.intervals.length>0);});
 test('TPEx sixth-clause volume uses 2000 lots and small-cap exception',()=>{assert.equal(sixthClauseMinimumShares(10000000,'TPEX',100000000),2000000);assert.equal(sixthClauseMinimumShares(5000000,'TPEX',50000000),250000);});
 test('price labels use directional inequalities and outside-limits status',()=>{assert.equal(priceSummary([],100),'超出漲跌停價');assert.match(priceSummary([109,109.5,110],100),/≥ 109/);});
+test('when every legal price qualifies, the quick summary names the actual price range',()=>{
+ const prices=legalPrices(100);
+ assert.equal(priceSummary(prices,100),'收盤 90～110 元');
+});
 test('quick forecast summary shows only the easiest clause 2–8 threshold',()=>{const rows=predict();rows[0].status='outside';rows[0].summary='不會觸發';rows[0].checks=Array.from({length:4},(_,i)=>({label:`A${i}`,value:'',progress:0,state:'safe' as const}));rows[2].status='partial';rows[2].summary='收盤 ≥ 101 元；且量 ≥ 1,091.023 張（基本門檻）';rows[2].ease=5;rows[3].status='partial';rows[3].summary='收盤 ≥ 101 元；且量 ≥ 5,455.112 張（基本門檻）';rows[3].ease=1;rows[5].status='partial';rows[5].summary='漲跌停範圍內皆符合價格條件；且成交量 ≥ 7,284 張';rows[5].ease=3;const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'無風險');assert.equal(quick[0].summary,'不會觸發');assert.equal(quick[1].badge,'可能觸發');assert.equal(quick[1].summary,'收盤 ≥ 101 元；且量 ≥ 5,455.112 張');});
 test('confirmed clause 1 quick summary keeps the price and achieved threshold',()=>{const rows=predict();rows[0].status='partial';rows[0].conditionSummary='收盤 ≤ 13.50 元';rows[0].checks=[{label:'累積漲跌幅',value:'49% / 30%',progress:1.63,state:'triggered'}];const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'必觸發');assert.equal(quick[0].summary,'收盤 ≤ 13.50 元（49% > 30%）');});
 test('quick forecast summary labels incomplete rules as insufficient data',()=>{const rows=predict();rows[0].status='missing';rows[0].checks=[{label:'A',value:'',progress:null,state:'unknown'}];for(const row of rows.filter(row=>row.rule>=2&&row.rule<=8))if(row.status==='partial')row.status='missing';const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'資料不足');assert.equal(quick[1].badge,'資料不足');});
