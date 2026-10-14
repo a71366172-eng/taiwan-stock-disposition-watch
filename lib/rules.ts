@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TW-MARKETS-2026-10-14-v0.9';
+export const RULESET_VERSION='TW-MARKETS-2026-10-14-v0.10';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -62,8 +62,8 @@ function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b
 export function countGate(stock:Stock,calendar:string[],asOf:string){
   const dates=calendar.filter(d=>d<=asOf),rollingByDate=new Map<string,Set<number>>(),streakByDate=new Map<string,Set<number>>();
   const rollingNotices=rollingAttentionNotices(stock,asOf),cycleNotices=attentionCycleNotices(stock,asOf);
-  // Rolling 10/30-session counts keep ordinary published notices. Only the
-  // consecutive paths consume their run at a disposition announcement.
+  // Every gate starts a new count after the latest published disposition.
+  // The 10/30-session gates remain rolling windows within that new cycle.
   for(const n of rollingNotices){
     const rolling=rollingByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>rolling.add(r));rollingByDate.set(n.date,rolling);
   }
@@ -83,23 +83,27 @@ export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notice
   return stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
 export function rollingAttentionNotices(stock:Stock,asOf:string){
-  const excludedThrough=stock.dispositions
+  const latestDisposition=stock.dispositions
+    .filter(item=>item.announced&&item.announced<=asOf)
+    .sort((a,b)=>a.announced.localeCompare(b.announced))
+    .at(-1);
+  const committeeExcludedThrough=stock.dispositions
     .filter(item=>item.announced<=asOf&&isCommitteeDisposition(item))
     .map(item=>item.end||item.start||item.announced)
     .filter((date):date is string=>!!date)
     .sort()
     .at(-1);
-  return countableAttentionNotices(stock,asOf).filter(notice=>!excludedThrough||notice.date>excludedThrough);
+  const resetThrough=[latestDisposition?.announced,committeeExcludedThrough].filter((date):date is string=>!!date).sort().at(-1);
+  return countableAttentionNotices(stock,asOf).filter(notice=>!resetThrough||notice.date>resetThrough);
 }
 export function attentionCycleNotices(stock:Stock,asOf:string){
-  const consumedThrough=stock.dispositions.map(item=>item.announced).filter(date=>date&&date<=asOf).sort().at(-1);
-  return rollingAttentionNotices(stock,asOf).filter(notice=>!consumedThrough||notice.date>consumedThrough);
+  return rollingAttentionNotices(stock,asOf);
 }
-/** Article 6(7): only committee-decided dispositions may exclude pre-treatment and in-treatment notice dates. */
+/** Article 6(7): committee-decided dispositions may exclude notices through their treatment end. */
 function isCommitteeDisposition(item:Stock['dispositions'][number]):boolean{
   return /監視業務督導會報|共同責任制(?:交割結算基金特別管理委員會|給付結算基金管理委員會)/.test(item.content);
 }
-/** Progress uses the same rolling 10/30-session and consecutive-day windows as the disposition gates. */
+/** All four progress bars restart after the latest disposition; 10/30 counts then roll within the new cycle. */
 export function attentionGateProgress(stock:Stock,calendar:string[],asOf:string){
   const gate=countGate(stock,calendar,asOf);
   return [{label:'連3日',value:gate.firstStreak,limit:3},{label:'連5日',value:gate.anyStreak,limit:5},{label:'10營業日',value:gate.tenCount,limit:6},{label:'30營業日',value:gate.thirtyCount,limit:12}];
