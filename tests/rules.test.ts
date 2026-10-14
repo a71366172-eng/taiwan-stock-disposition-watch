@@ -119,7 +119,7 @@ test('6538 rolling progress keeps prior ordinary notices and requires next-sessi
  assert.equal(forecast?.date,'2026-10-15','without an official candidate, a fresh candidate and next-session notice are both required');
  assert.ok(forecast?.paths.includes('三十個營業日內十二日'));
 });
-test('2466 next consecutive cycle agrees with the official October 8-12 two-day candidate',()=>{
+test('2466 historical October 12 forecast uses that date rather than the snapshot current candidate state',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='2466') as Stock;
  const observationDate='2026-10-12';
@@ -127,7 +127,8 @@ test('2466 next consecutive cycle agrees with the official October 8-12 two-day 
  assert.deepEqual(progress.map(item=>gateCountDisplay(item.value,item.limit)),[
   {value:2,excess:0},{value:2,excess:0},{value:6,excess:0},{value:7,excess:0},
  ]);
- assert.ok(stock.candidateReason,'the snapshot identifies this stock as an official candidate');
+ // candidateReason is only the snapshot's current status (October 13 here),
+ // so the October 12 replay must use historical notice rows instead.
  const calculated=forecastDispositionRisk({...stock,candidateReason:null},{...snapshot,asOf:observationDate,forecastDates:['2026-10-13','2026-10-14','2026-10-15']});
  assert.equal(calculated?.days,1);
  assert.ok(calculated?.paths.includes('第一款連續三日'));
