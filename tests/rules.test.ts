@@ -252,8 +252,8 @@ test('live TWSE notice parsing ignores clauses mentioned outside official attrib
  assert.deepEqual(parseNotice(row).rules,[2]);
 });
 test('TradingView links use the Taiwan chart route and the matching market symbol',()=>{
- assert.equal(tradingViewUrl('TWSE','2330'),'https://tw.tradingview.com/chart/?symbol=TWSE%3A2330');
- assert.equal(tradingViewUrl('TPEX','8069'),'https://tw.tradingview.com/chart/?symbol=TPEX%3A8069');
+ assert.equal(tradingViewUrl('TWSE','2330'),'https://tw.tradingview.com/chart/?symbol=TWSE%3A2330&interval=1D');
+ assert.equal(tradingViewUrl('TPEX','8069'),'https://tw.tradingview.com/chart/?symbol=TPEX%3A8069&interval=1D');
 });
 test('recent disposition exits include grouped -3 to +5 actual trading sessions',()=>{
  const sessions=['2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];
