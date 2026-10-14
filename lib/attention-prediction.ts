@@ -18,7 +18,7 @@ export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const first=rows.find(row=>row.rule===1);
  const firstState=first?.status==='outside'||first?.status==='exempt'?'safe':first?.checks?attentionOverallState(first.checks):first?.status==='partial'?'near':'unknown';
  const firstTrigger=first?.checks?.find(check=>check.state==='triggered');
- const firstSummary=firstState==='triggered'?(first?.conditionSummary&&firstTrigger?`${first.conditionSummary}（${firstTrigger.value.replace(' / ',' > ')}）`:firstTrigger?`${firstTrigger.label} ${firstTrigger.value.replace(' / ',' > ')}`:'觸發門檻已達，價格條件待補'):firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':'資料不足';
+ const firstSummary=firstState==='triggered'?(first?.conditionSummary&&firstTrigger?`${first.conditionSummary}（${firstTrigger.value.replace(' / ',' > ')}）`:firstTrigger?`${firstTrigger.label} ${firstTrigger.value.replace(' / ',' > ')}`:'觸發門檻已達，價格條件待補'):first?.conditionSummary?`${first.conditionSummary}${firstState==='safe'?'（目前未達標）':firstState==='near'?'（接近標準）':''}`:firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':'資料不足';
  const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
  const measurable=candidates.filter(row=>row.ease!==undefined&&Number.isFinite(row.ease));
  const easiest=(measurable.length?measurable:candidates).slice().sort((a,b)=>(a.ease??Infinity)-(b.ease??Infinity)||a.rule-b.rule)[0];
@@ -56,6 +56,15 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
   const volume=sixthClauseMinimumShares(shares,stock.market,stock.paidInCapital);
   priceRule(id,values,r.status!=='missing',id===6?`；且成交量 ≥ ${volume===null?'待補股數':fmt(volume/1000)} 張`:'',id===1?r.conditions:[`本益比負值，或 ≥ ${otc?65:60} 且超過市場加權平均 2 倍；淨值比 ≥ ${otc?4:6} 且超過市場平均 2 倍。`,`週轉率 ≥ 5%；產業淨值比比較、券商集中或單一投資人集中，須至少符合一個分支。`,'本列僅計算產業比較分支，市場與產業估值採情境假設；未達此分支不能排除其他分支。',...(small?['小資本額上櫃股適用法定比較及成交量除外條件。']:[])]);
   if(id===1&&sum!==null&&five){
+   if(values.length)rows[0].conditionSummary=priceSummary(values,simulation.reference);
+   else if(r.targetPrices){
+    const targets=[r.targetPrices.up,r.targetPrices.down].filter((p):p is number=>p!==null);
+    rows[0].conditionSummary=targets.map(p=>{
+     const phrase=p>simulation.reference?`收盤 ≥ ${fmt(p)} 元`:`收盤 ≤ ${fmt(p)} 元`;
+     const outside=p>simulation.limits.high?`（高於明日漲停價 ${fmt(simulation.limits.high)} 元）`:p<simulation.limits.low?`（低於明日跌停價 ${fmt(simulation.limits.low)} 元）`:'';
+     return `${phrase}${outside}`;
+    }).join('；或 ');
+   }
    const differential=(limit:number)=>Math.min(sum>=0?sum-simulation.scenario.market6:simulation.scenario.market6-sum,sum>=0?sum-simulation.scenario.industry6:simulation.scenario.industry6-sum)/limit;
    const checksFor=(standard:1|2)=>{
     const cumulativeLimit=standard===1?(otc?30:32):(otc?23:25),cumulativeProgress=Math.abs(sum)/cumulativeLimit;

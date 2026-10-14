@@ -155,9 +155,23 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
   const differential=(r:Q,market:number,industry:number,min:number,exempt:boolean)=>r.cmp(q(0))>=0?(r.sub(q(market)).cmp(q(min))>=0&&(exempt||r.sub(q(industry)).cmp(q(min))>=0)):(q(market).sub(r).cmp(q(min))>=0&&(exempt||q(industry).sub(r).cmp(q(min))>=0));
   const otc=stock.market==='TPEX',small=otc&&positive(stock.paidInCapital)&&stock.paidInCapital<80_000_000;
   const firstMatches=(p:number)=>{const r=six(p);return p>=5&&(small||differential(r,scenario.market6,scenario.industry6,20,industryExempt(p)))&&(r.abs().cmp(q(otc?30:32))>0||((otc?r.abs().cmp(q(23))>=0:r.abs().cmp(q(25))>0)&&money(p).sub(money(lastFive[0].close!)).abs().cmp(q(otc?40:50))>=0));};
+  const firstTarget=(direction:-1|1):number|null=>{
+    if(!historyOkay)return null;
+    let cents=Math.round(reference*100);
+    for(let i=0;i<10000;i++){
+      const tick=tickCents(cents),remainder=cents%tick;
+      if(remainder)cents+=direction>0?tick-remainder:-remainder;
+      if(cents<500)break;
+      if(firstMatches(cents/100))return cents/100;
+      cents+=direction*tickCents(cents);
+    }
+    return null;
+  };
   const shared=['普通股、正常漲跌幅限制及交易狀態不變。','未發生尚未處理的除權息、減資或其他非交易價格變動。','市場與同類平均值為輸入的情境假設，並非明日已知數據。'];
   const rules:RuleResult[]=[];
-  rules.push(result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,`每股盈餘不變，以試算價格重估本益比；負值或達 ${peExemption} 倍時免同類差幅比較。`,'同類證券至少五種；少於五種的除外條件尚需確認。','每日報酬百分比先向零截至小數兩位再加總；已與上市初始批次 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記'));
+  const firstRule=result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,`每股盈餘不變，以試算價格重估本益比；負值或達 ${peExemption} 倍時免同類差幅比較。`,'同類證券至少五種；少於五種的除外條件尚需確認。','每日報酬百分比先向零截至小數兩位再加總；已與上市初始批次 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記');
+  if(historyOkay)firstRule.targetPrices={up:firstTarget(1),down:firstTarget(-1)};
+  rules.push(firstRule);
 
   rules.push(result(2,'三十／六十／九十日漲跌幅',[],[...shared,'長期企業行動及處置除外條件需完整驗證後開放。'],'第二款尚未完成企業行動與除外條件驗證，暫不提供門檻'));
 

@@ -10,5 +10,5 @@ export type ScreenerSnapshot={asOf:string;generatedAt:string;stocks:ScreenerStoc
 export type RiskForecast = {days:1|2|3;date:string;paths:string[];official:boolean};
 export type Scenario = {market6:number;industry6:number;market30:number;industry30:number;market60:number;industry60:number;market90:number;industry90:number;marketPe:number;marketPb:number;industryPb:number;referencePrice?:number};
 export type PriceInterval = {from:number;to:number;direction:"up"|"down";rule:number};
-export type RuleResult = {rule:number;label:string;status:"conditional"|"no_price"|"missing";intervals:PriceInterval[];conditions:string[];reason?:string};
+export type RuleResult = {rule:number;label:string;status:"conditional"|"no_price"|"missing";intervals:PriceInterval[];conditions:string[];targetPrices?:{up:number|null;down:number|null};reason?:string};
 export type Simulation = {code:string;asOf:string;targetDate:string;effectiveDate:string;rulesVersion:string;scenario:Scenario;reference:number;referenceAssumed:boolean;limits:{low:number;high:number};gate:{official:boolean;paths:string[];firstStreak:number;anyStreak:number;tenCount:number;thirtyCount:number};rules:RuleResult[];intervals:PriceInterval[];limitations:string[]};
