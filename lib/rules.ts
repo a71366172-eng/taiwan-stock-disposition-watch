@@ -11,7 +11,7 @@ class Q {
 const q=(x:number|string)=>Q.of(x), money=(x:number)=>q(x.toFixed(2));
 const positive=(x:number|null|undefined):x is number=>x!=null&&Number.isFinite(x)&&x>0;
 export const DEFAULT_SCENARIO:Scenario={market6:0,industry6:0,market30:0,industry30:0,market60:0,industry60:0,market90:0,industry90:0,marketPe:30,marketPb:2,industryPb:3};
-export const RULESET_VERSION='TW-MARKETS-2026-08-10-v0.8';
+export const RULESET_VERSION='TW-MARKETS-2026-10-14-v0.9';
 export const RULES_URL='https://twse-regulation.twse.com.tw/TW/law/DAT0201.aspx?FLCODE=FL007226';
 
 export function validateScenario(input:unknown):Scenario{
@@ -61,14 +61,13 @@ export function sixDayTwentyFivePercentFloor(stock:Stock,asOf:string):{price:num
 function cumulativeQ(bars:Stock['bars']){return bars.reduce((r,b)=>r.add(money(b.close!).div(money(b.reference!)).sub(q(1)).mul(q(100)).trunc2()),q(0));}
 export function countGate(stock:Stock,calendar:string[],asOf:string){
   const dates=calendar.filter(d=>d<=asOf),rollingByDate=new Map<string,Set<number>>(),streakByDate=new Map<string,Set<number>>();
-  const cycleNotices=attentionCycleNotices(stock,asOf);
-  // A published disposition consumes the preceding consecutive-day run.
-  // New notices during ordinary treatment start the next run immediately.
-  // Rolling windows remain separate; only committee exclusions affect those.
-  const consumedThrough=stock.dispositions.map(item=>item.announced).filter(date=>date&&date<=asOf).sort().at(-1);
-  for(const n of cycleNotices){
+  const rollingNotices=rollingAttentionNotices(stock,asOf),cycleNotices=attentionCycleNotices(stock,asOf);
+  // Rolling 10/30-session counts keep ordinary published notices. Only the
+  // consecutive paths consume their run at a disposition announcement.
+  for(const n of rollingNotices){
     const rolling=rollingByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>rolling.add(r));rollingByDate.set(n.date,rolling);
-    if(consumedThrough&&n.date<=consumedThrough)continue;
+  }
+  for(const n of cycleNotices){
     const streak=streakByDate.get(n.date)||new Set<number>();n.rules.filter(r=>r>=1&&r<=8).forEach(r=>streak.add(r));streakByDate.set(n.date,streak);
   }
   const first=(d:string)=>streakByDate.get(d)?.has(1)||false;
@@ -83,7 +82,7 @@ export function countGate(stock:Stock,calendar:string[],asOf:string){
 export function countableAttentionNotices(stock:Stock,asOf:string):Stock['notices']{
   return stock.notices.filter(notice=>notice.date<=asOf&&notice.rules.some(rule=>rule>=1&&rule<=8));
 }
-function attentionCycleNotices(stock:Stock,asOf:string){
+export function rollingAttentionNotices(stock:Stock,asOf:string){
   const excludedThrough=stock.dispositions
     .filter(item=>item.announced<=asOf&&isCommitteeDisposition(item))
     .map(item=>item.end||item.start||item.announced)
@@ -91,6 +90,10 @@ function attentionCycleNotices(stock:Stock,asOf:string){
     .sort()
     .at(-1);
   return countableAttentionNotices(stock,asOf).filter(notice=>!excludedThrough||notice.date>excludedThrough);
+}
+export function attentionCycleNotices(stock:Stock,asOf:string){
+  const consumedThrough=stock.dispositions.map(item=>item.announced).filter(date=>date&&date<=asOf).sort().at(-1);
+  return rollingAttentionNotices(stock,asOf).filter(notice=>!consumedThrough||notice.date>consumedThrough);
 }
 /** Article 6(7): only committee-decided dispositions may exclude pre-treatment and in-treatment notice dates. */
 function isCommitteeDisposition(item:Stock['dispositions'][number]):boolean{
@@ -112,15 +115,18 @@ export function forecastDispositionRisk(stock:Stock,snapshot:Pick<MarketSnapshot
   // not itself a declaration that a disposition will happen tomorrow.
   if(stock.candidateReason)return {days:1,date:future[0],paths:['次一營業日再達注意標準時，將公告處置'],official:true};
   const history=snapshot.calendar.filter(d=>d<=snapshot.asOf),base=countGate(stock,history,snapshot.asOf);
-  const countable=new Set(attentionCycleNotices(stock,snapshot.asOf).map(n=>n.date));
+  const countable=new Set(rollingAttentionNotices(stock,snapshot.asOf).map(n=>n.date));
   for(let index=0;index<future.length;index++){
-    const days=(index+1) as 1|2|3,assumed=future.slice(0,days),sessions=[...history,...assumed];
+    const days=(index+1) as 1|2|3,assumed=future.slice(0,days);
     const isCountable=(date:string)=>countable.has(date)||assumed.includes(date);
     const paths:string[]=[];
     if(base.firstStreak>0&&base.firstStreak+days>=3)paths.push('第一款連續三日');
     if(base.anyStreak>0&&base.anyStreak+days>=5)paths.push('第 1–8 款連續五日');
-    if(sessions.slice(-10).filter(isCountable).length>=6)paths.push('十日內六日');
-    if(sessions.slice(-30).filter(isCountable).length>=12)paths.push('三十個營業日內十二日');
+    if(days>=2){
+      const candidateSessions=[...history,...future.slice(0,days-1)];
+      if(candidateSessions.slice(-10).filter(isCountable).length>=6)paths.push('十日內六日');
+      if(candidateSessions.slice(-30).filter(isCountable).length>=12)paths.push('三十個營業日內十二日');
+    }
     if(paths.length)return {days,date:future[index],paths,official:false};
   }
   return null;

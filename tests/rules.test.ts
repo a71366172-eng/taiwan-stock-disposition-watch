@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {attentionGateProgress,countGate,countableAttentionNotices,forecastDispositionRisk,gateCountDisplay,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {attentionGateProgress,countGate,countableAttentionNotices,rollingAttentionNotices,forecastDispositionRisk,gateCountDisplay,legalPrices,simulate,DEFAULT_SCENARIO,validateScenario,cumulativeReturn,sixDayTwentyFivePercentFloor,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {dispositionTier} from '../lib/disposition-tier.ts';
 import {isGuaranteedDispositionNextSession} from '../lib/guaranteed-disposition.ts';
@@ -68,12 +68,12 @@ test('progress meter caps at its threshold and separately reports the actual exc
  assert.deepEqual(gateCountDisplay(13,12),{value:12,excess:1});
  assert.deepEqual(gateCountDisplay(2,5),{value:2,excess:0});
 });
-test('ordinary rule-based dispositions do not reset rolling notice counts; only clauses 1-8 count',()=>{
+test('ordinary dispositions consume the previous consecutive run but keep rolling notices; only clauses 1-8 count',()=>{
  const sessions=calendar.slice(-30),notices=sessions.slice(5,17).map(date=>({code:'TEST',name:'test',date,reason:'',rules:[6],close:100,pe:60}));
  notices.push({code:'TEST',name:'test',date:sessions[17],reason:'',rules:[13],close:100,pe:60},{code:'TEST',name:'test',date:sessions[18],reason:'',rules:[10],close:100,pe:60});
  const disposed={...base,notices,dispositions:[{code:'TEST',name:'test',announced:sessions[8],start:sessions[8],end:sessions[9],condition:'',measure:'',content:''}]};
  const gate=countGate(disposed,sessions,context.asOf);assert.equal(countableAttentionNotices(disposed,context.asOf).length,12);assert.equal(gate.thirtyCount,12);assert.ok(gate.paths.includes('三十個營業日內十二日'));
- assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,1);
+ assert.equal(forecastDispositionRisk(disposed,{...forecastContext,calendar:sessions})?.days,2,'rolling thresholds require a candidate day and next-session confirmation');
 });
 test('active ordinary-treatment progress stays on rolling windows and ignores non-1-8 clauses',()=>{
  const start=calendar.at(-2)!,asOf=calendar.at(-1)!;
@@ -103,16 +103,21 @@ test('first-rule streak requires first clause specifically and consecutive sessi
  assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,0);
  notices.forEach(n=>n.rules=[1]);assert.equal(countGate({...base,notices},calendar,context.asOf).firstStreak,2);
 });
-test('6538 follows its published clause 1-8 dates; no generic disposition reset is inferred',()=>{
+test('6538 rolling progress keeps prior ordinary notices and requires next-session confirmation',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
  const archive=JSON.parse(fs.readFileSync(new URL('../data/disposition-history.json',import.meta.url),'utf8'));
  const stock=snapshot.stocks.find((item:Stock)=>item.code==='6538') as Stock;
+ snapshot.asOf='2026-10-13';snapshot.calendar=snapshot.calendar.filter((date:string)=>date<=snapshot.asOf);
  const disposed={...stock,dispositions:archive.records.filter((item:{code:string})=>item.code==='6538')};
  const qualifying=countableAttentionNotices(disposed,snapshot.asOf);
  assert.equal(qualifying.filter(notice=>snapshot.calendar.slice(-30).includes(notice.date)).length,13);
+ assert.equal(rollingAttentionNotices(disposed,snapshot.asOf).filter(notice=>snapshot.calendar.slice(-30).includes(notice.date)).length,13);
  assert.equal(countGate(disposed,snapshot.calendar,snapshot.asOf).thirtyCount,13);
  assert.ok(countGate(disposed,snapshot.calendar,snapshot.asOf).paths.includes('三十個營業日內十二日'));
- assert.equal(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')?.value,13);
+ assert.deepEqual(gateCountDisplay(attentionGateProgress(disposed,snapshot.calendar,snapshot.asOf).find(item=>item.label==='30營業日')!.value,12),{value:12,excess:1});
+ const forecast=forecastDispositionRisk({...disposed,candidateReason:null},{...snapshot,forecastDates:['2026-10-14','2026-10-15','2026-10-16']});
+ assert.equal(forecast?.date,'2026-10-15','without an official candidate, a fresh candidate and next-session notice are both required');
+ assert.ok(forecast?.paths.includes('三十個營業日內十二日'));
 });
 test('2466 next consecutive cycle agrees with the official October 8-12 two-day candidate',()=>{
  const snapshot=JSON.parse(fs.readFileSync(new URL('../data/market.json',import.meta.url),'utf8'));
@@ -200,7 +205,7 @@ test('repeat disposition tier depends on recent announcements, including after r
 test('the shared price engine accepts TPEx common stocks',()=>{
  const result=simulate({...base,market:'TPEX',code:'5314'},context);
  assert.equal(result.code,'5314');
- assert.equal(result.rulesVersion,'TW-MARKETS-2026-08-10-v0.8');
+ assert.equal(result.rulesVersion,'TW-MARKETS-2026-10-14-v0.9');
 });
 test('three-session risk keeps official candidates first and extends an active first-clause streak',()=>{
  const official=forecastDispositionRisk({...base,candidateReason:'官方候選'},forecastContext);
