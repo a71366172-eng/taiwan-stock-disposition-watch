@@ -262,25 +262,38 @@ test('TradingView links use the Taiwan chart route and the matching market symbo
  assert.equal(tradingViewUrl('TPEX','8069'),'https://tw.tradingview.com/chart/?symbol=TPEX%3A8069&interval=1D');
 });
 test('recent disposition exits include grouped -3 to +5 actual trading sessions',()=>{
- const sessions=['2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];
+ const sessions=['2026-09-30','2026-10-01','2026-10-02','2026-10-05','2026-10-07','2026-10-08'];
  const future=['2026-10-09','2026-10-12','2026-10-13','2026-10-14','2026-10-15','2026-10-16','2026-10-19','2026-10-20'];
  const entry=(code:string,end:string,announced:string):Stock['dispositions'][number]=>({code,name:code,announced,start:null,end,condition:'',measure:'',content:''});
  const groups=recentDispositionExits([
-  entry('past-edge','2026-10-02','2026-10-01'),entry('past-out','2026-10-01','2026-10-01'),
+  entry('past-edge','2026-10-01','2026-10-01'),entry('past-out','2026-09-30','2026-09-30'),
   entry('today-a','2026-10-08','2026-10-07'),entry('today-b','2026-10-08','2026-10-07'),
-  entry('future-edge','2026-10-15','2026-10-09'),entry('future-out','2026-10-16','2026-10-09')
+  entry('future-edge','2026-10-14','2026-10-09'),entry('future-out','2026-10-15','2026-10-09')
  ],sessions,'2026-10-08',future,new Date('2026-10-08T06:59:00Z'));
  assert.deepEqual(groups.map(group=>[group.date,group.offset,group.items.map(item=>item.code)]),[
-  ['2026-10-02',-3,['past-edge']],['2026-10-08',0,['today-a','today-b']],['2026-10-15',5,['future-edge']]
+  ['2026-10-02',-3,['past-edge']],['2026-10-09',1,['today-a','today-b']],['2026-10-15',5,['future-edge']]
  ]);
 });
-test('recent exit labels roll to the next trading session at 15:00 and skip closed dates',()=>{
+test('release date is the trading session after the final disposition session',()=>{
  const item:Stock['dispositions'][number]={code:'exit',name:'exit',announced:'2026-10-08',start:'2026-10-09',end:'2026-10-12',condition:'',measure:'',content:''};
  const calendar=['2026-10-08','2026-10-09','2026-10-12'];
  const future=['2026-10-13','2026-10-15','2026-10-16'];
- assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T06:59:00Z'))[0]?.offset,0);
- assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T07:00:00Z'))[0]?.offset,-1);
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T06:59:00Z'))[0]?.date,'2026-10-13');
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T06:59:00Z'))[0]?.offset,1);
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T07:00:00Z'))[0]?.offset,0);
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-13T07:00:00Z'))[0]?.offset,-1);
  assert.equal(tradingReferenceDate('2026-10-13',['2026-10-15','2026-10-16'],new Date('2026-10-14T07:00:00Z')),'2026-10-15');
+});
+test('6213 final disposition date 10/19 means it resumes normal trading on 10/20',()=>{
+ const item:Stock['dispositions'][number]={code:'6213',name:'聯茂',announced:'2026-10-07',start:'2026-10-08',end:'2026-10-19',condition:'',measure:'第一次處置',content:''};
+ const calendar=['2026-10-08','2026-10-09','2026-10-12','2026-10-13','2026-10-14','2026-10-15','2026-10-16','2026-10-19'];
+ const upcoming=['2026-10-20','2026-10-21','2026-10-22','2026-10-23','2026-10-27'];
+ const beforeRelease=recentDispositionExits([item],calendar,'2026-10-19',upcoming,new Date('2026-10-19T06:00:00Z'))[0];
+ assert.equal(beforeRelease?.date,'2026-10-20');
+ assert.equal(beforeRelease?.offset,1);
+ const releaseDay=recentDispositionExits([item],calendar,'2026-10-19',upcoming,new Date('2026-10-20T02:00:00Z'))[0];
+ assert.equal(releaseDay?.date,'2026-10-20');
+ assert.equal(releaseDay?.offset,0);
 });
 test('30-day observation rows are optional and ended dispositions can remain in normal risk results',()=>{
  const observed={...base,notices:[{code:'TEST',name:'test',date:calendar.at(-1)!,reason:'',rules:[1],close:100,pe:60}]};
