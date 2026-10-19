@@ -19,6 +19,12 @@ test('watch and disposition pages use the same inclusive Taiwan-date cutoff',()=
  assert.deepEqual(activeDispositions(records,'2026-10-13').map(item=>item.code),['2492','2033']);
  assert.deepEqual(activeDispositions(records,'2026-10-14').map(item=>item.code),['2492']);
 });
+test('an end-date disposition expires after that session closes, not at midnight',()=>{
+ const records=[{code:'6213',name:'聯茂',announced:'2026-10-07',start:'2026-10-08',end:'2026-10-19',condition:'連續三次',measure:'第一次處置',content:''}];
+ const sessions=['2026-10-16','2026-10-19','2026-10-20','2026-10-21'];
+ assert.deepEqual(activeDispositions(records,'2026-10-19',sessions,new Date('2026-10-19T05:29:00Z')).map(item=>item.code),['6213']);
+ assert.deepEqual(activeDispositions(records,'2026-10-19',sessions,new Date('2026-10-19T05:30:00Z')),[]);
+});
 test('night-session baseline advances at 15:00 Taipei and stays advanced overnight',()=>{
  const sessions=['2026-10-13','2026-10-14','2026-10-15'];
  assert.equal(tradingReferenceDate('2026-10-12',sessions,new Date('2026-10-12T06:59:00Z')),'2026-10-12');

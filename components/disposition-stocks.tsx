@@ -1,5 +1,5 @@
 import {CalendarDays,ExternalLink,Info,ShieldAlert} from 'lucide-react';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {dispositionMetrics} from '../lib/disposition-metrics';
 import {activeDispositions,dispositionReferenceDate} from '../lib/disposition-status';
 import type {Disposition,MarketSnapshot,Stock} from '../lib/market-types';
@@ -17,14 +17,17 @@ const percent=(value:number|null)=>value===null?'—':`${value>0?'+':''}${value.
 const percentTone=(value:number|null)=>value===null?'muted':value>0?'up':value<0?'down':'';
 
 export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
+ const [clock,setClock]=useState(0);
+ useEffect(()=>{const initial=window.setTimeout(()=>setClock(Date.now()),0);const timer=setInterval(()=>setClock(Date.now()),60000);return()=>{window.clearTimeout(initial);clearInterval(timer);};},[]);
  const [tier,setTier]=useState<'all'|'first'|'repeat'>('all'),[market,setMarket]=useState<'ALL'|'TWSE'|'TPEX'>('ALL'),[futures,setFutures]=useState<'all'|'yes'|'no'>('all'),[search,setSearch]=useState(''),[sort,setSort]=useState<Sort>('end'),[view,setView]=useState<'list'|'grid'>('list');
  const toggleSort=(first:Sort,second:Sort)=>setSort(current=>current===first?second:first);
  const sortHeader=(label:string,first:Sort,second:Sort,firstAscending:boolean)=><button type="button" className={`disposition-header-button ${sort===first||sort===second?'active':''}`} onClick={()=>toggleSort(first,second)} aria-label={`${label}，${sort===first?`目前${firstAscending?'升冪':'降冪'}，點擊切換`:sort===second?`目前${firstAscending?'降冪':'升冪'}，點擊切換`:'點擊排序'}`} aria-pressed={sort===first||sort===second}>{label}<span aria-hidden="true">{sort===first?(firstAscending?'↑':'↓'):sort===second?(firstAscending?'↓':'↑'):'↕'}</span></button>;
  const [endWithin,setEndWithin]=useState('all'),[returnDirection,setReturnDirection]=useState<Direction>('all'),[institutionalDirection,setInstitutionalDirection]=useState<Direction>('all'),[ma20Direction,setMa20Direction]=useState<Direction>('all'),[fiveDayDirection,setFiveDayDirection]=useState<Direction>('all'),[tenDayDirection,setTenDayDirection]=useState<Direction>('all');
+ const sessions=[...new Set([...snapshot.calendar,...(snapshot.upcomingSessions||snapshot.forecastDates||[])])];
  const referenceDate=dispositionReferenceDate(snapshot.asOf);
  const byCode=new Map(snapshot.stocks.map(stock=>[stock.code,stock]));
  const unique=new Map<string,Disposition>();
- for(const disposition of activeDispositions(snapshot.dispositions,referenceDate)){
+ for(const disposition of activeDispositions(snapshot.dispositions,referenceDate,sessions,new Date(clock))){
   const previous=unique.get(disposition.code);
   if(!previous||disposition.start!>previous.start!)unique.set(disposition.code,disposition);
  }
@@ -63,7 +66,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
   <div className="page-heading"><div><div className="eyebrow">OFFICIAL DISPOSITION NOTICES</div><h1>處置股<span className="heading-dot">.</span></h1><p>依證交所與櫃買中心公告，列出目前仍在處置期間的股票。</p></div><div className="date-stamp"><CalendarDays size={18}/><div>行情資料日<strong>{snapshot.asOf.replaceAll('-','.')}</strong></div></div></div>
   <div className="summary-grid disposition-summary"><div className="summary-card featured"><div className="summary-label">目前處置股</div><div className="summary-number">{items.length}<span>檔</span></div><p>截至 {date(referenceDate)} 仍在處置期間</p></div><div className="summary-card"><div className="summary-label">報酬計算基準</div><div className="status-value">處置起始日</div><p>起始日收盤價至最新可用收盤價；不含股利及交易成本。</p></div><div className="summary-card"><div className="summary-label">三大法人 5 日資料</div><div className="status-value">{institutionalCount} / {items.length} 檔</div><p>最近 5 個交易日買賣超合計；與券商分點主力不同。</p></div></div>
   {items.length===0?<section className="panel"><div className="empty-state"><ShieldAlert size={32}/><h2>目前沒有處置中的股票</h2><p>已依公告處置區間核對至 {referenceDate}，正式資料仍以交易所公告為準。</p></div></section>:<section className="panel disposition-panel">
-   <div className="panel-heading"><div><h2>處置期間一覽</h2><p>出關倒數以台灣日期計算曆日；行情與法人資料截至 {snapshot.asOf}。</p></div><span className="badge amber">{visibleItems.length} / {items.length} 檔</span></div>
+   <div className="panel-heading"><div><h2>處置期間一覽</h2><p>公告迄日當天仍在處置，收盤後才期滿；行情與法人資料截至 {snapshot.asOf}。</p></div><span className="badge amber">{visibleItems.length} / {items.length} 檔</span></div>
    <div className="disposition-tools">
     <div className="segmented-control" aria-label="處置次數">{(['all','first','repeat'] as const).map(value=><button key={value} className={tier===value?'active':''} onClick={()=>setTier(value)}>{value==='all'?'全部':value==='first'?'首次處置':'再次處置'}</button>)}</div>
     <div className="segmented-control" aria-label="市場">{(['ALL','TWSE','TPEX'] as const).map(value=><button key={value} className={market===value?'active':''} onClick={()=>setMarket(value)}>{value==='ALL'?'全部':value==='TWSE'?'上市':'上櫃'}</button>)}</div>
@@ -97,7 +100,7 @@ export function DispositionStocks({snapshot}:{snapshot:MarketSnapshot}){
    return <article className={`disposition-card ${repeat?'repeat-disposition':''}`} key={`${d.code}-${d.start}`}>
     <div className="disposition-card-head"><a href={`#/stocks/${d.code}`} className="disposition-stock"><strong>{d.code}</strong><span>{stock?.name||d.name}</span><small>{stock?.market==='TPEX'?'上櫃':stock?.market==='TWSE'?'上市':'市場未提供'} · 查看個股 ↗</small></a><div className="disposition-status"><span className="disposition-tier-badge">{repeat?'再次處置':'首次處置'}</span><span className="period-badge">{date(d.start)} — {date(d.end)}</span></div></div>
     <div className="disposition-metrics">
-     <div><small>離出關日 · 曆日</small><strong>{metrics.calendarDaysUntilEnd===0?'今天出關':`${metrics.calendarDaysUntilEnd} 天`}</strong><small>{date(d.end)} 結束</small></div>
+     <div><small>距公告迄日 · 曆日</small><strong>{metrics.calendarDaysUntilEnd===0?'今日最後處置日':`${metrics.calendarDaysUntilEnd} 天`}</strong><small>{date(d.end)} 結束{metrics.calendarDaysUntilEnd===0?' · 收盤後期滿':''}</small></div>
      <div><small>處置期間漲跌幅</small><strong className={percentTone(metrics.periodChangePercent)}>{percent(metrics.periodChangePercent)}</strong><small>{metrics.startClose===null?'缺少起始日收盤價':`${price(metrics.startClose)} → ${price(metrics.latestClose)} 元`}</small></div>
      <div><small>5 日漲幅</small><strong className={percentTone(metrics.fiveDayChangePercent)}>{percent(metrics.fiveDayChangePercent)}</strong><small>相較 5 個交易日前</small></div>
      <div><small>10 日漲幅</small><strong className={percentTone(metrics.tenDayChangePercent)}>{percent(metrics.tenDayChangePercent)}</strong><small>相較 10 個交易日前</small></div>
