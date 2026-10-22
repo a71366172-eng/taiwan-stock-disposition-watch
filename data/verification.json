@@ -2388,15 +2388,18 @@
   ],
   "candidates": [
     {
-      "code": "6269",
-      "officialReason": "115年10月20日至115年10月21日連續二次",
+      "code": "2033",
+      "officialReason": "115年10月21日至115年10月22日連續二次115年10月19日至115年10月22日連續四次",
       "reconstructed": {
         "official": true,
-        "paths": [],
-        "firstStreak": 0,
-        "anyStreak": 0,
-        "tenCount": 2,
-        "thirtyCount": 2
+        "paths": [
+          "第一款連續三日",
+          "連續五日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 4,
+        "tenCount": 4,
+        "thirtyCount": 6
       }
     },
     {
