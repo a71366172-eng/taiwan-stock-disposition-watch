@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {attentionPrediction,attentionQuickSummary,priceSummary} from '../lib/attention-prediction.ts';
-import {legalPrices,simulate,sixthClauseMinimumShares} from '../lib/rules.ts';
+import {DEFAULT_SCENARIO,legalPrices,simulate,sixthClauseMinimumShares} from '../lib/rules.ts';
 import type {Stock} from '../lib/market-types.ts';
 import {attentionLegalDetails,clause2RecentFirstNoticeExcludes} from '../lib/attention-law.ts';
 const calendar=Array.from({length:90},(_,i)=>new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10));
@@ -20,7 +20,7 @@ test('clause 2 first-clause exception removes a long-price candidate when six-da
  assert.equal(predict(longRise)[1].status,'partial');
  const excluded=predict({...longRise,notices:recent.notices})[1];
  assert.equal(excluded.status,'exempt');
- assert.match(excluded.summary,/第一款注意.*第二款除外/);
+ assert.match(excluded.summary,/第一款注意之除外/);
 });
 test('legal explanations distinguish full exclusions from omitted sector comparison',()=>{
  const first=attentionLegalDetails(stock,1);
@@ -42,14 +42,34 @@ test('official close-only daily supplement remains valid for next-session foreca
  assert.equal(predict(supplemented)[1].status,predict(stock)[1].status);
  assert.equal(predict({...stock,bars:bars.map((bar,index)=>index===bars.length-1?{...bar,note:'**'}:bar)})[1].status,'missing');
 });
-test('90-session bars enable the long-window clause checks; short history stays unknown',()=>{assert.notEqual(predict()[1].status,'missing');const short={...stock,bars:stock.bars.slice(-31)};assert.equal(predict(short)[1].status,'missing');});
+test('available long windows are shown independently without calling incomplete coverage safe',()=>{assert.notEqual(predict()[1].status,'missing');const short={...stock,bars:stock.bars.slice(-31)};const row=predict(short)[1];assert.equal(row.status,'missing');assert.match(row.details.join(' '),/90 日：缺連續有效收盤價/);});
+test('clause 2 does not invent a falling candidate when the required drop exceeds 100 percent',()=>{
+ const falling={...stock,bars:stock.bars.map((bar,index)=>index===61?{...bar,close:300}:bar)};
+ const row=predict(falling)[1];
+ assert.equal(row.status,'outside');
+ assert.match(row.details.join(' '),/30 日：基準/);
+});
+test('clause 2 requires the forecast-day direction and market differential',()=>{
+ const longRise={...stock,bars:stock.bars.map((bar,index)=>index===61?{...bar,close:40}:bar)};
+ const normal=attentionPrediction(longRise,context,simulate(longRise,context));
+ assert.equal(normal[1].status,'partial');
+ assert.match(normal[1].summary,/收盤 ≥ 100/);
+ const scenario={...DEFAULT_SCENARIO,market30:200,market60:200};
+ const blocked=attentionPrediction(longRise,context,simulate(longRise,context,scenario));
+ assert.equal(blocked[1].status,'outside');
+});
 test('TPEx first clause uses 30 percent instead of TWSE 32 percent',()=>{const s={...stock,bars:stock.bars.map((b,i)=>i>=85?{...b,close:104.2,reference:100}:b)};const a=simulate(s,context).rules[0],b=simulate({...s,market:'TPEX'},context).rules[0];assert.equal(a.intervals.length,0);assert.ok(b.intervals.length>0);});
+test('a reference price below five dollars still reports a reachable upward first-clause target',()=>{
+ const low={...stock,close:4.95,bars:stock.bars.map(bar=>({...bar,open:4.95,high:4.95,low:4.95,close:4.95,reference:4.95}))};
+ const target=simulate(low,context).rules[0].targetPrices?.up;
+ assert.ok(target!==null&&target!==undefined&&target>=5);
+});
 test('TPEx sixth-clause volume uses 2000 lots and small-cap exception',()=>{assert.equal(sixthClauseMinimumShares(10000000,'TPEX',100000000),2000000);assert.equal(sixthClauseMinimumShares(5000000,'TPEX',50000000),250000);});
 test('price labels use directional inequalities and outside-limits status',()=>{assert.equal(priceSummary([],100),'超出漲跌停價');assert.match(priceSummary([109,109.5,110],100),/≥ 109/);});
 test('when every legal price qualifies, the quick summary names the actual price range',()=>{
  const prices=legalPrices(100);
  assert.equal(priceSummary(prices,100),'收盤 90～110 元');
 });
-test('quick forecast summary shows first-clause price standards even before they are met',()=>{const rows=predict();rows[0].status='outside';rows[0].summary='不會觸發';rows[0].checks=Array.from({length:4},(_,i)=>({label:`A${i}`,value:'',progress:0,state:'safe' as const}));rows[2].status='partial';rows[2].summary='收盤 ≥ 101 元；且量 ≥ 1,091.023 張（基本門檻）';rows[2].ease=5;rows[3].status='partial';rows[3].summary='收盤 ≥ 101 元；且量 ≥ 5,455.112 張（基本門檻）';rows[3].ease=1;rows[5].status='partial';rows[5].summary='漲跌停範圍內皆符合價格條件；且成交量 ≥ 7,284 張';rows[5].ease=3;const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'無風險');assert.match(quick[0].summary,/收盤 ≥ 132\.5 元/);assert.match(quick[0].summary,/收盤 ≤ 67\.9 元/);assert.match(quick[0].summary,/目前未達標/);assert.equal(quick[1].badge,'可能觸發');assert.equal(quick[1].summary,'收盤 ≥ 101 元；且量 ≥ 5,455.112 張');});
-test('confirmed clause 1 quick summary keeps the price and achieved threshold',()=>{const rows=predict();rows[0].status='partial';rows[0].conditionSummary='收盤 ≤ 13.50 元';rows[0].checks=[{label:'累積漲跌幅',value:'49% / 30%',progress:1.63,state:'triggered'}];const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'必觸發');assert.equal(quick[0].summary,'收盤 ≤ 13.50 元（49% > 30%）');});
+test('quick forecast summary shows first-clause price standards even before they are met',()=>{const rows=predict();rows[0].status='outside';rows[0].summary='價格未達';rows[2].status='partial';rows[2].summary='收盤 ≥ 101 元；且量 ≥ 1,091.023 張（基本門檻）';rows[2].ease=5;rows[3].status='partial';rows[3].summary='收盤 ≥ 101 元；且量 ≥ 5,455.112 張（基本門檻）';rows[3].ease=1;rows[5].status='partial';rows[5].summary='漲跌停範圍內皆符合價格條件；且成交量 ≥ 7,284 張';rows[5].ease=3;const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'價格未達');assert.match(quick[0].summary,/收盤 ≥ 132\.5 元/);assert.match(quick[0].summary,/收盤 ≤ 67\.9 元/);assert.match(quick[0].summary,/下個交易日價格範圍未達/);assert.equal(quick[1].badge,'基本條件可能達標');assert.equal(quick[1].summary,'第 4 款 收盤 ≥ 101 元；且量 ≥ 5,455.112 張（基本門檻）');});
+test('first-clause badges follow the simulated price candidates, not stale five-day progress',()=>{const rows=predict();rows[0].status='partial';rows[0].conditionSummary='收盤 ≤ 13.50 元';rows[0].checks=[{label:'累積漲跌幅',value:'49% / 30%',progress:1.63,state:'triggered'}];const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'價格可能達標');assert.equal(quick[0].summary,'收盤 ≤ 13.50 元');});
 test('quick forecast summary labels incomplete rules as insufficient data',()=>{const rows=predict();rows[0].status='missing';rows[0].checks=[{label:'A',value:'',progress:null,state:'unknown'}];for(const row of rows.filter(row=>row.rule>=2&&row.rule<=8))if(row.status==='partial')row.status='missing';const quick=attentionQuickSummary(rows);assert.equal(quick[0].badge,'資料不足');assert.equal(quick[1].badge,'資料不足');});

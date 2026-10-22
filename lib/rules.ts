@@ -161,7 +161,7 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
     for(let i=0;i<10000;i++){
       const tick=tickCents(cents),remainder=cents%tick;
       if(remainder)cents+=direction>0?tick-remainder:-remainder;
-      if(cents<500)break;
+      if(cents<500&&direction<0)break;
       if(firstMatches(cents/100))return cents/100;
       cents+=direction*tickCents(cents);
     }
@@ -169,7 +169,7 @@ export function simulate(stock:Stock,snapshot:Pick<MarketSnapshot,'asOf'|'target
   };
   const shared=['普通股、正常漲跌幅限制及交易狀態不變。','未發生尚未處理的除權息、減資或其他非交易價格變動。','市場與同類平均值為輸入的情境假設，並非明日已知數據。'];
   const rules:RuleResult[]=[];
-  const firstRule=result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,`每股盈餘不變，以試算價格重估本益比；負值或達 ${peExemption} 倍時免同類差幅比較。`,'同類證券至少五種；少於五種的除外條件尚需確認。','每日報酬百分比先向零截至小數兩位再加總；已與上市初始批次 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記');
+  const firstRule=result(1,'六日累積漲跌幅',historyOkay?mergePrices(prices,firstMatches,reference,1):[],[...shared,`每股盈餘不變，以試算價格重估本益比；負值或達 ${peExemption} 倍時免同類差幅比較。`,'同類證券少於五種時免同類差幅比較；目前缺同類證券家數，尚未自動套用。','每日報酬百分比先向零截至小數兩位再加總；已與上市初始批次 24 筆歷史公告核對。'],historyOkay?undefined:'缺少連續五日有效報酬或有特殊註記');
   if(historyOkay)firstRule.targetPrices={up:firstTarget(1),down:firstTarget(-1)};
   rules.push(firstRule);
 

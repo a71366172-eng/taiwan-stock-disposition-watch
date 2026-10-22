@@ -16,17 +16,16 @@ export function attentionOverallState(checks:AttentionCheck[]):AttentionCheck['s
 }
 export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const first=rows.find(row=>row.rule===1);
- const firstState=first?.status==='outside'||first?.status==='exempt'?'safe':first?.checks?attentionOverallState(first.checks):first?.status==='partial'?'near':'unknown';
- const firstTrigger=first?.checks?.find(check=>check.state==='triggered');
- const firstSummary=firstState==='triggered'?(first?.conditionSummary&&firstTrigger?`${first.conditionSummary}（${firstTrigger.value.replace(' / ',' > ')}）`:firstTrigger?`${firstTrigger.label} ${firstTrigger.value.replace(' / ',' > ')}`:'觸發門檻已達，價格條件待補'):first?.conditionSummary?`${first.conditionSummary}${firstState==='safe'?'（目前未達標）':firstState==='near'?'（接近標準）':''}`:firstState==='safe'?'不會觸發':firstState==='near'?'接近條件':'資料不足';
+ const firstState=first?.status==='outside'||first?.status==='exempt'?'safe':first?.status==='partial'?'near':'unknown';
+ const firstSummary=first?.conditionSummary?`${first.conditionSummary}${firstState==='safe'?'（下個交易日價格範圍未達）':''}`:firstState==='safe'?first?.summary??'價格範圍未達':firstState==='near'?first?.summary??'價格條件可能符合':'資料不足';
  const candidates=rows.filter(row=>row.rule>=2&&row.rule<=8&&row.status==='partial');
  const measurable=candidates.filter(row=>row.ease!==undefined&&Number.isFinite(row.ease));
  const easiest=(measurable.length?measurable:candidates).slice().sort((a,b)=>(a.ease??Infinity)-(b.ease??Infinity)||a.rule-b.rule)[0];
  const secondState=candidates.length?'near':rows.some(row=>row.rule>=2&&row.rule<=8&&row.status==='missing')?'unknown':'safe';
- const secondSummary=easiest?easiest.summary.replace(/（基本門檻）/g,''):secondState==='unknown'?'條件資料不足':'目前沒有可計算的價格觸發條件';
+ const secondSummary=easiest?`第 ${easiest.rule} 款 ${easiest.summary}`:secondState==='unknown'?'條件資料不足':'目前沒有可計算的價格觸發條件';
  return [
-  {label:'第1款',state:firstState,badge:firstState==='safe'?'無風險':firstState==='near'?'可能觸發':firstState==='triggered'?'必觸發':'資料不足',summary:firstSummary},
-  {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無風險':secondState==='near'?'可能觸發':'資料不足',summary:secondSummary}
+  {label:'第1款',state:firstState,badge:firstState==='safe'?'價格未達':firstState==='near'?'價格可能達標':'資料不足',summary:firstSummary},
+  {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無可算候選':secondState==='near'?'基本條件可能達標':'資料不足',summary:secondSummary}
  ];
 }
 const names=['累積漲跌幅異常','中長期漲跌異常','漲跌異常＋量能放大','漲跌異常＋高週轉','漲跌異常＋券商集中','本益比／股價淨值比異常','漲跌異常＋券資比','存託憑證溢折價','成交量放大','累積週轉率','起迄價差','借券賣出','當沖異常','其他交易異常'];
@@ -65,23 +64,48 @@ export function attentionPrediction(stock:Stock,snapshot:Pick<MarketSnapshot,'as
      return `${phrase}${outside}`;
     }).join('；或 ');
    }
-   const differential=(limit:number)=>Math.min(sum>=0?sum-simulation.scenario.market6:simulation.scenario.market6-sum,sum>=0?sum-simulation.scenario.industry6:simulation.scenario.industry6-sum)/limit;
-   const checksFor=(standard:1|2)=>{
-    const cumulativeLimit=standard===1?(otc?30:32):(otc?23:25),cumulativeProgress=Math.abs(sum)/cumulativeLimit;
-    const diffValue=differential(20)*20,diffProgress=differential(20),gapLimit=otc?40:50,gapProgress=Math.abs(simulation.reference-five[0].close!)/gapLimit;
-    const selected=standard===1?[{label:'累積漲跌幅',value:`${fmt(sum)}% / ${cumulativeLimit}%`,progress:cumulativeProgress},{label:'與市場／同類差幅',value:`${fmt(diffValue)}% / 20%`,progress:diffProgress}]:[{label:'累積漲跌幅',value:`${fmt(sum)}% / ${cumulativeLimit}%`,progress:cumulativeProgress},{label:'與市場／同類差幅',value:`${fmt(diffValue)}% / 20%`,progress:diffProgress},{label:'六日收盤價差',value:`${fmt(Math.abs(simulation.reference-five[0].close!))} 元 / ${gapLimit} 元`,progress:gapProgress}];
-    return selected.map(check=>({label:check.label,value:check.value,progress:check.progress,state:check.progress>=1?'triggered':check.progress>=.75?'near':'safe'} as AttentionCheck));
-   };
-   const first=checksFor(1),second=checksFor(2);
-   rows[0].checks=[...first,...second];rows[0].details=[];
-   const overall=rows[0].status==='outside'?'safe':attentionOverallState(rows[0].checks);rows[0].summary=overall==='triggered'?'必觸發':overall==='near'?'可能觸發':overall==='unknown'?'待補資料':'無風險';
-  }else if(id===1){rows[0].checks=[{label:'條件進度',value:'缺少連續有效行情',progress:null,state:'unknown'}];rows[0].summary='待補資料';}
+   rows[0].details=[
+    `標準一：六日累積漲跌幅超過 ${otc?30:32}%，且與全市場及同類差幅均達 20 個百分點（適用免比較條件時除外）。`,
+    `標準二：六日累積漲跌幅${otc?'達 23%':'超過 25%'}、差幅均達 20 個百分點，且起迄收盤價差達 ${otc?40:50} 元。`,
+    '上列價格依目前市場與同類平均值的情境假設計算；明日平均值尚未確定。'
+   ];
+   rows[0].summary=values.length?'合法價格範圍內有條件候選':'下個交易日漲跌停範圍內價格未達條件';
+  }else if(id===1){rows[0].summary='待補連續有效行情';}
   if(id===6&&r.status==='no_price')set(6,'missing','產業分支未達；集中度分支待資料',rows[5].details);
  }
- const longValues=new Set<number>(),longBasicValues=new Set<number>();let longReady=0;
- for(const [n,threshold] of [[30,100],[60,otc?140:130],[90,160]]){const b=tail(n-1);if(!b?.every(x=>x.close!==null&&x.close>0))continue;longReady++;for(const p of prices){const limit=otc&&p<5?({30:120,60:180,90:240}[n]??threshold):threshold;if(Math.abs((p/b[0].close!-1)*100)>limit&&p>simulation.reference){longBasicValues.add(p);if(!(sum!==null&&clause2RecentFirstNoticeExcludes(stock,snapshot,six(p),'up',simulation.scenario.market6,simulation.scenario.industry6)))longValues.add(p);}}}
- priceRule(2,prices.filter(p=>longValues.has(p)),longReady===3,'',['計算 30／60／90 日起迄價差的基本價格門檻；市場及同類差幅仍須達標。','已套用近 30 營業日第一款注意的可計算除外條件；近 60 營業日僅第二款處置、企業行動及其他缺資料除外條件仍須核對，故不作確定觸發判定。']);
- if(longReady===3&&longBasicValues.size>0&&longValues.size===0)set(2,'exempt','依目前情境，近 30 日第一款注意使候選價格均符合第二款除外',rows[1].details);
+ const longValues=new Set<number>(),longComparedValues=new Set<number>(),longDetails:string[]=[];let longReady=0;
+ for(const [n,threshold] of [[30,100],[60,otc?140:130],[90,160]]){
+  const b=tail(n-1);
+  if(!b?.every(x=>x.close!==null&&x.close>0)){longDetails.push(`${n} 日：缺連續有效收盤價，無法計算。`);continue;}
+  longReady++;
+  const base=b[0].close!;
+  const periodValues=prices.filter(p=>{
+   const limit=otc&&p<5?({30:120,60:180,90:240}[n]??threshold):threshold;
+   const change=(p/base-1)*100;
+   return Math.abs(change)>limit&&(change>0?p>simulation.reference:p<simulation.reference);
+  });
+  const periodMarket=({30:simulation.scenario.market30,60:simulation.scenario.market60,90:simulation.scenario.market90} as Record<number,number>)[n];
+  const periodIndustry=({30:simulation.scenario.industry30,60:simulation.scenario.industry60,90:simulation.scenario.industry90} as Record<number,number>)[n];
+  const requiredDiff=otc?80:({30:85,60:110,90:135} as Record<number,number>)[n];
+  longDetails.push(`${n} 日：基準 ${b[0].date} 收盤 ${fmt(base)} 元；${periodValues.length?priceSummary(periodValues,simulation.reference)+'（基本價格，另須與市場／同類差幅達 '+requiredDiff+' 個百分點）':'合法價格範圍未達基本漲跌幅或當日方向條件'}。`);
+  for(const p of periodValues){
+   const direction=p>=base?'up':'down';
+   const move=(p/base-1)*100;
+   const marketDiff=direction==='up'?move-periodMarket:periodMarket-move;
+   const industryDiff=direction==='up'?move-periodIndustry:periodIndustry-move;
+   const projectedPe=stock.pe!==null&&stock.close!==null&&stock.close>0&&stock.valuationDate===snapshot.asOf?stock.pe*p/stock.close:null;
+   const sectorExempt=stock.peNegative===true||(projectedPe!==null&&(projectedPe<0||projectedPe>=(otc?65:60)));
+   const comparison=small||(marketDiff>=requiredDiff&&(sectorExempt||industryDiff>=requiredDiff));
+   if(comparison){
+    longComparedValues.add(p);
+    if(!(sum!==null&&clause2RecentFirstNoticeExcludes(stock,snapshot,six(p),direction,simulation.scenario.market6,simulation.scenario.industry6)))longValues.add(p);
+   }
+  }
+ }
+ priceRule(2,prices.filter(p=>longValues.has(p)),longReady>0,'（市場／同類平均值採情境假設）',[...longDetails,'依假設平均值篩選價格並套用近 30 日第一款注意的可計算除外；近 60 日僅第二款處置、企業行動及其他缺資料除外仍須核對。']);
+ if(longReady===3&&longComparedValues.size>0&&longValues.size===0&&sum!==null&&stock.notices.some(notice=>dates.slice(-29).includes(notice.date)&&notice.rules.includes(1)))set(2,'exempt','符合價格及比較條件的候選均適用近 30 日第一款注意之除外',rows[1].details);
+ else if(longReady<3&&longValues.size===0)set(2,'missing','部分期間資料不足；已知期間未達基本門檻',rows[1].details);
+ else if(longValues.size===0)set(2,'outside','目前假設下，合法價格範圍內無符合漲跌幅、方向與比較條件的候選',rows[1].details);
  const volume59=tail(59),sum59=volume59?.every(b=>b.volume!==null)?volume59.reduce((a,b)=>a+b.volume!,0):null;
  // V >= 5 * (sum59 + V) / 60, not five times yesterday's average.
  const min3=sum59!==null&&shares?Math.ceil(Math.max(5*sum59/55,small?0:(otc?300_000:500_000),shares*(otc?.01:.001))):null;

@@ -6,7 +6,7 @@ import {attentionLawUrl,attentionLegalDetails} from '../lib/attention-law';
 export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapshot:MarketSnapshot;result:Simulation}){
  const rows=attentionPrediction(stock,snapshot,result);
  const quickSummary=attentionQuickSummary(rows);
- const labels={partial:'條件式預測',outside:'價格未達',missing:'待補資料',exempt:'不適用／除外',manual:'公告認定'};
+ const labels={partial:'基本條件候選',outside:'價格範圍未達',missing:'待補資料',exempt:'不適用／已除外',manual:'公告認定'};
  const checkLabel={safe:'無風險',near:'可能觸發',triggered:'已達條件',unknown:'待補資料'};
  const groupLabel={safe:'無風險',near:'可能觸發',triggered:'必觸發',unknown:'待補資料'};
  const detailState=(status:string):'safe'|'near'|'unknown'=>status==='outside'||status==='exempt'?'safe':status==='partial'?'near':'unknown';
@@ -21,7 +21,7 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
     const state=row.status==='outside'||row.status==='exempt'?'safe':row.checks?attentionOverallState(row.checks):row.status==='partial'?'near':'unknown';
     const detailGroups=row.checks?[{title:'標準一',checks:row.checks.slice(0,2)},{title:'標準二',checks:row.checks.slice(2)}].filter(item=>item.checks.length>0):[];
     const priceState=detailState(row.status);
-    const rowBadge=row.checks?row.summary:state==='triggered'?'必觸發':state==='near'?'可能觸發':state==='safe'?'無風險':labels[row.status];
+    const rowBadge=labels[row.status];
     return <details className={`attention-row attention-${row.status}`} key={row.rule}>
      <summary><strong>第 {row.rule} 款 <span>{row.name}</span></strong><span className="attention-threshold">{row.summary}</span><span className={`badge attention-state-${state}`}>{rowBadge}</span></summary>
      <div className="attention-explanation">
@@ -32,11 +32,11 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
         {item.checks.map(check=><div className={`attention-check attention-state-${check.state}`} key={`${item.title}-${check.label}`}><span>{check.label}</span><span>{check.value}</span><b>{checkLabel[check.state]}</b></div>)}
        </section>;
       })}</div>}
-      {!row.checks&&row.rule>=2&&row.rule<=8&&<div className="attention-clause-details">
-       <div className={`attention-clause-check attention-state-${priceState}`}><strong>價格門檻</strong><span>{row.status==='outside'?'下個交易日價格不在候選範圍':row.status==='partial'||row.status==='exempt'?row.summary:'目前無法確認價格門檻'}</span><b>{row.status==='exempt'?'除外':checkLabel[priceState]}</b></div>
-       {row.details.map((text,index)=><div className="attention-clause-check attention-state-unknown" key={`${row.rule}-${index}`}><strong>{index===0?'判斷依據':'其他條件'}</strong><span>{text}</span><b>待核對</b></div>)}
+      {!row.checks&&row.rule<=8&&<div className="attention-clause-details">
+       <div className={`attention-clause-check attention-state-${priceState}`}><strong>價格條件</strong><span>{row.rule===1&&row.conditionSummary?row.conditionSummary:row.summary}</span><b>{row.status==='exempt'?'除外':row.status==='outside'?'價格未達':row.status==='partial'?'情境試算':'待核對'}</b></div>
+       {row.details.map((value,index)=><div className="attention-clause-check attention-state-unknown" key={`${row.rule}-${index}`}><strong>{row.rule===2&&index<3?`${[30,60,90][index]} 日`:index===0?'判斷依據':'其他條件'}</strong><span>{value}</span><b>{/缺|待核|未確定|未知|尚未/.test(value)?'待核對':'條件說明'}</b></div>)}
       </div>}
-      {!row.checks&&!(row.rule>=2&&row.rule<=8)&&row.details.length>0&&<ul>{row.details.map(text=><li key={text}>{text}</li>)}</ul>}
+      {!row.checks&&row.rule>8&&row.details.length>0&&<ul>{row.details.map(text=><li key={text}>{text}</li>)}</ul>}
       {row.rule<=8&&<details className="attention-legal-details">
        <summary>法定除外、免比較與計算調整 <small>（{stock.market==='TPEX'?'上櫃':'上市'}第 {row.rule} 款）</small></summary>
        <p>以下列出法規效果；「待核對」項目不代表本股已符合除外條件。</p>
