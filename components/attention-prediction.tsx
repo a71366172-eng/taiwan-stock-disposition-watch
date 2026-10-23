@@ -21,7 +21,7 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
     const state=row.status==='outside'||row.status==='exempt'?'safe':row.checks?attentionOverallState(row.checks):row.status==='partial'?'near':'unknown';
     const detailGroups=row.checks?[{title:'標準一',checks:row.checks.slice(0,2)},{title:'標準二',checks:row.checks.slice(2)}].filter(item=>item.checks.length>0):[];
     const priceState=detailState(row.status);
-    const rowBadge=labels[row.status];
+    const rowBadge=row.rule===2&&row.status==='outside'?'情境條件未達':labels[row.status];
     return <details className={`attention-row attention-${row.status}`} key={row.rule}>
      <summary><strong>第 {row.rule} 款 <span>{row.name}</span></strong><span className="attention-threshold">{row.summary}</span><span className={`badge attention-state-${state}`}>{rowBadge}</span></summary>
      <div className="attention-explanation">
@@ -33,7 +33,7 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
        </section>;
       })}</div>}
       {!row.checks&&row.rule<=8&&<div className="attention-clause-details">
-       <div className={`attention-clause-check attention-state-${priceState}`}><strong>價格條件</strong><span>{row.rule===1&&row.conditionSummary?row.conditionSummary:row.summary}</span><b>{row.status==='exempt'?'除外':row.status==='outside'?'價格未達':row.status==='partial'?'情境試算':'待核對'}</b></div>
+       <div className={`attention-clause-check attention-state-${priceState}`}><strong>價格條件</strong><span>{row.rule===1&&row.conditionSummary?row.conditionSummary:row.summary}</span><b>{row.status==='exempt'?'除外':row.status==='outside'&&row.rule===2?'情境未達':row.status==='outside'?'價格未達':row.status==='partial'?'情境試算':'待核對'}</b></div>
        {row.details.map((value,index)=><div className="attention-clause-check attention-state-unknown" key={`${row.rule}-${index}`}><strong>{row.rule===2&&index<3?`${[30,60,90][index]} 日`:index===0?'判斷依據':'其他條件'}</strong><span>{value}</span><b>{/缺|待核|未確定|未知|尚未/.test(value)?'待核對':'條件說明'}</b></div>)}
       </div>}
       {!row.checks&&row.rule>8&&row.details.length>0&&<ul>{row.details.map(text=><li key={text}>{text}</li>)}</ul>}
