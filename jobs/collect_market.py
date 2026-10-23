@@ -1024,6 +1024,11 @@ def main():
         date=iso(h.get('Date',''))
         description=str(h.get('Name',''))+str(h.get('Description',''))
         if date and '開始交易' not in description and '最後交易' not in description: closed.add(date)
+    # Unscheduled full-market closures may be announced after the annual holiday feed is published.
+    closure_file=ROOT/'data'/'exceptional-closures.json'
+    if closure_file.exists():
+        for entry in json.loads(closure_file.read_text(encoding='utf-8')):
+            closed.add(dt.date.fromisoformat(entry['date']).isoformat())
     upcoming_sessions=[]; cursor=day
     while len(upcoming_sessions)<8:
         cursor+=dt.timedelta(days=1)
