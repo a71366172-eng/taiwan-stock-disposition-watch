@@ -23,7 +23,7 @@ export function recentDispositionExits(dispositions:Disposition[],calendar:strin
     if(!exitDate)continue;
     const offset=sessions.indexOf(exitDate)-todayIndex;
     if(offset < -3 || offset > 5)continue;
-    const label=exitDate===today?'今日恢復正常交易':exitDate<today?(offset===0?'已恢復正常交易':`已出關 ${Math.abs(offset)} 個交易日`):`${offset} 個交易日後恢復正常交易`;
+    const label=exitDate===today?'今日出關':exitDate<today?(offset===0?'已出關':`出關 ${Math.abs(offset)} 日`):`${offset} 日後出關`;
     const group=groups.get(exitDate)||{date:exitDate,offset,items:[],label};
     group.items.push(item);
     groups.set(exitDate,group);

@@ -24,8 +24,8 @@ export function attentionQuickSummary(rows:AttentionRow[]):AttentionQuickLine[]{
  const secondState=candidates.length?'near':rows.some(row=>row.rule>=2&&row.rule<=8&&row.status==='missing')?'unknown':'safe';
  const secondSummary=easiest?`第 ${easiest.rule} 款 ${easiest.summary}`:secondState==='unknown'?'條件資料不足':'目前沒有可計算的價格觸發條件';
  return [
-  {label:'第1款',state:firstState,badge:firstState==='safe'?'價格未達':firstState==='near'?'價格可能達標':'資料不足',summary:firstSummary},
-  {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無可算候選':secondState==='near'?'基本條件可能達標':'資料不足',summary:secondSummary}
+  {label:'第1款',state:firstState,badge:firstState==='safe'?'價格未達':firstState==='near'?'可能觸發':'資料不足',summary:firstSummary},
+  {label:'第2–8款',state:secondState,badge:secondState==='safe'?'無可算候選':secondState==='near'?'可能觸發':'資料不足',summary:secondSummary}
  ];
 }
 const names=['累積漲跌幅異常','中長期漲跌異常','漲跌異常＋量能放大','漲跌異常＋高週轉','漲跌異常＋券商集中','本益比／股價淨值比異常','漲跌異常＋券資比','存託憑證溢折價','成交量放大','累積週轉率','起迄價差','借券賣出','當沖異常','其他交易異常'];

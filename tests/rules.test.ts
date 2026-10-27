@@ -282,9 +282,9 @@ test('release date is the trading session after the final disposition session',(
  assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T06:59:00Z'))[0]?.offset,1);
  assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T07:00:00Z'))[0]?.offset,1);
  assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-13T07:00:00Z'))[0]?.offset,0);
- assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T15:59:00Z'))[0]?.label,'1 個交易日後恢復正常交易');
- assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T16:00:00Z'))[0]?.label,'今日恢復正常交易');
- assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-14T02:00:00Z'))[0]?.label,'已恢復正常交易');
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T15:59:00Z'))[0]?.label,'1 日後出關');
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-12T16:00:00Z'))[0]?.label,'今日出關');
+ assert.equal(recentDispositionExits([item],calendar,'2026-10-12',future,new Date('2026-10-14T02:00:00Z'))[0]?.label,'已出關');
  assert.equal(tradingReferenceDate('2026-10-13',['2026-10-15','2026-10-16'],new Date('2026-10-14T07:00:00Z')),'2026-10-15');
 });
 test('6213 final disposition date 10/19 means it resumes normal trading on 10/20',()=>{

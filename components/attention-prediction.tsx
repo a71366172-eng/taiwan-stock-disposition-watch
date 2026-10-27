@@ -6,7 +6,7 @@ import {attentionLawUrl,attentionLegalDetails} from '../lib/attention-law';
 export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapshot:MarketSnapshot;result:Simulation}){
  const rows=attentionPrediction(stock,snapshot,result);
  const quickSummary=attentionQuickSummary(rows);
- const labels={partial:'基本條件候選',outside:'價格範圍未達',missing:'待補資料',exempt:'不適用／已除外',manual:'公告認定'};
+ const labels={partial:'可能觸發',outside:'未達標',missing:'待補資料',exempt:'已除外',manual:'公告認定'};
  const checkLabel={safe:'無風險',near:'可能觸發',triggered:'已達條件',unknown:'待補資料'};
  const groupLabel={safe:'無風險',near:'可能觸發',triggered:'必觸發',unknown:'待補資料'};
  const detailState=(status:string):'safe'|'near'|'unknown'=>status==='outside'||status==='exempt'?'safe':status==='partial'?'near':'unknown';
@@ -21,7 +21,7 @@ export function AttentionPrediction({stock,snapshot,result}:{stock:Stock;snapsho
     const state=row.status==='outside'||row.status==='exempt'?'safe':row.checks?attentionOverallState(row.checks):row.status==='partial'?'near':'unknown';
     const detailGroups=row.checks?[{title:'標準一',checks:row.checks.slice(0,2)},{title:'標準二',checks:row.checks.slice(2)}].filter(item=>item.checks.length>0):[];
     const priceState=detailState(row.status);
-    const rowBadge=row.rule===2&&row.status==='outside'?'情境條件未達':labels[row.status];
+    const rowBadge=row.rule===2&&row.status==='outside'?'未達標':labels[row.status];
     return <details className={`attention-row attention-${row.status}`} key={row.rule}>
      <summary><strong>第 {row.rule} 款 <span>{row.name}</span></strong><span className="attention-threshold">{row.summary}</span><span className={`badge attention-state-${state}`}>{rowBadge}</span></summary>
      <div className="attention-explanation">
