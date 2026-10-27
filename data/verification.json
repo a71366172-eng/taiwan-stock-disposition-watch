@@ -1,8 +1,8 @@
 {
-  "asOf": "2026-10-22",
+  "asOf": "2026-10-27",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 340,
-  "skipped": 105,
+  "compared": 341,
+  "skipped": 98,
   "failures": [],
   "checks": [
     {
@@ -455,6 +455,13 @@
     },
     {
       "code": "2466",
+      "date": "2026-10-27",
+      "announced": 41.66,
+      "calculated": 41.66,
+      "pass": true
+    },
+    {
+      "code": "2466",
       "date": "2026-10-14",
       "announced": 34.45,
       "calculated": 34.45,
@@ -500,13 +507,6 @@
       "date": "2026-10-05",
       "announced": 32.8,
       "calculated": 32.8,
-      "pass": true
-    },
-    {
-      "code": "2466",
-      "date": "2026-07-09",
-      "announced": 33.83,
-      "calculated": 33.83,
       "pass": true
     },
     {
@@ -1158,6 +1158,13 @@
       "date": "2026-10-05",
       "announced": 40.79,
       "calculated": 40.79,
+      "pass": true
+    },
+    {
+      "code": "4526",
+      "date": "2026-10-27",
+      "announced": 33.07,
+      "calculated": 33.07,
       "pass": true
     },
     {
@@ -2392,68 +2399,22 @@
       "officialReason": "115年10月21日至115年10月22日連續二次115年10月19日至115年10月22日連續四次",
       "reconstructed": {
         "official": true,
-        "paths": [
-          "第一款連續三日",
-          "連續五日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 4,
+        "paths": [],
+        "firstStreak": 0,
+        "anyStreak": 0,
         "tenCount": 4,
         "thirtyCount": 6
       }
     },
     {
-      "code": "3354",
-      "officialReason": "115年10月21日至115年10月22日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "tenCount": 2,
-        "thirtyCount": 2
-      }
-    },
-    {
-      "code": "5475",
-      "officialReason": "115年10月19日至115年10月22日連續四次",
+      "code": "3441",
+      "officialReason": "115年10月20日至115年10月27日連續四次",
       "reconstructed": {
         "official": true,
         "paths": [
           "連續五日"
         ],
         "firstStreak": 0,
-        "anyStreak": 4,
-        "tenCount": 4,
-        "thirtyCount": 4
-      }
-    },
-    {
-      "code": "6751",
-      "officialReason": "115年10月21日至115年10月22日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 3,
-        "tenCount": 3,
-        "thirtyCount": 3
-      }
-    },
-    {
-      "code": "6925",
-      "officialReason": "115年10月21日至115年10月22日連續二次115年10月19日至115年10月22日連續四次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日",
-          "連續五日"
-        ],
-        "firstStreak": 2,
         "anyStreak": 4,
         "tenCount": 4,
         "thirtyCount": 5
