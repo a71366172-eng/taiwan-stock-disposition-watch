@@ -2409,15 +2409,31 @@
   ],
   "candidates": [
     {
-      "code": "8996",
-      "officialReason": "115年10月13日至115年10月27日等九個營業日已有五次",
+      "code": "2466",
+      "officialReason": "115年10月27日至115年10月28日連續二次",
       "reconstructed": {
         "official": true,
-        "paths": [],
-        "firstStreak": 0,
-        "anyStreak": 0,
-        "tenCount": 5,
-        "thirtyCount": 5
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "tenCount": 3,
+        "thirtyCount": 3
+      }
+    },
+    {
+      "code": "4526",
+      "officialReason": "115年10月27日至115年10月28日連續二次",
+      "reconstructed": {
+        "official": true,
+        "paths": [
+          "第一款連續三日"
+        ],
+        "firstStreak": 2,
+        "anyStreak": 2,
+        "tenCount": 2,
+        "thirtyCount": 2
       }
     },
     {
