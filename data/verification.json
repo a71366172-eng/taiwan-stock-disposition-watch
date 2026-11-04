@@ -1,8 +1,8 @@
 {
-  "asOf": "2026-11-03",
+  "asOf": "2026-11-04",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 337,
-  "skipped": 72,
+  "compared": 345,
+  "skipped": 59,
   "failures": [],
   "checks": [
     {
@@ -615,10 +615,24 @@
       "pass": true
     },
     {
-      "code": "2492",
-      "date": "2026-07-21",
-      "announced": -40.93,
-      "calculated": -40.93,
+      "code": "3006",
+      "date": "2026-08-10",
+      "announced": 44.48,
+      "calculated": 44.48,
+      "pass": true
+    },
+    {
+      "code": "3006",
+      "date": "2026-08-07",
+      "announced": 46.83,
+      "calculated": 46.83,
+      "pass": true
+    },
+    {
+      "code": "3006",
+      "date": "2026-08-06",
+      "announced": 42.76,
+      "calculated": 42.76,
       "pass": true
     },
     {
@@ -738,13 +752,6 @@
       "date": "2026-07-29",
       "announced": -34.29,
       "calculated": -34.29,
-      "pass": true
-    },
-    {
-      "code": "3026",
-      "date": "2026-07-21",
-      "announced": -25.81,
-      "calculated": -25.81,
       "pass": true
     },
     {
@@ -1067,6 +1074,55 @@
       "date": "2026-10-02",
       "announced": 33.37,
       "calculated": 33.37,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-11-04",
+      "announced": -25.52,
+      "calculated": -25.52,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-08-18",
+      "announced": 27.6,
+      "calculated": 27.6,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-08-03",
+      "announced": -34.27,
+      "calculated": -34.27,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-07-31",
+      "announced": -41.84,
+      "calculated": -41.84,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-07-30",
+      "announced": -49.61,
+      "calculated": -49.61,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-07-29",
+      "announced": -31.76,
+      "calculated": -31.76,
+      "pass": true
+    },
+    {
+      "code": "3532",
+      "date": "2026-07-28",
+      "announced": -28.79,
+      "calculated": -28.79,
       "pass": true
     },
     {
@@ -2093,6 +2149,13 @@
     },
     {
       "code": "7750",
+      "date": "2026-11-04",
+      "announced": -27.23,
+      "calculated": -27.23,
+      "pass": true
+    },
+    {
+      "code": "7750",
       "date": "2026-08-05",
       "announced": 26.23,
       "calculated": 26.23,
@@ -2166,13 +2229,6 @@
       "date": "2026-07-23",
       "announced": -34.61,
       "calculated": -34.61,
-      "pass": true
-    },
-    {
-      "code": "7795",
-      "date": "2026-07-21",
-      "announced": -26.56,
-      "calculated": -26.56,
       "pass": true
     },
     {
@@ -2371,16 +2427,18 @@
       "officialReason": "115年10月20日至115年11月3日等九個營業日已有五次",
       "reconstructed": {
         "official": true,
-        "paths": [],
+        "paths": [
+          "十日內六日"
+        ],
         "firstStreak": 0,
-        "anyStreak": 0,
-        "tenCount": 5,
-        "thirtyCount": 6
+        "anyStreak": 1,
+        "tenCount": 6,
+        "thirtyCount": 7
       }
     },
     {
-      "code": "8099",
-      "officialReason": "115年11月02日至115年11月03日連續二次",
+      "code": "5013",
+      "officialReason": "115年11月03日至115年11月04日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [
@@ -2389,21 +2447,7 @@
         "firstStreak": 2,
         "anyStreak": 2,
         "tenCount": 2,
-        "thirtyCount": 2
-      }
-    },
-    {
-      "code": "8272",
-      "officialReason": "115年11月02日至115年11月03日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "tenCount": 2,
-        "thirtyCount": 2
+        "thirtyCount": 4
       }
     }
   ]
