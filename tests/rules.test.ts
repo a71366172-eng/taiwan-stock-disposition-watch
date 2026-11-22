@@ -226,7 +226,7 @@ test('three-session risk estimates the earliest continued countable-attention pa
  const projected=forecastDispositionRisk({...base,notices},forecastContext);
  assert.equal(projected?.days,3);assert.ok(projected?.paths.includes('第 1–8 款連續五日'));
 });
-test('next-session disposition label follows first-clause trigger at the reference close',()=>{
+test('next-session disposition label requires first-clause coverage at every legal price',()=>{
  const robust={...base,close:109,candidateReason:'官方累計候選',bars:base.bars.map((bar,index)=>index>=calendar.length-5?{...bar,close:109,reference:100}:bar)};
  const robustResult=simulate(robust,context);
  assert.equal(isGuaranteedDispositionNextSession(robust,robustResult),true);
@@ -305,4 +305,15 @@ test('30-day observation rows are optional and ended dispositions can remain in 
  const ended={...observed,dispositions:[{code:'TEST',name:'test',announced:calendar.at(-10)!,start:calendar.at(-10)!,end:calendar.at(-5)!,condition:'',measure:'',content:''}]};
  assert.equal(isCurrentlyDisposed(ended,context.asOf),false);
  assert.equal(isRiskWatchEligible(ended,context.asOf,true,false,false,false),true);
+});
+
+
+test('guaranteed label rejects a falling stock that can escape at limit up',()=>{
+ const stock={...base,code:'1569',close:66.5};
+ const result={...simulate(stock,context),limits:{low:59.9,high:73.1},rules:[{rule:1,label:'',status:'conditional' as const,conditions:[],intervals:[{from:59.9,to:66.4,direction:'down' as const,rule:1},{from:66.5,to:70.7,direction:'up' as const,rule:1}]}]};
+ assert.equal(isGuaranteedDispositionNextSession(stock,result),false);
+ result.rules[0].intervals[1].to=73.1;
+ assert.equal(isGuaranteedDispositionNextSession(stock,result),true);
+ result.rules[0].intervals[0].to=66.3;
+ assert.equal(isGuaranteedDispositionNextSession(stock,result),false);
 });
