@@ -1,0 +1,64 @@
+name: Deploy website
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/market.json'
+      - 'data/verification.json'
+      - 'data/futures-margins.json'
+      - 'data/screener.json'
+      - 'public/data/**'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Build personal industry groups
+        run: python scripts/build_personal_groups.py
+      - name: Verify snapshot and rules
+        run: |
+          npm run data:verify
+          node --experimental-strip-types --test tests/rules.test.ts tests/attention-prediction.test.ts tests/public-source.test.ts tests/disposition-metrics.test.ts tests/stock-comparison.test.ts tests/comparison-symbols.test.ts tests/position-ratio.test.ts tests/position-scenario.test.ts
+          python -m unittest discover -s tests -p 'test_*.py'
+      - name: Build static site
+        env:
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: npm run build
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-static
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
