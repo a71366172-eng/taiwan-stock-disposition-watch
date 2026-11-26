@@ -1,7 +1,7 @@
 {
-  "asOf": "2026-11-25",
+  "asOf": "2026-11-26",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 372,
+  "compared": 366,
   "skipped": 24,
   "failures": [],
   "checks": [
@@ -213,13 +213,6 @@
       "date": "2026-08-14",
       "announced": 34.25,
       "calculated": 34.25,
-      "pass": true
-    },
-    {
-      "code": "2033",
-      "date": "2026-08-12",
-      "announced": 34.67,
-      "calculated": 34.67,
       "pass": true
     },
     {
@@ -525,6 +518,13 @@
     },
     {
       "code": "2466",
+      "date": "2026-11-26",
+      "announced": -26.23,
+      "calculated": -26.23,
+      "pass": true
+    },
+    {
+      "code": "2466",
       "date": "2026-11-17",
       "announced": 30.44,
       "calculated": 30.44,
@@ -815,13 +815,6 @@
       "date": "2026-08-13",
       "announced": 25.28,
       "calculated": 25.28,
-      "pass": true
-    },
-    {
-      "code": "3026",
-      "date": "2026-08-12",
-      "announced": 34.24,
-      "calculated": 34.24,
       "pass": true
     },
     {
@@ -1476,13 +1469,6 @@
       "pass": true
     },
     {
-      "code": "6152",
-      "date": "2026-08-12",
-      "announced": 32.37,
-      "calculated": 32.37,
-      "pass": true
-    },
-    {
       "code": "6168",
       "date": "2026-09-24",
       "announced": 33.22,
@@ -1560,13 +1546,6 @@
       "pass": true
     },
     {
-      "code": "6213",
-      "date": "2026-08-12",
-      "announced": 41.97,
-      "calculated": 41.97,
-      "pass": true
-    },
-    {
       "code": "6225",
       "date": "2026-10-06",
       "announced": 34.67,
@@ -1606,13 +1585,6 @@
       "date": "2026-08-13",
       "announced": 42.83,
       "calculated": 42.83,
-      "pass": true
-    },
-    {
-      "code": "6225",
-      "date": "2026-08-12",
-      "announced": 40.71,
-      "calculated": 40.71,
       "pass": true
     },
     {
@@ -1739,13 +1711,6 @@
       "date": "2026-09-23",
       "announced": 28.18,
       "calculated": 28.18,
-      "pass": true
-    },
-    {
-      "code": "6426",
-      "date": "2026-08-12",
-      "announced": 25.76,
-      "calculated": 25.76,
       "pass": true
     },
     {
@@ -2309,13 +2274,6 @@
       "pass": true
     },
     {
-      "code": "7610",
-      "date": "2026-08-12",
-      "announced": 28.05,
-      "calculated": 28.05,
-      "pass": true
-    },
-    {
       "code": "7711",
       "date": "2026-09-15",
       "announced": -32.65,
@@ -2355,13 +2313,6 @@
       "date": "2026-08-13",
       "announced": 41.87,
       "calculated": 41.87,
-      "pass": true
-    },
-    {
-      "code": "7711",
-      "date": "2026-08-12",
-      "announced": 41.88,
-      "calculated": 41.88,
       "pass": true
     },
     {
@@ -2474,6 +2425,13 @@
       "date": "2026-09-17",
       "announced": 27.56,
       "calculated": 27.56,
+      "pass": true
+    },
+    {
+      "code": "7827",
+      "date": "2026-11-26",
+      "announced": -44.22,
+      "calculated": -44.22,
       "pass": true
     },
     {
@@ -2616,18 +2574,16 @@
       "officialReason": "115年11月24日至115年11月25日連續二次",
       "reconstructed": {
         "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "tenCount": 2,
-        "thirtyCount": 2
+        "paths": [],
+        "firstStreak": 0,
+        "anyStreak": 0,
+        "tenCount": 0,
+        "thirtyCount": 0
       }
     },
     {
-      "code": "3259",
-      "officialReason": "115年11月24日至115年11月25日連續二次",
+      "code": "5013",
+      "officialReason": "115年11月25日至115年11月26日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [
@@ -2636,21 +2592,7 @@
         "firstStreak": 2,
         "anyStreak": 2,
         "tenCount": 2,
-        "thirtyCount": 2
-      }
-    },
-    {
-      "code": "7856",
-      "officialReason": "115年11月24日至115年11月25日連續二次",
-      "reconstructed": {
-        "official": true,
-        "paths": [
-          "第一款連續三日"
-        ],
-        "firstStreak": 2,
-        "anyStreak": 2,
-        "tenCount": 2,
-        "thirtyCount": 2
+        "thirtyCount": 4
       }
     }
   ]
