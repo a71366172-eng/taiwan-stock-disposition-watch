@@ -1,7 +1,7 @@
 {
-  "asOf": "2026-11-26",
+  "asOf": "2026-11-27",
   "kind": "Historical announcement arithmetic reconciliation, not prediction backtest",
-  "compared": 366,
+  "compared": 360,
   "skipped": 24,
   "failures": [],
   "checks": [
@@ -227,13 +227,6 @@
       "date": "2026-10-14",
       "announced": -27.63,
       "calculated": -27.63,
-      "pass": true
-    },
-    {
-      "code": "2059",
-      "date": "2026-08-13",
-      "announced": 26.62,
-      "calculated": 26.62,
       "pass": true
     },
     {
@@ -808,13 +801,6 @@
       "date": "2026-08-17",
       "announced": 26.79,
       "calculated": 26.79,
-      "pass": true
-    },
-    {
-      "code": "3026",
-      "date": "2026-08-13",
-      "announced": 25.28,
-      "calculated": 25.28,
       "pass": true
     },
     {
@@ -1539,13 +1525,6 @@
       "pass": true
     },
     {
-      "code": "6213",
-      "date": "2026-08-13",
-      "announced": 33.04,
-      "calculated": 33.04,
-      "pass": true
-    },
-    {
       "code": "6225",
       "date": "2026-10-06",
       "announced": 34.67,
@@ -1578,13 +1557,6 @@
       "date": "2026-08-14",
       "announced": 49.27,
       "calculated": 49.27,
-      "pass": true
-    },
-    {
-      "code": "6225",
-      "date": "2026-08-13",
-      "announced": 42.83,
-      "calculated": 42.83,
       "pass": true
     },
     {
@@ -2309,13 +2281,6 @@
       "pass": true
     },
     {
-      "code": "7711",
-      "date": "2026-08-13",
-      "announced": 41.87,
-      "calculated": 41.87,
-      "pass": true
-    },
-    {
       "code": "7730",
       "date": "2026-11-06",
       "announced": -41.67,
@@ -2372,13 +2337,6 @@
       "pass": true
     },
     {
-      "code": "7788",
-      "date": "2026-08-13",
-      "announced": 28.02,
-      "calculated": 28.02,
-      "pass": true
-    },
-    {
       "code": "7795",
       "date": "2026-11-19",
       "announced": -29.78,
@@ -2407,13 +2365,6 @@
       "pass": true
     },
     {
-      "code": "7795",
-      "date": "2026-08-13",
-      "announced": 27.79,
-      "calculated": 27.79,
-      "pass": true
-    },
-    {
       "code": "7799",
       "date": "2026-09-23",
       "announced": 25.62,
@@ -2425,6 +2376,13 @@
       "date": "2026-09-17",
       "announced": 27.56,
       "calculated": 27.56,
+      "pass": true
+    },
+    {
+      "code": "7827",
+      "date": "2026-11-27",
+      "announced": -44.5,
+      "calculated": -44.5,
       "pass": true
     },
     {
@@ -2570,8 +2528,8 @@
   ],
   "candidates": [
     {
-      "code": "5013",
-      "officialReason": "115年11月25日至115年11月26日連續二次",
+      "code": "4577",
+      "officialReason": "115年11月26日至115年11月27日連續二次",
       "reconstructed": {
         "official": true,
         "paths": [
@@ -2580,7 +2538,7 @@
         "firstStreak": 2,
         "anyStreak": 2,
         "tenCount": 2,
-        "thirtyCount": 4
+        "thirtyCount": 2
       }
     }
   ]
